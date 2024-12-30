@@ -1,0 +1,7 @@
+url: ~
+template:
+  params:
+    bootswatch: flatly
+
+figures:
+  dev: grfx
