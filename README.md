@@ -1,4 +1,4 @@
-# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" align="right" width="250" height="250"/>
+# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" align="right" width="275" height="275"/>
 
 The goal of this package is to integrate the flexible frontend of the [SurveyJS](https://surveyjs.io/) library with the reactive backend of [Shiny](https://shiny.posit.co/) to interface with a database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.
 
