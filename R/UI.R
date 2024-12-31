@@ -5,6 +5,7 @@
 #' @param primary Primary color hex code (optional)
 #' @param mode Color mode ("light" or "dark")
 #' @return A tagList containing survey dependencies and container
+#' @import shiny
 #' @importFrom htmltools tags tagList
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
