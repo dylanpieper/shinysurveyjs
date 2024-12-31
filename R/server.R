@@ -7,7 +7,7 @@
 #'
 #' @import shiny
 #' @import shinyjs
-#' @import DT
+#' @importFrom DT renderDT datatable
 #' @import jsonlite
 #' @import sass
 #' @export

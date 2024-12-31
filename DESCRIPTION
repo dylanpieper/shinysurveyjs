@@ -3,7 +3,7 @@ Title: Host Surveys in Shiny
 Version: 0.0.0.9000
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: Host Surveys Using Shiny, SurveyJS, and PostgreSQL
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
