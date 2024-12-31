@@ -5,13 +5,14 @@
 #' @param primary Primary color hex code (optional)
 #' @param mode Color mode ("light" or "dark")
 #' @return A tagList containing survey dependencies and container
-#' @import shiny
-#' @importFrom htmltools tags tagList
+#' @importFrom shiny div conditionalPanel h4
+#' @importFrom htmltools tags tagList HTML
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
-#' @importFrom shinyjs useShinyjs hidden
+#' @importFrom shinyjs useShinyjs
 #' @export
-surveyUI <- function(id = "surveyContainer", theme = "defaultV2", primary = "#003594", mode = "light") {
+surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
+                     primary = "#003594", mode = "light") {
   css_file <- switch(theme,
                      "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
                      "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -63,22 +64,22 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2", primary = "#00
                            dark_text, dark_container_bg, dark_text, dark_text,
                            dark_border, dark_container_bg, dark_text, dark_border)
 
-  tagList(
-    tags$head(
-      tags$script(src = paste0("https://unpkg.com/survey-jquery/survey.jquery.min.js")),
-      tags$link(rel = "stylesheet", href = css_file),
-      tags$style(sass::sass(survey_css(primary = primary, mode = mode))),
-      tags$style(dark_mode_css),
-      tags$script(HTML(survey_single_js())),
+  htmltools::tagList(
+    htmltools::tags$head(
+      htmltools::tags$script(src = paste0("https://unpkg.com/survey-jquery/survey.jquery.min.js")),
+      htmltools::tags$link(rel = "stylesheet", href = css_file),
+      htmltools::tags$style(sass::sass(survey_css(primary = primary, mode = mode))),
+      htmltools::tags$style(dark_mode_css),
+      htmltools::tags$script(htmltools::HTML(survey_single_js())),
       shinyjs::useShinyjs()
     ),
-    div(id = id),
-    conditionalPanel(
+    shiny::div(id = id),
+    shiny::conditionalPanel(
       condition = "input.surveyComplete == true && output.showResponseTable == true",
-      div(
+      shiny::div(
         id = "surveyResponseContainer",
         style = "margin-top: 30px;",
-        h4("Your Response:"),
+        shiny::h4("Your Response:"),
         DT::dataTableOutput("surveyResponseTable")
       )
     )

@@ -60,6 +60,6 @@ survey <- '{
 }'
 
 survey_single(json = survey,
-              theme_primary = "#00AD6E",
+              theme_color = "#00AD6E",
               theme_mode = "dark")
 ```

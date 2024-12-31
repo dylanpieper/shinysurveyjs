@@ -8,7 +8,7 @@ survey_single(
   json,
   show_responses = TRUE,
   theme = "defaultV2",
-  theme_primary = "#003594",
+  theme_color = "#003594",
   theme_mode = "light"
 )
 }
@@ -19,7 +19,9 @@ survey_single(
 
 \item{theme}{Theme name ("defaultV2" or "modern")}
 
-\item{primary}{Primary color hex colde (optional)}
+\item{theme_color}{Primary color hex code for theme (optional)}
+
+\item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
 }
 \description{
 Create a single survey
