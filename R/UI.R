@@ -6,7 +6,7 @@
 #' @param mode Color mode ("light" or "dark")
 #' @return A tagList containing survey dependencies and container
 #' @importFrom htmltools tags tagList
-#' @importFrom sass sass sass_file
+#' @importFrom sass sass
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs hidden
 #' @export

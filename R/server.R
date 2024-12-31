@@ -9,7 +9,6 @@
 #' @import shinyjs
 #' @importFrom DT renderDT datatable
 #' @import jsonlite
-#' @import sass
 #' @export
 survey_single <- function(json,
                           show_responses = TRUE,
