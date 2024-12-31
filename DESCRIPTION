@@ -1,10 +1,17 @@
 Package: shinysurveyjs
-Title: Host Surveys in Shiny
+Title: Create and Deploy Surveys in Shiny
 Version: 0.0.0.9000
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: Host Surveys Using Shiny, SurveyJS, and PostgreSQL
+Description: Create and Deploy Surveys Using Shiny and SurveyJS
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Imports:
+    DT,
+    htmltools,
+    jsonlite,
+    sass,
+    shiny,
+    shinyjs
