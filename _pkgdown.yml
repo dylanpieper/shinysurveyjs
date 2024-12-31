@@ -1,7 +1,16 @@
 url: ~
 template:
-  params:
-    bootswatch: flatly
-
+  bootstrap: 5
+  bslib:
+    bg: "#ffffff"
+    fg: "#003594"
+    primary: "#003594"
+    secondary: "#00AD6E"
+    navbar-bg: "#DBEEFF"
+    border-color: "#DBEEFF"
+    heading-color: "#003594"
+    code-bg: "#f8f9fa"
+    link-color: "#00AD6E"
+    link-hover-color: "#003594"
 figures:
   dev: grfx

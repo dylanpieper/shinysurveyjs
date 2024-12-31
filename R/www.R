@@ -1,0 +1,198 @@
+#' Single Survey JavaScript
+#'
+#' Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
+#' This JavaScript code sets up event handlers for survey completion and enables communication
+#' between the survey and Shiny.
+#'
+#' @return A character string containing the JavaScript code for survey initialization
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' # Use in ui.R or similar:
+#' tags$script(get_survey_js())
+#' }
+survey_single_js <- function() {
+  "$(document).ready(function() {
+  var survey;
+  function initializeSurvey(surveyJSON) {
+    try {
+      if (typeof surveyJSON === 'string') {
+        surveyJSON = JSON.parse(surveyJSON);
+      }
+      // Update document title if available
+      if (surveyJSON.title) {
+        document.title = surveyJSON.title;
+      }
+      $('#surveyContainer').empty();
+      // Create the survey
+      survey = new Survey.Model(surveyJSON);
+      survey.onComplete.add(function(result) {
+        Shiny.setInputValue('surveyData', JSON.stringify(result.data));
+        Shiny.setInputValue('surveyComplete', true);
+      });
+      // Initialize jQuery Survey
+      $('#surveyContainer').Survey({ model: survey });
+    } catch (error) {
+      console.error('Error initializing survey:', error);
+      console.error(error.stack);
+    }
+  }
+  Shiny.addCustomMessageHandler('loadSurvey', function(surveyJSON) {
+    initializeSurvey(surveyJSON);
+  });
+});"
+}
+
+#' Survey CSS with Theme Support
+#'
+#' Returns the CSS code needed for a survey in a Shiny application with light/dark theme support.
+#'
+#' @param primary Primary color in hex format (default: "#003594")
+#' @param primary_foreground Text color for primary elements (default: "#ffffff")
+#' @param background Background color (default: "#ffffff")
+#' @param foreground Main text color (default: "#404040")
+#' @param mode Color mode selection: "light" or "dark" (default: "light")
+#' @param css_string Optional custom CSS string to override default styles
+#' @return A character string containing the CSS code
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' # Light mode
+#' tags$script(survey_css())
+#'
+#' # Dark mode
+#' tags$script(survey_css(mode = "dark"))
+#'
+#' # Custom dark mode colors
+#' tags$script(survey_css(
+#'   theme = "dark",
+#'   primary = "#7289da",
+#'   background = "#2c2f33"
+#' ))
+#' }
+survey_css <- function(
+    primary = "#003594",
+    primary_foreground = "#ffffff",
+    background = "#ffffff",
+    foreground = "#404040",
+    mode = "light",
+    css_string = NULL
+) {
+  if (!is.null(css_string)) {
+    return(css_string)
+  }
+
+  # Function to lighten/darken hex color
+  adjust_hex <- function(hex, percent = 25, lighten = TRUE) {
+    hex <- gsub("^#", "", hex)
+    r <- strtoi(substr(hex, 1, 2), 16)
+    g <- strtoi(substr(hex, 3, 4), 16)
+    b <- strtoi(substr(hex, 5, 6), 16)
+
+    if (lighten) {
+      r <- min(255, r + (255 - r) * percent/100)
+      g <- min(255, g + (255 - g) * percent/100)
+      b <- min(255, b + (255 - b) * percent/100)
+    } else {
+      r <- max(0, r * (1 - percent/100))
+      g <- max(0, g * (1 - percent/100))
+      b <- max(0, b * (1 - percent/100))
+    }
+
+    sprintf("#%02x%02x%02x", round(r), round(g), round(b))
+  }
+
+  # Set mode-specific colors
+  if (mode == "dark") {
+    if (background == "#ffffff") background <- "#1a1a1a"
+    if (foreground == "#404040") foreground <- "#e0e0e0"
+    primary_light <- adjust_hex(primary, 15, lighten = TRUE)
+    primary_dark <- adjust_hex(primary, 25, lighten = FALSE)
+    input_background <- "#2d2d2d"
+    border_color <- "#404040"
+    hover_background <- "#2a2a2a"
+  } else {
+    primary_light <- adjust_hex(primary, 25, lighten = TRUE)
+    primary_dark <- adjust_hex(primary, 25, lighten = FALSE)
+    input_background <- "#ffffff"
+    border_color <- "#e0e0e0"
+    hover_background <- "#f5f5f5"
+  }
+
+  sprintf("
+.sd-root-modern {
+    /* Main colors */
+    --primary: %s;
+    --primary-light: %s;
+    --primary-dark: %s;
+    --primary-foreground: %s;
+    --background: %s;
+    --foreground: %s;
+    --input-background: %s;
+    --border-color: %s;
+    --hover-background: %s;
+
+    /* Apply theme colors */
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+/* Base styles */
+.sd-root-modern {
+    --sd-button-primary-background: var(--primary);
+    --sd-button-primary-text-color: var(--primary-foreground);
+    --sd-navigation-button-color: var(--primary);
+    --sd-navigation-button-background: var(--primary-light);
+    --sd-checkbox-checked-background: var(--primary);
+    --sd-radio-checked-background: var(--primary);
+    --sd-rating-background: var(--primary);
+    --sd-progress-bar-background: var(--primary);
+    --sd-progress-bar-text: var(--primary-foreground);
+    --sd-matrix-background: var(--primary-light);
+    --sd-matrix-selected-background: var(--primary);
+}
+
+/* Mode-specific adjustments */
+.sd-question {
+    background-color: var(--input-background);
+    border: 1px solid var(--border-color);
+}
+
+.sd-question:hover {
+    background-color: var(--hover-background);
+}
+
+.sd-input {
+    background-color: var(--input-background);
+    border: 1px solid var(--border-color);
+    color: var(--foreground);
+}
+
+.sd-input:focus {
+    border-color: var(--primary);
+    background-color: var(--input-background);
+}
+
+.sd-btn--action:hover {
+    background-color: var(--primary-light);
+}
+
+.sd-question.sd-question--selected {
+    border-color: var(--primary);
+    background-color: var(--hover-background);
+}
+
+.sd-rating-item--selected {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+}
+
+.sd-header__text .sd-title {
+    color: var(--foreground);
+}",
+primary, primary_light, primary_dark, primary_foreground,
+background, foreground, input_background, border_color, hover_background
+  )
+}
