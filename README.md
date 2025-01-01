@@ -6,11 +6,15 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Host a single survey or multiple surveys in one app
 
+-   Design surveys and create json objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
+
 -   Dynamically populate field choices (i.e., response options) from a database table and create dependent fields (e.g., select a car brand and filter available models)
 
--   URL query tokens and one-time access tokens for controlled survey distribution
+-   URL query tokens and one-time access tokens for secure survey distribution
 
 -   Asynchronous worker to handle database updates in near real-time
+
+🚧 **Warning**: These features are under construction and being moved from my [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
 
 ## Installation
 
@@ -59,7 +63,26 @@ survey <- '{
   ]
 }'
 
-survey_single(json = survey,
-              theme_color = "#00AD6E",
-              theme_mode = "dark")
+
+survey_single(
+  json = survey,
+  table_name = "survey_package_feedback",
+  show_response = TRUE,
+  theme_color = "#00AD6E",
+  theme_mode = "dark",
+  shiny_config = list(
+    host = "0.0.0.0",
+    port = 3838,
+    workers = 100,
+    sanitize_errors = TRUE,
+    autoreload = FALSE
+  ),
+  db_config = list(
+    host = "pooler.supabase.com",
+    port = 5432,
+    dbname = "postgres",
+    user = "username",
+    password = "password"
+  )
+)
 ```

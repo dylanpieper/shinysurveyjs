@@ -58,10 +58,12 @@
 </h2>
 <ul>
 <li><p>Host a single survey or multiple surveys in one app</p></li>
+<li><p>Design surveys and create json objects with a user-friendly <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a></p></li>
 <li><p>Dynamically populate field choices (i.e., response options) from a database table and create dependent fields (e.g., select a car brand and filter available models)</p></li>
-<li><p>URL query tokens and one-time access tokens for controlled survey distribution</p></li>
+<li><p>URL query tokens and one-time access tokens for secure survey distribution</p></li>
 <li><p>Asynchronous worker to handle database updates in near real-time</p></li>
 </ul>
+<p>🚧 <strong>Warning</strong>: These features are under construction and being moved from my <a href="https://github.com/dylanpieper/ShinySurveyJS-Template" class="external-link">template</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -111,9 +113,28 @@
 <span><span class="st">  ]</span></span>
 <span><span class="st">}'</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span>json <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>              theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
-<span>              theme_mode <span class="op">=</span> <span class="st">"dark"</span><span class="op">)</span></span></code></pre></div>
+<span></span>
+<span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
+<span>  json <span class="op">=</span> <span class="va">survey</span>,</span>
+<span>  table_name <span class="op">=</span> <span class="st">"survey_package_feedback"</span>,</span>
+<span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
+<span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
+<span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,</span>
+<span>    port <span class="op">=</span> <span class="fl">3838</span>,</span>
+<span>    workers <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>    sanitize_errors <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    autoreload <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    host <span class="op">=</span> <span class="st">"pooler.supabase.com"</span>,</span>
+<span>    port <span class="op">=</span> <span class="fl">5432</span>,</span>
+<span>    dbname <span class="op">=</span> <span class="st">"postgres"</span>,</span>
+<span>    user <span class="op">=</span> <span class="st">"username"</span>,</span>
+<span>    password <span class="op">=</span> <span class="st">"password"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 </div>

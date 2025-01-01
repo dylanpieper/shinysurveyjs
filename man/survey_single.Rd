@@ -2,30 +2,71 @@
 % Please edit documentation in R/server.R
 \name{survey_single}
 \alias{survey_single}
-\title{Create a single survey}
+\title{Create a single survey application}
 \usage{
 survey_single(
   json,
-  show_responses = TRUE,
+  table_name = "survey_responses",
+  show_response = TRUE,
   theme = "defaultV2",
   theme_color = "#003594",
   theme_mode = "light",
-  shiny_config = NULL
+  shiny_config = NULL,
+  db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
+    dbname = Sys.getenv("DBNAME"), user = Sys.getenv("USER"), password =
+    Sys.getenv("PASSWORD"))
 )
 }
 \arguments{
-\item{json}{Survey JSON string or object}
+\item{json}{Survey JSON string or object defining the survey structure}
 
-\item{show_responses}{Whether to show responses after submission}
+\item{table_name}{Name of the database table to store survey responses (default: "survey_responses")}
 
-\item{theme}{Theme name ("defaultV2" or "modern")}
+\item{show_response}{Logical. Whether to show responses after submission (default: TRUE)}
 
-\item{theme_color}{Primary color hex code for theme (optional)}
+\item{theme}{Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")}
+
+\item{theme_color}{Primary color hex code for theme customization}
 
 \item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
 
-\item{shiny_config}{Optional Shiny configuration parameters passed to configure_shiny()}
+\item{shiny_config}{Optional list. Shiny configuration parameters passed to configure_shiny()}
+
+\item{db_config}{List. Database connection parameters (defaults to environment variables):
+\itemize{
+\item host: Database host (default: HOST environment variable)
+\item port: Database port (default: PORT environment variable)
+\item dbname: Database name (default: DBNAME environment variable)
+\item user: Database username (default: USER environment variable)
+\item password: Database password (default: PASSWORD environment variable)
+}}
+}
+\value{
+A Shiny application object
 }
 \description{
-Create a single survey
+Creates a Shiny application for a single survey with database integration.
+Responses are stored in a PostgreSQL database with configurable table name.
+}
+\examples{
+\dontrun{
+# Basic usage with default settings
+survey <- survey_single(json_string)
+
+# Custom table name and theme
+feedback_survey <- survey_single(
+  json = feedback_json,
+  table_name = "customer_feedback",
+  theme = "modern",
+  theme_color = "#4CAF50"
+)
+
+# Multiple surveys with different configurations
+employee_survey <- survey_single(
+  json = employee_json,
+  table_name = "employee_satisfaction",
+  show_response = FALSE
+)
+}
+
 }

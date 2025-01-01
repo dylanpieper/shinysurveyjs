@@ -54,3 +54,21 @@ configure_shiny <- function(..., type_handlers = list()) {
 
   invisible(NULL)
 }
+
+#' Clean up application resources
+#'
+#' Closes the database connection pool and performs cleanup operations
+#' when the application is shutting down.
+#'
+#' @param session Shiny session object
+#'
+#' @importFrom shiny onStop
+#' @export
+cleanup_app <- function(session) {
+  shiny::onStop(function() {
+    if (exists("app_pool", envir = .GlobalEnv)) {
+      cleanup_pool(get("app_pool", envir = .GlobalEnv))
+      rm(app_pool, envir = .GlobalEnv)
+    }
+  }, session)
+}

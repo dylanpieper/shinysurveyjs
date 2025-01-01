@@ -4,7 +4,12 @@
 <url><loc>/index.html</loc></url>
 <url><loc>/LICENSE-text.html</loc></url>
 <url><loc>/LICENSE.html</loc></url>
+<url><loc>/reference/cleanup_app.html</loc></url>
+<url><loc>/reference/cleanup_pool.html</loc></url>
+<url><loc>/reference/configure_shiny.html</loc></url>
+<url><loc>/reference/db_ops.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/initialize_pool.html</loc></url>
 <url><loc>/reference/surveyUI.html</loc></url>
 <url><loc>/reference/survey_css.html</loc></url>
 <url><loc>/reference/survey_single.html</loc></url>

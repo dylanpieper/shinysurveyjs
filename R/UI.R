@@ -73,15 +73,6 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       htmltools::tags$script(htmltools::HTML(survey_single_js())),
       shinyjs::useShinyjs()
     ),
-    shiny::div(id = id),
-    shiny::conditionalPanel(
-      condition = "input.surveyComplete == true && output.showResponseTable == true",
-      shiny::div(
-        id = "surveyResponseContainer",
-        style = "margin-top: 30px;",
-        shiny::h4("Your Response:"),
-        DT::dataTableOutput("surveyResponseTable")
-      )
-    )
+    shiny::div(id = id)
   )
 }
