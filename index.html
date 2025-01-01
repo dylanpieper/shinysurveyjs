@@ -64,7 +64,7 @@
 <li><p>URL query tokens and one-time access tokens for secure survey distribution</p></li>
 <li><p>Asynchronous worker to handle database updates in near real-time</p></li>
 </ul>
-<p>🚧 <strong>Warning</strong>: These features are under construction and being moved from my <a href="https://github.com/dylanpieper/ShinySurveyJS-Template" class="external-link">template</a>.</p>
+<p>🚧 <strong>Warning</strong>: These features are under construction and being moved from the app <a href="https://github.com/dylanpieper/ShinySurveyJS-Template" class="external-link">template</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -79,7 +79,7 @@
 <div class="section level3">
 <h3 id="single-survey">Single Survey<a class="anchor" aria-label="anchor" href="#single-survey"></a>
 </h3>
-<p>Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table.</p>
+<p>Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table hosted on <a href="https://supabase.com/" class="external-link">Supabase</a>.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">shinysurveyjs</span><span class="op">)</span></span>
 <span></span>
@@ -129,7 +129,7 @@
 <span>  <span class="op">)</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    write_table <span class="op">=</span> <span class="st">"survey_package_feedback"</span>,</span>
-<span>    host <span class="op">=</span> <span class="st">"pooler.supabase.com"</span>,</span>
+<span>    host <span class="op">=</span> <span class="st">"aws-0-us-east-2.pooler.supabase.com"</span>,</span>
 <span>    port <span class="op">=</span> <span class="fl">5432</span>,</span>
 <span>    dbname <span class="op">=</span> <span class="st">"postgres"</span>,</span>
 <span>    user <span class="op">=</span> <span class="st">"username"</span>,</span>
