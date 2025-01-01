@@ -8,7 +8,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Design surveys and create json objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
 
--   Dynamically populate choices (i.e., item response options) from a database table and create dependent fields (e.g., select a car brand and filter available models)
+-   Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)
 
 -   URL query tokens and one-time access tokens for secure survey distribution
 
