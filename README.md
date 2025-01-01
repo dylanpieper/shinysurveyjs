@@ -77,12 +77,12 @@ survey_single(
     autoreload = FALSE
   ),
   db_config = list(
-    write_table = "survey_package_feedback",
     host = "aws-0-us-east-2.pooler.supabase.com",
     port = 5432,
     dbname = "postgres",
     user = "username",
-    password = "password"
+    password = "password",
+    write_table = "survey_package_feedback"
   )
 )
 ```
