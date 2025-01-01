@@ -13,10 +13,4 @@ A character string containing the JavaScript code for survey initialization
 Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
 This JavaScript code sets up event handlers for survey completion and enables communication between the survey and Shiny.
 }
-\examples{
-\dontrun{
-# Use in ui.R or similar:
-tags$script(survey_single_js())
-}
-}
 \keyword{internal}

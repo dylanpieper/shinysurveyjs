@@ -75,14 +75,23 @@ cleanup_app <- function(session) {
 
 #' Helper function to hide one message and show another
 #'
-#' @importFrom shinyjs hide show
+#' @importFrom shinyjs hide show toggle
 #' @param hide_id ID of the message to hide
 #' @param show_id ID of the message to show
 #' @param fade_time Time in seconds for fade animation (default: 1)
 #' @export
 hide_and_show_message <- function(hide_id, show_id, fade_time = 1) {
+  # First ensure the show element exists but is hidden
+  shinyjs::toggle(show_id, condition = FALSE, anim = FALSE)
+
+  # Then do the hide animation
   shinyjs::hide(hide_id, anim = TRUE, animType = "fade", time = fade_time)
-  shinyjs::show(show_id, anim = TRUE, animType = "fade", time = fade_time)
+
+  # Use setTimeout to delay the show animation
+  shinyjs::delay(fade_time * 1000, {
+    shinyjs::toggle(show_id, condition = TRUE, anim = TRUE,
+                    animType = "fade", time = fade_time)
+  })
 }
 
 #' Adjust Hexadecimal Color Values

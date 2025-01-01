@@ -22,13 +22,13 @@ The function modifies each RGB component while ensuring values stay within valid
 }
 \examples{
 # Lighten a color by 25\%
-adjust_hex("#003594")  # Default lighten by 25\%
+adjust_hex("#003594") # Default lighten by 25\%
 
 # Darken a color by 30\%
 adjust_hex("#003594", percent = 30, lighten = FALSE)
 
 # Lighten a color by 50\%
-adjust_hex("003594", percent = 50)  # Works with or without leading "#"
+adjust_hex("003594", percent = 50) # Works with or without leading "#"
 
 }
 \keyword{internal}

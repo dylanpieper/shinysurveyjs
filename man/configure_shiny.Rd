@@ -29,9 +29,9 @@ configure_shiny(
 
 # With custom type handler
 configure_shiny(
-  special_option = c(1,2,3),
+  special_option = c(1, 2, 3),
   type_handlers = list(
-    special_option = function(x) paste(x, collapse=",")
+    special_option = function(x) paste(x, collapse = ",")
   )
 )
 

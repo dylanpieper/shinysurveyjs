@@ -82,8 +82,6 @@
 #' }
 #'
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
-#' @importFrom shinycssloaders withSpinner
-#' @importFrom shinyjs show
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON
 #'
@@ -213,9 +211,9 @@ survey_single <- function(json,
 
     # Handle survey completion
     observeEvent(input$surveyComplete, {
+      shinyjs::show("savingDataMessage")
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
-      shinyjs::show("savingDataMessage")
     })
 
     # Handle survey responses with detailed error handling
@@ -241,8 +239,7 @@ survey_single <- function(json,
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
           warning(rv$error_message)
-          shinyjs::hide("savingDataMessage")
-          shinyjs::show("invalidQueryMessage")
+          hide_and_show_message("savingDataMessage", "invalidQueryMessage")
           return(NULL)
         }
 
@@ -269,14 +266,12 @@ survey_single <- function(json,
             rv$error_message <- NULL
 
             # Hide saving spinner and show response table
-            shinyjs::hide("savingDataMessage")
-            shinyjs::show("surveyResponseContainer")
+            hide_and_show_message("savingDataMessage", "surveyResponseContainer")
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
             warning(rv$error_message)
-            shinyjs::hide("savingDataMessage")
-            shinyjs::show("invalidQueryMessage")
+            hide_and_show_message("savingDataMessage", "invalidQueryMessage")
           }
         )
       }

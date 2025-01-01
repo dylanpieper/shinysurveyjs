@@ -109,8 +109,9 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       left: 0;
       width: 100%%;
       height: 100%%;
-      background: linear-gradient(135deg, %s, %s);
-      z-index: 9999;
+      background: %s;
+      opacity: 0.50;
+      z-index: 9998;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -120,11 +121,31 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       color: %s;
       text-align: center;
       letter-spacing: -0.01em;
+      transition: opacity 0.3s ease;
+    }
+
+    #surveyContainer {
+      position: relative;
+      z-index: 9999;
+    }
+
+    .sv-completedpage {
+      position: relative;
+      z-index: 10000;
+      background-color: %s !important;
+      opacity: 1 !important;
+    }
+
+    #surveyResponseContainer {
+      position: relative;
+      z-index: 10000;
+      background-color: %s;
+      opacity: 1 !important;
     }
 
     .loading-spinner {
-      width: 80px;        /* Reduced from 100px */
-      height: 80px;       /* Reduced from 100px */
+      width: 80px;
+      height: 80px;
       position: relative;
       margin-bottom: 20px;
     }
@@ -134,7 +155,7 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       content: '';
       position: absolute;
       inset: 0;
-      border: 4px solid %s;  /* Using primary color from sprintf */
+      border: 4px solid %s;
       border-radius: 50%%;
       animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
@@ -145,21 +166,31 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
 
     @keyframes pulse {
       0%% {
-        transform: scale(0.8);   /* Reduced from 0.5 */
+        transform: scale(0.8);
         opacity: 1;
       }
       50%% {
-        transform: scale(1.2);   /* Reduced from 1.5 */
+        transform: scale(1.2);
         opacity: 0.2;
       }
       100%% {
-        transform: scale(0.8);   /* Reduced from 0.5 */
+        transform: scale(0.8);
         opacity: 1;
       }
-    }",
-    dark_bg, dark_container_bg, # Background gradient colors
-    dark_text, # Text color
-    gradient_color2 # Spinner color
+    }
+
+    .sv-root-modern {
+      background-color: %s;
+      position: relative;
+      z-index: 9999;
+    }
+    ",
+    dark_bg,        # Background color
+    dark_text,      # Text color
+    dark_container_bg, # Completed page background
+    dark_container_bg, # Response container background
+    gradient_color2,   # Spinner color
+    dark_container_bg  # Survey root background
   )
 
   # Animation keyframes
@@ -203,6 +234,7 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
     div(
       id = "waitingMessage",
       class = "message-container",
+      style = "display: none;",
       div(class = "loading-spinner"),
       div(class = "loading-text", "Loading Survey")
     ),

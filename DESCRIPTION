@@ -17,5 +17,4 @@ Imports:
     jsonlite,
     sass,
     shiny,
-    shinyjs,
-    shinycssloaders
+    shinyjs

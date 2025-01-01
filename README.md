@@ -57,12 +57,17 @@ survey <- '{
           "visibleIf": "{rating} notempty",
           "title": "Why did you rate it {rating} stars?",
           "rows": 2
+        },
+        {
+          "type": "html",
+          "name": "lowRatingMessage",
+          "visibleIf": "{rating} <= 2",
+          "html": "I am sorry you had a poor experience. Please reach out to me at <b>dylanpieper@gmail.com</b> so I can help improve your experience."
         }
       ]
     }
   ]
 }'
-
 
 survey_single(
   json = survey,

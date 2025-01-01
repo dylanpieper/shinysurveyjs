@@ -5,18 +5,10 @@
 #'
 #' @return A character string containing the JavaScript code for survey initialization
 #' @keywords internal
-#'
-#' @examples
-#' \dontrun{
-#' # Use in ui.R or similar:
-#' tags$script(survey_single_js())
-#' }
 survey_single_js <- function() {
   "$(document).ready(function() {
     var survey;
 
-    // Hide loading message immediately for local surveys
-    $('#waitingMessage').hide();
     $('#surveyContainer').show();
 
     function initializeSurvey(surveyJSON) {
@@ -40,12 +32,20 @@ survey_single_js <- function() {
                 // First trigger completion to show loading state
                 Shiny.setInputValue('surveyComplete', true);
 
-                // Then process and send the data
-                setTimeout(function() {
-                    // Keep the container visible
-                    $('#surveyContainer').show();
-                    Shiny.setInputValue('surveyData', JSON.stringify(result.data));
-                }, 100);
+                // Keep the container visible
+                $('#surveyContainer').show();
+
+                // Show saving message with spinner
+                $('#savingDataMessage').show();
+
+                // Set z-index for completion page
+                $('.sv-completedpage').css({
+                    'position': 'relative',
+                    'z-index': '10000',
+                    'opacity': '1'
+                });
+
+                Shiny.setInputValue('surveyData', JSON.stringify(result.data));
             });
 
             // Initialize jQuery Survey
@@ -61,7 +61,6 @@ survey_single_js <- function() {
             console.error('Error initializing survey:', error);
             console.error(error.stack);
             // Show error message if survey initialization fails
-            $('#waitingMessage').hide();
             $('#surveyNotDefinedMessage').show();
         }
     }
