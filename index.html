@@ -108,12 +108,17 @@
 <span><span class="st">          "visibleIf": "{rating} notempty",</span></span>
 <span><span class="st">          "title": "Why did you rate it {rating} stars?",</span></span>
 <span><span class="st">          "rows": 2</span></span>
+<span><span class="st">        },</span></span>
+<span><span class="st">        {</span></span>
+<span><span class="st">          "type": "html",</span></span>
+<span><span class="st">          "name": "lowRatingMessage",</span></span>
+<span><span class="st">          "visibleIf": "{rating} &lt;= 2",</span></span>
+<span><span class="st">          "html": "I am sorry you had a poor experience. Please reach out to me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can help improve your experience."</span></span>
 <span><span class="st">        }</span></span>
 <span><span class="st">      ]</span></span>
 <span><span class="st">    }</span></span>
 <span><span class="st">  ]</span></span>
 <span><span class="st">}'</span></span>
-<span></span>
 <span></span>
 <span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
 <span>  json <span class="op">=</span> <span class="va">survey</span>,</span>
