@@ -110,8 +110,8 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       width: 100%%;
       height: 100%%;
       background: %s;
-      opacity: 0.50;
-      z-index: 9998;
+      opacity: 0.90;
+      z-index: 10000; /* Increased z-index */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -122,32 +122,42 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       text-align: center;
       letter-spacing: -0.01em;
       transition: opacity 0.3s ease;
+      padding: clamp(1rem, 5vw, 2rem);
+      box-sizing: border-box;
+      overflow: hidden; /* Prevent content overflow */
+    }
+
+    /* Content wrapper to ensure proper containment */
+    .message-container > div {
+      max-width: min(90vw, 600px);
+      margin: 0 auto;
+      padding: 1rem;
     }
 
     #surveyContainer {
       position: relative;
-      z-index: 9999;
+      z-index: 1;
     }
 
     .sv-completedpage {
       position: relative;
-      z-index: 10000;
+      z-index: 1;
       background-color: %s !important;
       opacity: 1 !important;
     }
 
     #surveyResponseContainer {
       position: relative;
-      z-index: 10000;
+      z-index: 1;
       background-color: %s;
       opacity: 1 !important;
     }
 
     .loading-spinner {
-      width: 80px;
-      height: 80px;
+      width: min(80px, 15vw);
+      height: min(80px, 15vw);
       position: relative;
-      margin-bottom: 20px;
+      margin: clamp(0.5rem, 3vw, 1.5rem) auto;
     }
 
     .loading-spinner::before,
@@ -155,7 +165,7 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       content: '';
       position: absolute;
       inset: 0;
-      border: 4px solid %s;
+      border: min(4px, 0.8vw) solid %s;
       border-radius: 50%%;
       animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
@@ -164,6 +174,7 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       animation-delay: -1s;
     }
 
+    /* Keep the original pulsating animation */
     @keyframes pulse {
       0%% {
         transform: scale(0.8);
@@ -182,7 +193,36 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
     .sv-root-modern {
       background-color: %s;
       position: relative;
-      z-index: 9999;
+      z-index: 1;
+    }
+
+    /* Error message containment */
+    .error-message {
+      font-size: clamp(1rem, 4vw, 1.5rem);
+      font-weight: 600;
+      color: %s;
+      padding: clamp(0.5rem, 2vw, 1rem);
+      border-radius: 8px;
+      background: %s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      width: 100%%;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* Media query for better mobile containment */
+    @media screen and (max-width: 480px) {
+      .message-container {
+        padding: 0.75rem;
+      }
+
+      .message-container > div {
+        padding: 0.5rem;
+      }
+
+      .loading-spinner {
+        margin: 0.5rem auto;
+      }
     }
     ",
     dark_bg,        # Background color
@@ -190,7 +230,9 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
     dark_container_bg, # Completed page background
     dark_container_bg, # Response container background
     gradient_color2,   # Spinner color
-    dark_container_bg  # Survey root background
+    dark_container_bg,  # Survey root background
+    dark_text,      # Error message text color
+    dark_container_bg  # Error message background
   )
 
   # Animation keyframes
