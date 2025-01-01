@@ -1,10 +1,9 @@
-#' Create a single survey application
+#' Create a Single Survey
 #'
 #' Creates a Shiny application for a single survey with database integration.
 #' Responses are stored in a PostgreSQL database with configurable table name.
 #'
 #' @param json Survey JSON string or object defining the survey structure
-#' @param table_name Name of the database table to store survey responses (default: "survey_responses")
 #' @param show_response Logical. Whether to show responses after submission (default: TRUE)
 #' @param theme Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")
 #' @param theme_color Primary color hex code for theme customization
@@ -14,31 +13,71 @@
 #'   \itemize{
 #'     \item host: Database host (default: HOST environment variable)
 #'     \item port: Database port (default: PORT environment variable)
-#'     \item dbname: Database name (default: DBNAME environment variable)
+#'     \item db_name: Database name (default: DB_NAME environment variable)
 #'     \item user: Database username (default: USER environment variable)
 #'     \item password: Database password (default: PASSWORD environment variable)
+#'     \item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
 #'   }
 #'
 #' @return A Shiny application object
 #'
 #' @examples
 #' \dontrun{
-#' # Basic usage with default settings
-#' survey <- survey_single(json_string)
+#' library(shinysurveyjs)
 #'
-#' # Custom table name and theme
-#' feedback_survey <- survey_single(
-#'   json = feedback_json,
-#'   table_name = "customer_feedback",
-#'   theme = "modern",
-#'   theme_color = "#4CAF50"
-#' )
+#' # Define a package feedback survey with rating and conditional comment
+#' survey <- '{
+#'   "title": "R Package Feedback",
+#'   "pages": [
+#'     {
+#'       "name": "userInfo",
+#'       "elements": [
+#'         {
+#'           "type": "rating",
+#'           "name": "rating",
+#'           "title": "Please rate the shinysurveyjs 📦:",
+#'           "rateValues": [
+#'             {"value": 1, "text": "⭐"},
+#'             {"value": 2, "text": "⭐⭐"},
+#'             {"value": 3, "text": "⭐⭐⭐"},
+#'             {"value": 4, "text": "⭐⭐⭐⭐"},
+#'             {"value": 5, "text": "⭐⭐⭐⭐⭐"}
+#'           ],
+#'           "rateMax": 5
+#'         },
+#'         {
+#'           "type": "comment",
+#'           "name": "feedback",
+#'           "visibleIf": "{rating} notempty",
+#'           "title": "Why did you rate it {rating} stars?",
+#'           "rows": 2
+#'         }
+#'       ]
+#'     }
+#'   ]
+#' }'
 #'
-#' # Multiple surveys with different configurations
-#' employee_survey <- survey_single(
-#'   json = employee_json,
-#'   table_name = "employee_satisfaction",
-#'   show_response = FALSE
+#' # Create and launch the survey application
+#' survey_single(
+#'   json = survey,
+#'   show_response = TRUE,
+#'   theme_color = "#00AD6E",
+#'   theme_mode = "dark",
+#'   shiny_config = list(
+#'     host = "0.0.0.0",
+#'     port = 3838,
+#'     workers = 100,
+#'     sanitize_errors = TRUE,
+#'     autoreload = FALSE
+#'   ),
+#'   db_config = list(
+#'     host = "pooler.supabase.com",
+#'     port = 5432,
+#'     dbname = "postgres",
+#'     user = Sys.getenv("DB_USER"),
+#'     password = Sys.getenv("DB_PASSWORD"),
+#'     write_table = "survey_package_feedback"
+#'   )
 #' )
 #' }
 #'
@@ -48,7 +87,6 @@
 #' @importFrom jsonlite fromJSON
 #' @export
 survey_single <- function(json,
-                          table_name = "survey_responses",
                           show_response = TRUE,
                           theme = "defaultV2",
                           theme_color = "#003594",
@@ -57,9 +95,10 @@ survey_single <- function(json,
                           db_config = list(
                             host = Sys.getenv("HOST"),
                             port = as.numeric(Sys.getenv("PORT")),
-                            dbname = Sys.getenv("DBNAME"),
+                            db_name = Sys.getenv("DB_NAME"),
                             user = Sys.getenv("USER"),
-                            password = Sys.getenv("PASSWORD")
+                            password = Sys.getenv("PASSWORD"),
+                            write_table = Sys.getenv("WRITE_TABLE")
                           )) {
 
   # Input validation
@@ -67,8 +106,8 @@ survey_single <- function(json,
     stop("Survey JSON is required")
   }
 
-  if (!is.character(table_name) || nchar(table_name) == 0) {
-    stop("table_name must be a non-empty character string")
+  if (!is.character(db_config$write_table) || nchar(db_config$write_table) == 0) {
+    stop("db_config$write_table must be a non-empty character string")
   }
 
   # Apply Shiny configuration if provided
@@ -144,11 +183,11 @@ survey_single <- function(json,
 
         # Store in database
         tryCatch({
-          if (!db_ops$check_table_exists(table_name)) {
-            db_ops$create_survey_data_table(table_name, parsed_data)
-            db_ops$update_survey_data_table(table_name, parsed_data)
+          if (!db_ops$check_table_exists(db_config$write_table)) {
+            db_ops$create_survey_data_table(db_config$write_table, parsed_data)
+            db_ops$update_survey_data_table(db_config$write_table, parsed_data)
           } else {
-            db_ops$update_survey_data_table(table_name, parsed_data)
+            db_ops$update_survey_data_table(db_config$write_table, parsed_data)
           }
         }, error = function(e) {
           warning("Error writing to database: ", e$message)

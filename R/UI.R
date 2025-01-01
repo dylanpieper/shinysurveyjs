@@ -1,4 +1,4 @@
-#' Create the survey UI
+#' Create Survey UI
 #'
 #' @param id Optional id for the survey div container (default is "surveyContainer")
 #' @param theme Theme name ("defaultV2" or "modern")

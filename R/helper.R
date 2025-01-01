@@ -55,7 +55,7 @@ configure_shiny <- function(..., type_handlers = list()) {
   invisible(NULL)
 }
 
-#' Clean up application resources
+#' Clean Application Resources
 #'
 #' Closes the database connection pool and performs cleanup operations
 #' when the application is shutting down.

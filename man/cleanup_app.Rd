@@ -2,7 +2,7 @@
 % Please edit documentation in R/helper.R
 \name{cleanup_app}
 \alias{cleanup_app}
-\title{Clean up application resources}
+\title{Clean Application Resources}
 \usage{
 cleanup_app(session)
 }

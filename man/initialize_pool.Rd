@@ -7,7 +7,7 @@
 initialize_pool(
   host = NULL,
   port = NULL,
-  dbname = NULL,
+  db_name = NULL,
   user = NULL,
   password = NULL,
   min_size = 1,
@@ -19,7 +19,7 @@ initialize_pool(
 
 \item{port}{Database port}
 
-\item{dbname}{Database name}
+\item{db_name}{Database name}
 
 \item{user}{Database username}
 

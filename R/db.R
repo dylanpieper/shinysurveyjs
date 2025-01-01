@@ -4,27 +4,29 @@
 #'
 #' @param host Database host
 #' @param port Database port
-#' @param dbname Database name
+#' @param db_name Database name
 #' @param user Database username
 #' @param password Database password
 #' @param min_size Minimum pool size (default: 1)
 #' @param max_size Maximum pool size (default: Inf)
 #'
 #' @return A database pool object
+#' @importFrom pool dbPool poolClose
+#' @importFrom RPostgres Postgres
 #' @export
 initialize_pool <- function(host = NULL,
                             port = NULL,
-                            dbname = NULL,
+                            db_name = NULL,
                             user = NULL,
                             password = NULL,
                             min_size = 1,
                             max_size = Inf) {
-  if (all(!is.null(c(host, port, dbname, user, password)))) {
+  if (all(!is.null(c(host, port, db_name, user, password)))) {
     pool <- pool::dbPool(
       RPostgres::Postgres(),
       host = host,
       port = port,
-      dbname = dbname,
+      dbname = db_name,
       user = user,
       password = password,
       minSize = min_size,
@@ -42,6 +44,7 @@ initialize_pool <- function(host = NULL,
 #' Closes the database pool and removes lock files.
 #'
 #' @param pool Database pool object to close
+#' @importFrom pool dbIsValid poolClose
 #' @export
 cleanup_pool <- function(pool) {
   if (!is.null(pool) && pool::dbIsValid(pool)) {
@@ -64,7 +67,8 @@ cleanup_pool <- function(pool) {
 #' @field pool Pool object. Database connection pool
 #'
 #' @importFrom R6 R6Class
-#' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit dbRollback dbIsValid dbExistsTable dbWriteTable
+#' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
+#' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
 #' @importFrom pool poolCheckout poolReturn
 #'
 #' @export
