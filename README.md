@@ -14,7 +14,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Asynchronous worker to handle database updates in near real-time
 
-🚧 **Warning**: These features are under construction and being moved from my [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
+🚧 **Warning**: These features are under construction and being moved from the app [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
 
 ## Installation
 
@@ -27,7 +27,7 @@ pak::pkg_install("dylanpieper/shinysurveyjs")
 
 ### Single Survey
 
-Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table.
+Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table hosted on [Supabase](https://supabase.com/).
 
 ``` r
 library(shinysurveyjs)
@@ -78,7 +78,7 @@ survey_single(
   ),
   db_config = list(
     write_table = "survey_package_feedback",
-    host = "pooler.supabase.com",
+    host = "aws-0-us-east-2.pooler.supabase.com",
     port = 5432,
     dbname = "postgres",
     user = "username",
