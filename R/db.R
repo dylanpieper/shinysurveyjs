@@ -167,26 +167,32 @@ db_ops <- R6::R6Class(
         DBI::dbCommit(conn)
 
         return(result)
-
       }, error = function(e) {
         if (!is.null(conn) && DBI::dbIsValid(conn)) {
-          tryCatch({
-            DBI::dbRollback(conn)
-          }, error = function(rollback_error) {
-            private$log_message(sprintf("Rollback error: %s", rollback_error$message))
-          })
+          tryCatch(
+            {
+              DBI::dbRollback(conn)
+            },
+            error = function(rollback_error) {
+              private$log_message(sprintf("Rollback error: %s", rollback_error$message))
+            }
+          )
         }
         private$log_message(sprintf("%s: %s", error_message, e$message))
         stop(private$format_message(sprintf("%s: %s", error_message, e$message)))
-
       }, finally = {
         if (!is.null(conn)) {
-          tryCatch({
-            pool::poolReturn(conn)
-          }, error = function(return_error) {
-            private$log_message(sprintf("Error returning connection to pool: %s",
-                                        return_error$message))
-          })
+          tryCatch(
+            {
+              pool::poolReturn(conn)
+            },
+            error = function(return_error) {
+              private$log_message(sprintf(
+                "Error returning connection to pool: %s",
+                return_error$message
+              ))
+            }
+          )
         }
       })
     },
@@ -250,38 +256,45 @@ db_ops <- R6::R6Class(
       invisible(table_name)
     }
   ),
-
   private = list(
     log_message = function(msg) {
       message(private$format_message(msg))
     },
-
     format_message = function(msg) {
       sprintf("[Session %s] %s", self$session_id, msg)
     },
-
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
-
     generate_column_definitions = function(data) {
       vapply(names(data), function(col) {
         type <- private$get_postgres_type(data[[col]])
-        sprintf("%s %s",
-                DBI::dbQuoteIdentifier(self$pool, col),
-                type)
+        sprintf(
+          "%s %s",
+          DBI::dbQuoteIdentifier(self$pool, col),
+          type
+        )
       }, character(1))
     },
-
     get_postgres_type = function(vector) {
       if (is.numeric(vector)) {
-        if (all(vector == floor(vector), na.rm = TRUE)) return("INTEGER")
+        if (all(vector == floor(vector), na.rm = TRUE)) {
+          return("INTEGER")
+        }
         return("NUMERIC")
       }
-      if (is.logical(vector)) return("BOOLEAN")
-      if (inherits(vector, "POSIXt")) return("TIMESTAMP")
-      if (is.factor(vector)) return("TEXT")
-      if (is.list(vector)) return("JSONB")
+      if (is.logical(vector)) {
+        return("BOOLEAN")
+      }
+      if (inherits(vector, "POSIXt")) {
+        return("TIMESTAMP")
+      }
+      if (is.factor(vector)) {
+        return("TEXT")
+      }
+      if (is.list(vector)) {
+        return("JSONB")
+      }
       return("TEXT")
     }
   )

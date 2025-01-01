@@ -82,9 +82,19 @@
 #' }
 #'
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
+#' @importFrom shinycssloaders withSpinner
 #' @importFrom shinyjs show
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON
+#'
+#' @param json Survey JSON string or object
+#' @param show_response Logical to show responses
+#' @param theme Theme name
+#' @param theme_color Primary color hex
+#' @param theme_mode Color mode
+#' @param shiny_config Shiny configuration
+#' @param db_config Database configuration
+#' @return Shiny application object
 #' @export
 survey_single <- function(json,
                           show_response = TRUE,
@@ -100,8 +110,7 @@ survey_single <- function(json,
                             password = Sys.getenv("PASSWORD"),
                             write_table = Sys.getenv("WRITE_TABLE")
                           )) {
-
-  # Input validation
+  # Validate inputs with detailed error messages
   if (missing(json) || is.null(json)) {
     stop("Survey JSON is required")
   }
@@ -110,14 +119,31 @@ survey_single <- function(json,
     stop("db_config$write_table must be a non-empty character string")
   }
 
+  # Validate database configuration
+  required_db_fields <- c("host", "port", "db_name", "user", "password")
+  missing_fields <- required_db_fields[!required_db_fields %in% names(db_config)]
+  if (length(missing_fields) > 0) {
+    stop(sprintf(
+      "Missing required database configuration fields: %s",
+      paste(missing_fields, collapse = ", ")
+    ))
+  }
+
   # Apply Shiny configuration if provided
   if (!is.null(shiny_config)) {
     do.call(configure_shiny, shiny_config)
   }
 
-  # Initialize global database pool if not exists
+  # Initialize global database pool with error handling
   if (!exists("app_pool", envir = .GlobalEnv)) {
-    assign("app_pool", do.call(initialize_pool, db_config), envir = .GlobalEnv)
+    tryCatch(
+      {
+        assign("app_pool", do.call(initialize_pool, db_config), envir = .GlobalEnv)
+      },
+      error = function(e) {
+        stop(sprintf("Failed to initialize database pool: %s", e$message))
+      }
+    )
   }
 
   # Define UI
@@ -130,93 +156,165 @@ survey_single <- function(json,
         shiny::div(
           id = "surveyResponseContainer",
           style = "display: none;",
-          shiny::h3("Survey Responses"),
-          DT::DTOutput("surveyResponseTable")
+          shiny::h3("Your Response:"),
+          shiny::div(
+            class = "nested-spinner-container",
+            shinycssloaders::withSpinner(
+              DT::DTOutput("surveyResponseTable"),
+              type = 8,
+              color = theme_color,
+              size = 1,
+              proxy.height = "200px"
+            )
+          )
         )
       )
     )
   }
 
-  # Define server
+  # Define server with enhanced error handling
   server <- function(input, output, session) {
     rv <- shiny::reactiveValues(
-      survey_responses = NULL
+      survey_responses = NULL,
+      loading = FALSE,
+      survey_completed = FALSE,
+      error_message = NULL
     )
 
-    # Initialize database operations
-    db_ops <- db_ops$new(get("app_pool", envir = .GlobalEnv), session$token)
+    # Initialize database operations with error logging
+    db_ops <- tryCatch(
+      {
+        db_ops$new(get("app_pool", envir = .GlobalEnv), session$token)
+      },
+      error = function(e) {
+        warning(sprintf("Failed to initialize db_ops: %s", e$message))
+        NULL
+      }
+    )
 
-    # Load survey
+    # Load survey with error handling
     shiny::observe({
-      tryCatch({
-        survey_obj <- if (is.character(json)) {
-          jsonlite::fromJSON(json, simplifyVector = FALSE)
-        } else {
-          json
+      tryCatch(
+        {
+          survey_obj <- if (is.character(json)) {
+            jsonlite::fromJSON(json, simplifyVector = FALSE)
+          } else {
+            json
+          }
+          session$sendCustomMessage("loadSurvey", survey_obj)
+        },
+        error = function(e) {
+          rv$error_message <- sprintf("Error loading survey: %s", e$message)
+          warning(rv$error_message)
+          shinyjs::show("surveyNotDefinedMessage")
         }
-        session$sendCustomMessage("loadSurvey", survey_obj)
-      }, error = function(e) {
-        warning("Error loading survey JSON: ", e$message)
-      })
+      )
     })
 
-    # Handle survey responses
-    shiny::observeEvent(input$surveyData, {
-      parsed_data <- tryCatch({
-        if (is.character(input$surveyData)) {
-          jsonlite::fromJSON(input$surveyData)
-        } else {
-          input$surveyData
+    # Handle survey completion
+    observeEvent(input$surveyComplete, {
+      rv$survey_completed <- TRUE
+      rv$loading <- TRUE
+      shinyjs::show("savingDataMessage")
+    })
+
+    # Handle survey responses with detailed error handling
+    observeEvent(input$surveyData, {
+      # Parse survey data
+      parsed_data <- tryCatch(
+        {
+          if (is.character(input$surveyData)) {
+            jsonlite::fromJSON(input$surveyData)
+          } else {
+            input$surveyData
+          }
+        },
+        error = function(e) {
+          rv$error_message <- sprintf("Error parsing survey data: %s", e$message)
+          warning(rv$error_message)
+          return(NULL)
         }
-      }, error = function(e) {
-        warning("Error parsing survey data: ", e$message)
-        return(NULL)
-      })
+      )
 
       if (!is.null(parsed_data)) {
-        # Convert to data frame if necessary
-        if (!is.data.frame(parsed_data)) {
-          parsed_data <- as.data.frame(t(unlist(parsed_data)),
-                                       stringsAsFactors = FALSE)
+        # Validate parsed data
+        if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
+          rv$error_message <- "Invalid data format: expected data frame or list"
+          warning(rv$error_message)
+          shinyjs::hide("savingDataMessage")
+          shinyjs::show("invalidQueryMessage")
+          return(NULL)
         }
-        rv$survey_responses <- parsed_data
 
-        # Store in database
-        tryCatch({
-          if (!db_ops$check_table_exists(db_config$write_table)) {
-            db_ops$create_survey_data_table(db_config$write_table, parsed_data)
+        # Convert list to data frame if necessary
+        if (is.list(parsed_data) && !is.data.frame(parsed_data)) {
+          parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
+        }
+
+        # Store in database with error handling
+        tryCatch(
+          {
+            if (is.null(db_ops)) {
+              stop("Database operations not initialized")
+            }
+
+            if (!db_ops$check_table_exists(db_config$write_table)) {
+              db_ops$create_survey_data_table(db_config$write_table, parsed_data)
+            }
+
             db_ops$update_survey_data_table(db_config$write_table, parsed_data)
-          } else {
-            db_ops$update_survey_data_table(db_config$write_table, parsed_data)
+
+            # Update reactive value after successful database operation
+            rv$survey_responses <- parsed_data
+            rv$error_message <- NULL
+
+            # Hide saving spinner and show response table
+            shinyjs::hide("savingDataMessage")
+            shinyjs::show("surveyResponseContainer")
+          },
+          error = function(e) {
+            rv$error_message <- sprintf("Database error: %s", e$message)
+            warning(rv$error_message)
+            shinyjs::hide("savingDataMessage")
+            shinyjs::show("invalidQueryMessage")
           }
-        }, error = function(e) {
-          warning("Error writing to database: ", e$message)
-        })
-
-        # Show response table if enabled
-        if (show_response) {
-          shinyjs::show("surveyResponseContainer")
-        }
+        )
       }
+
+      rv$loading <- FALSE
     })
 
-    # Render response table
+    # Render response table with error handling
     output$surveyResponseTable <- DT::renderDT({
+      shiny::req(rv$survey_completed)
+      shiny::validate(need(!rv$loading, "Loading data..."))
       shiny::req(rv$survey_responses)
+
+      if (!is.null(rv$error_message)) {
+        return(NULL)
+      }
+
       DT::datatable(
         rv$survey_responses,
         options = list(
           pageLength = 5,
           scrollX = TRUE,
-          dom = 'tp'
+          dom = "tp"
         ),
         rownames = FALSE
       )
     })
 
     # Control response table visibility
-    output$showResponseTable <- shiny::reactive(show_response)
+    output$showResponseTable <- shiny::reactive({
+      show_response && rv$survey_completed && is.null(rv$error_message)
+    })
     shiny::outputOptions(output, "showResponseTable", suspendWhenHidden = FALSE)
+
+    # Clean up on session end
+    session$onSessionEnded(function() {
+      cleanup_app(session)
+    })
   }
 
   # Create and return Shiny app

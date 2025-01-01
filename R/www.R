@@ -13,33 +13,62 @@
 #' }
 survey_single_js <- function() {
   "$(document).ready(function() {
-  var survey;
-  function initializeSurvey(surveyJSON) {
-    try {
-      if (typeof surveyJSON === 'string') {
-        surveyJSON = JSON.parse(surveyJSON);
-      }
-      // Update document title if available
-      if (surveyJSON.title) {
-        document.title = surveyJSON.title;
-      }
-      $('#surveyContainer').empty();
-      // Create the survey
-      survey = new Survey.Model(surveyJSON);
-      survey.onComplete.add(function(result) {
-        Shiny.setInputValue('surveyData', JSON.stringify(result.data));
-        Shiny.setInputValue('surveyComplete', true);
-      });
-      // Initialize jQuery Survey
-      $('#surveyContainer').Survey({ model: survey });
-    } catch (error) {
-      console.error('Error initializing survey:', error);
-      console.error(error.stack);
+    var survey;
+
+    // Hide loading message immediately for local surveys
+    $('#waitingMessage').hide();
+    $('#surveyContainer').show();
+
+    function initializeSurvey(surveyJSON) {
+        try {
+            if (typeof surveyJSON === 'string') {
+                surveyJSON = JSON.parse(surveyJSON);
+            }
+
+            // Update document title if available
+            if (surveyJSON.title) {
+                document.title = surveyJSON.title;
+            }
+
+            // Clear the container without removing it
+            $('#surveyContainer').empty();
+
+            // Create the survey
+            survey = new Survey.Model(surveyJSON);
+
+            survey.onComplete.add(function(result) {
+                // First trigger completion to show loading state
+                Shiny.setInputValue('surveyComplete', true);
+
+                // Then process and send the data
+                setTimeout(function() {
+                    // Keep the container visible
+                    $('#surveyContainer').show();
+                    Shiny.setInputValue('surveyData', JSON.stringify(result.data));
+                }, 100);
+            });
+
+            // Initialize jQuery Survey
+            $('#surveyContainer').Survey({
+                model: survey,
+                onComplete: function(survey, options) {
+                    // Ensure container stays visible after completion
+                    $('#surveyContainer').show();
+                }
+            });
+
+        } catch (error) {
+            console.error('Error initializing survey:', error);
+            console.error(error.stack);
+            // Show error message if survey initialization fails
+            $('#waitingMessage').hide();
+            $('#surveyNotDefinedMessage').show();
+        }
     }
-  }
-  Shiny.addCustomMessageHandler('loadSurvey', function(surveyJSON) {
-    initializeSurvey(surveyJSON);
-  });
+
+    Shiny.addCustomMessageHandler('loadSurvey', function(surveyJSON) {
+        initializeSurvey(surveyJSON);
+    });
 });"
 }
 
@@ -77,8 +106,7 @@ survey_css <- function(
     background = "#ffffff",
     foreground = "#404040",
     mode = "light",
-    css_string = NULL
-) {
+    css_string = NULL) {
   if (!is.null(css_string)) {
     return(css_string)
   }
@@ -91,13 +119,13 @@ survey_css <- function(
     b <- strtoi(substr(hex, 5, 6), 16)
 
     if (lighten) {
-      r <- min(255, r + (255 - r) * percent/100)
-      g <- min(255, g + (255 - g) * percent/100)
-      b <- min(255, b + (255 - b) * percent/100)
+      r <- min(255, r + (255 - r) * percent / 100)
+      g <- min(255, g + (255 - g) * percent / 100)
+      b <- min(255, b + (255 - b) * percent / 100)
     } else {
-      r <- max(0, r * (1 - percent/100))
-      g <- max(0, g * (1 - percent/100))
-      b <- max(0, b * (1 - percent/100))
+      r <- max(0, r * (1 - percent / 100))
+      g <- max(0, g * (1 - percent / 100))
+      b <- max(0, b * (1 - percent / 100))
     }
 
     sprintf("#%02x%02x%02x", round(r), round(g), round(b))
@@ -120,7 +148,8 @@ survey_css <- function(
     hover_background <- "#f5f5f5"
   }
 
-  sprintf("
+  sprintf(
+    "
 .sd-root-modern {
     /* Main colors */
     --primary: %s;
@@ -191,7 +220,7 @@ survey_css <- function(
 .sd-header__text .sd-title {
     color: var(--foreground);
 }",
-primary, primary_light, primary_dark, primary_foreground,
-background, foreground, input_background, border_color, hover_background
+    primary, primary_light, primary_dark, primary_foreground,
+    background, foreground, input_background, border_color, hover_background
   )
 }

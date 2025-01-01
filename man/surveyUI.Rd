@@ -2,7 +2,7 @@
 % Please edit documentation in R/UI.R
 \name{surveyUI}
 \alias{surveyUI}
-\title{Create Survey UI}
+\title{Create Survey UI with Message Components}
 \usage{
 surveyUI(
   id = "surveyContainer",
@@ -24,5 +24,5 @@ surveyUI(
 A tagList containing survey dependencies and container
 }
 \description{
-Create Survey UI
+Create Survey UI with Message Components
 }

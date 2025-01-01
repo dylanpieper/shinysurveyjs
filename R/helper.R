@@ -17,9 +17,9 @@
 #'
 #' # With custom type handler
 #' configure_shiny(
-#'   special_option = c(1,2,3),
+#'   special_option = c(1, 2, 3),
 #'   type_handlers = list(
-#'     special_option = function(x) paste(x, collapse=",")
+#'     special_option = function(x) paste(x, collapse = ",")
 #'   )
 #' )
 #'
@@ -71,4 +71,58 @@ cleanup_app <- function(session) {
       rm(app_pool, envir = .GlobalEnv)
     }
   }, session)
+}
+
+#' Helper function to hide one message and show another
+#'
+#' @importFrom shinyjs hide show
+#' @param hide_id ID of the message to hide
+#' @param show_id ID of the message to show
+#' @param fade_time Time in seconds for fade animation (default: 1)
+#' @export
+hide_and_show_message <- function(hide_id, show_id, fade_time = 1) {
+  shinyjs::hide(hide_id, anim = TRUE, animType = "fade", time = fade_time)
+  shinyjs::show(show_id, anim = TRUE, animType = "fade", time = fade_time)
+}
+
+#' Adjust Hexadecimal Color Values
+#'
+#' @description
+#' Adjusts a hexadecimal color value by lightening or darkening it by a specified percentage.
+#' The function modifies each RGB component while ensuring values stay within valid ranges (0-255).
+#'
+#' @param hex Character string. A hexadecimal color code (e.g., "#003594" or "003594")
+#' @param percent Numeric. Percentage to adjust the color by (default: 25)
+#' @param lighten Logical. If TRUE, lightens the color; if FALSE, darkens it (default: TRUE)
+#'
+#' @return Character string. The adjusted hexadecimal color code with leading "#"
+#'
+#' @examples
+#' # Lighten a color by 25%
+#' adjust_hex("#003594") # Default lighten by 25%
+#'
+#' # Darken a color by 30%
+#' adjust_hex("#003594", percent = 30, lighten = FALSE)
+#'
+#' # Lighten a color by 50%
+#' adjust_hex("003594", percent = 50) # Works with or without leading "#"
+#'
+#' @keywords internal
+adjust_hex <- function(hex, percent = 25, lighten = TRUE) {
+  hex <- gsub("^#", "", hex)
+  r <- strtoi(substr(hex, 1, 2), 16)
+  g <- strtoi(substr(hex, 3, 4), 16)
+  b <- strtoi(substr(hex, 5, 6), 16)
+
+  if (lighten) {
+    r <- min(255, r + (255 - r) * percent / 100)
+    g <- min(255, g + (255 - g) * percent / 100)
+    b <- min(255, b + (255 - b) * percent / 100)
+  } else {
+    r <- max(0, r * (1 - percent / 100))
+    g <- max(0, g * (1 - percent / 100))
+    b <- max(0, b * (1 - percent / 100))
+  }
+
+  sprintf("#%02x%02x%02x", round(r), round(g), round(b))
 }

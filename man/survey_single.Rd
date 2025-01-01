@@ -17,30 +17,24 @@ survey_single(
 )
 }
 \arguments{
-\item{json}{Survey JSON string or object defining the survey structure}
+\item{json}{Survey JSON string or object}
 
-\item{show_response}{Logical. Whether to show responses after submission (default: TRUE)}
+\item{show_response}{Logical to show responses}
 
-\item{theme}{Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")}
+\item{theme}{Theme name}
 
-\item{theme_color}{Primary color hex code for theme customization}
+\item{theme_color}{Primary color hex}
 
-\item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
+\item{theme_mode}{Color mode}
 
-\item{shiny_config}{Optional list. Shiny configuration parameters passed to configure_shiny()}
+\item{shiny_config}{Shiny configuration}
 
-\item{db_config}{List. Database connection parameters (defaults to environment variables):
-\itemize{
-\item host: Database host (default: HOST environment variable)
-\item port: Database port (default: PORT environment variable)
-\item db_name: Database name (default: DB_NAME environment variable)
-\item user: Database username (default: USER environment variable)
-\item password: Database password (default: PASSWORD environment variable)
-\item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
-}}
+\item{db_config}{Database configuration}
 }
 \value{
 A Shiny application object
+
+Shiny application object
 }
 \description{
 Creates a Shiny application for a single survey with database integration.
