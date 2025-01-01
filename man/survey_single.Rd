@@ -9,7 +9,8 @@ survey_single(
   show_responses = TRUE,
   theme = "defaultV2",
   theme_color = "#003594",
-  theme_mode = "light"
+  theme_mode = "light",
+  shiny_config = NULL
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ survey_single(
 \item{theme_color}{Primary color hex code for theme (optional)}
 
 \item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
+
+\item{shiny_config}{Optional Shiny configuration parameters passed to configure_shiny()}
 }
 \description{
 Create a single survey
