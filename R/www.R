@@ -1,6 +1,7 @@
 #' Single Survey JavaScript
 #'
-#' Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application. This JavaScript code sets up event handlers for survey completion and enables communication between the survey and Shiny.
+#' Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
+#' This JavaScript code sets up event handlers for survey completion and enables communication between the survey and Shiny.
 #'
 #' @return A character string containing the JavaScript code for survey initialization
 #' @keywords internal
