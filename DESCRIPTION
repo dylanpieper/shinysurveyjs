@@ -11,6 +11,7 @@ RoxygenNote: 7.3.2
 Imports:
     pool,
     DBI,
+    RPostgres,
     DT,
     htmltools,
     jsonlite,
