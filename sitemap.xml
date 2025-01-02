@@ -5,12 +5,12 @@
 <url><loc>/authors.html</loc></url>
 <url><loc>/index.html</loc></url>
 <url><loc>/reference/adjust_hex.html</loc></url>
-<url><loc>/reference/clean_pool.html</loc></url>
 <url><loc>/reference/configure_shiny.html</loc></url>
 <url><loc>/reference/db_ops.html</loc></url>
+<url><loc>/reference/db_pool_close.html</loc></url>
+<url><loc>/reference/db_pool_open.html</loc></url>
 <url><loc>/reference/hide_and_show_message.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
-<url><loc>/reference/initialize_pool.html</loc></url>
 <url><loc>/reference/surveyUI.html</loc></url>
 <url><loc>/reference/survey_css.html</loc></url>
 <url><loc>/reference/survey_logger.html</loc></url>
