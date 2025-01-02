@@ -88,16 +88,16 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       background-color: %s;
       border-color: %s;
     }",
-    dark_bg, dark_text, # body
-    dark_container_bg, dark_text, # sv-root-modern
-    dark_container_bg, dark_text, # sv-body
-    dark_text, # sv-container-modern
-    dark_container_bg, dark_text, dark_border, # surveyResponseContainer
-    dark_container_bg, dark_text, # dataTables_wrapper
-    dark_border, # checkbox
-    dark_text, dark_container_bg, # error-message
-    dark_container_bg, # footer
-    dark_container_bg, dark_border # question
+    dark_bg, dark_text,                               # body
+    dark_container_bg, dark_text,                     # sv-root-modern
+    dark_container_bg, dark_text,                     # sv-body
+    dark_text,                                        # sv-container-modern
+    dark_container_bg, dark_text, dark_border,        # surveyResponseContainer
+    dark_container_bg, dark_text,                     # dataTables_wrapper
+    dark_border,                                      # checkbox
+    dark_text, dark_container_bg,                     # error-message
+    dark_container_bg,                                # footer
+    dark_container_bg, dark_border                    # question
   )
 
   # Message UI CSS
@@ -225,13 +225,13 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       }
     }
     ",
-    dark_bg,        # Background color
-    dark_text,      # Text color
+    dark_bg,           # Background color
+    dark_text,         # Text color
     dark_container_bg, # Completed page background
     dark_container_bg, # Response container background
     gradient_color2,   # Spinner color
-    dark_container_bg,  # Survey root background
-    dark_text,      # Error message text color
+    dark_container_bg, # Survey root background
+    dark_text,         # Error message text color
     dark_container_bg  # Error message background
   )
 
@@ -297,6 +297,12 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
       class = "message-container",
       style = "display: none;",
       div(class = "error-message", "❌ Invalid Query")
+    ),
+    div(
+      id = "invalidDataMessage",
+      class = "message-container",
+      style = "display: none;",
+      div(class = "error-message", "❌ Invalid Data")
     ),
     div(
       id = "inactiveSurveyMessage",

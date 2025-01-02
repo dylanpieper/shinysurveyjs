@@ -147,6 +147,8 @@ survey_css <- function(
     hover_background <- "#f5f5f5"
   }
 
+  # No gradient colors needed for complete button - using primary and primary-dark
+
   sprintf(
     "
 .sd-root-modern {
@@ -160,7 +162,6 @@ survey_css <- function(
     --input-background: %s;
     --border-color: %s;
     --hover-background: %s;
-
     /* Apply theme colors */
     background-color: var(--background);
     color: var(--foreground);
@@ -170,8 +171,9 @@ survey_css <- function(
 .sd-root-modern {
     --sd-button-primary-background: var(--primary);
     --sd-button-primary-text-color: var(--primary-foreground);
-    --sd-navigation-button-color: var(--primary);
-    --sd-navigation-button-background: var(--primary-light);
+    --sd-navigation-button-background: var(--primary);
+    --sd-navigation-button-text-color: var(--primary-foreground);
+    --sd-navigation-button-hover: var(--primary-light);
     --sd-checkbox-checked-background: var(--primary);
     --sd-radio-checked-background: var(--primary);
     --sd-rating-background: var(--primary);
@@ -181,7 +183,7 @@ survey_css <- function(
     --sd-matrix-selected-background: var(--primary);
 }
 
-/* Mode-specific adjustments */
+/* Fine tuning */
 .sd-question {
     background-color: var(--input-background);
     border: 1px solid var(--border-color);
@@ -218,7 +220,48 @@ survey_css <- function(
 
 .sd-header__text .sd-title {
     color: var(--foreground);
+}
+
+/* Main button styles */
+.sd-btn {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border: none !important;
+}
+
+.sd-navigation__next-btn,
+.sd-navigation__prev-btn {
+    background-color: var(--primary-dark) !important;
+    color: var(--primary-foreground) !important;
+    border: none !important;
+}
+
+.sd-btn:hover,
+.sd-navigation__next-btn:hover,
+.sd-navigation__prev-btn:hover {
+    background-color: var(--primary) !important;
+    opacity: 0.9;
+}
+
+.sd-btn:disabled,
+.sd-navigation__next-btn:disabled,
+.sd-navigation__prev-btn:disabled {
+    background-color: var(--border-color) !important;
+    opacity: 0.6;
+}
+
+/* Complete button special styling */
+.sd-btn--action[value='Complete'] {
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border: none !important;
+}
+
+/* Hover effect for complete button */
+.sd-btn--action[value='Complete']:hover {
+    background: var(--primary-light) !important;
 }",
+    # Base colors
     primary, primary_light, primary_dark, primary_foreground,
     background, foreground, input_background, border_color, hover_background
   )
