@@ -14,7 +14,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   URL query tokens and one-time access tokens for secure survey distribution
 
--   Asynchronous worker to handle database updates in near real-time, including sending app logs to the database, adding tokens for dynamic fields, and updating staged survey JSONs
+-   Asynchronous worker to handle database updates without interrupting the survey, including sending app logs to the database, adding tokens, and updating staged survey JSONs
 
 🚧 **Warning**: These features are under construction and being moved from the app [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
 

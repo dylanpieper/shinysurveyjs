@@ -70,7 +70,6 @@ cleanup_pool <- function(pool) {
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
 #' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
 #' @importFrom pool poolCheckout poolReturn
-#' @import mirai
 #'
 #' @export
 db_ops <- R6::R6Class(
