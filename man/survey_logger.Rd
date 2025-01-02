@@ -2,7 +2,7 @@
 % Please edit documentation in R/logger.R
 \name{survey_logger}
 \alias{survey_logger}
-\title{Survey Response Logger Class}
+\title{Shiny App Logger Class}
 \format{
 An R6 class object
 }

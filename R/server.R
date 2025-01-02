@@ -286,7 +286,7 @@ survey_single <- function(json,
     # Clean up on session end
     session$onSessionEnded(function() {
       logger$log_message("Survey session ended", zone = "SURVEY")
-      cleanup_app(session)
+      clean_pool(session)
     })
   }
 

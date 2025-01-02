@@ -2,7 +2,7 @@
 % Please edit documentation in R/helper.R
 \name{configure_shiny}
 \alias{configure_shiny}
-\title{Configure Shiny Application Settings}
+\title{Configure Shiny App Settings}
 \usage{
 configure_shiny(..., type_handlers = list())
 }
@@ -16,7 +16,7 @@ are provided for numeric, logical, and character values.}
 NULL (invisibly). Sets global options for Shiny.
 }
 \description{
-Configure Shiny Application Settings
+Configure Shiny App Settings
 }
 \examples{
 configure_shiny(

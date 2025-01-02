@@ -39,24 +39,6 @@ initialize_pool <- function(host = NULL,
   }
 }
 
-#' Clean Up Database Pool
-#'
-#' Closes the database pool and removes lock files.
-#'
-#' @param pool Database pool object to close
-#' @importFrom pool dbIsValid poolClose
-#' @export
-cleanup_pool <- function(pool) {
-  if (!is.null(pool) && pool::dbIsValid(pool)) {
-    pool::poolClose(pool)
-    message("Database pool connection closed")
-  }
-
-  if (file.exists("shiny_setup.lock")) {
-    unlink("shiny_setup.lock")
-  }
-}
-
 #' Database Operations Class
 #'
 #' @description

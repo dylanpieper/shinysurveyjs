@@ -1,4 +1,4 @@
-#' Configure Shiny Application Settings
+#' Configure Shiny App Settings
 #'
 #' @param ... Named arguments corresponding to Shiny options. Names will be prefixed with 'shiny.'
 #' @param type_handlers Named list of functions to process specific options. Default handlers
@@ -55,7 +55,7 @@ configure_shiny <- function(..., type_handlers = list()) {
   invisible(NULL)
 }
 
-#' Clean Application Resources
+#' Clean Database Pool
 #'
 #' Closes the database connection pool and performs cleanup operations
 #' when the application is shutting down.
@@ -64,7 +64,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'
 #' @importFrom shiny onStop
 #' @export
-cleanup_app <- function(session) {
+clean_pool <- function(session) {
   shiny::onStop(function() {
     if (exists("app_pool", envir = .GlobalEnv)) {
       cleanup_pool(get("app_pool", envir = .GlobalEnv))
@@ -73,7 +73,7 @@ cleanup_app <- function(session) {
   }, session)
 }
 
-#' Helper function to hide one message and show another
+#' Hide one message and show another
 #'
 #' @importFrom shinyjs hide show toggle
 #' @param hide_id ID of the message to hide
