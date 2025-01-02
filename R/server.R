@@ -45,18 +45,15 @@ survey_single <- function(json,
                           )) {
   # Validate inputs with detailed error messages
   if (missing(json) || is.null(json)) {
-    msg <- "Survey JSON is required"
-    logger$log_message(msg,
-                       type = "WARN",
-                       zone = "SURVEY")
-    stop(msg)
+    stop("Survey JSON is required")
   }
 
   if (!is.character(db_config$write_table) || nchar(db_config$write_table) == 0) {
     msg <- "db_config$write_table must be a non-empty character string"
     logger$log_message(msg,
-                       type = "WARN",
-                       zone = "SURVEY")
+      type = "ERROR",
+      zone = "SURVEY"
+    )
     stop(msg)
   }
 
@@ -96,7 +93,7 @@ survey_single <- function(json,
         )
       },
       error = function(e) {
-        stop(sprintf("Failed to initialize database pool: %s", e$message))
+        stop("Failed to initialize database pool: %s")
       }
     )
   }
@@ -138,7 +135,7 @@ survey_single <- function(json,
       survey_name = db_config$write_table
     )
 
-    logger$log_message("Start survey", zone = "SURVEY")
+    logger$log_message("Survey session started", zone = "SURVEY")
 
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
@@ -225,8 +222,9 @@ survey_single <- function(json,
         tryCatch(
           {
             if (is.null(db_ops)) {
-              logger$log_message("Database operations not initialized", type = "ERROR", zone = "DATABASE")
-              stop("Database operations not initialized")
+              msg <- "Database operations not initialized"
+              logger$log_message(msg, type = "ERROR", zone = "DATABASE")
+              stop(msg)
             }
 
             if (!db_ops$check_table_exists(db_config$write_table)) {

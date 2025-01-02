@@ -89,8 +89,10 @@ hide_and_show_message <- function(hide_id, show_id, fade_time = 1) {
 
   # Use setTimeout to delay the show animation
   shinyjs::delay(fade_time * 1000, {
-    shinyjs::toggle(show_id, condition = TRUE, anim = TRUE,
-                    animType = "fade", time = fade_time)
+    shinyjs::toggle(show_id,
+      condition = TRUE, anim = TRUE,
+      animType = "fade", time = fade_time
+    )
   })
 }
 
