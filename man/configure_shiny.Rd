@@ -23,7 +23,6 @@ Configure Shiny App Settings
 configure_shiny(
   host = "0.0.0.0",
   port = 3838,
-  workers = 100,
   sanitize_errors = TRUE,
   autoreload = FALSE
 )
