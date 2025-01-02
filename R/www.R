@@ -134,7 +134,7 @@ survey_css <- function(
   if (mode == "dark") {
     if (background == "#ffffff") background <- "#1a1a1a"
     if (foreground == "#404040") foreground <- "#e0e0e0"
-    primary_light <- adjust_hex(primary, 15, lighten = TRUE)
+    primary_light <- adjust_hex(primary, 25, lighten = TRUE)
     primary_dark <- adjust_hex(primary, 25, lighten = FALSE)
     input_background <- "#2d2d2d"
     border_color <- "#404040"
