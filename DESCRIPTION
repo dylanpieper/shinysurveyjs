@@ -17,4 +17,6 @@ Imports:
     jsonlite,
     sass,
     shiny,
-    shinyjs
+    shinyjs,
+    future,
+    promises

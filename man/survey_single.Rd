@@ -13,7 +13,8 @@ survey_single(
   shiny_config = NULL,
   db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
-    Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"))
+    Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
+    Sys.getenv("LOG_TABLE"))
 )
 }
 \arguments{
@@ -85,7 +86,6 @@ survey_single(
   shiny_config = list(
     host = "0.0.0.0",
     port = 3838,
-    workers = 100,
     sanitize_errors = TRUE,
     autoreload = FALSE
   ),

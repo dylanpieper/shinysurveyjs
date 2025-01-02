@@ -17,6 +17,7 @@
 #'     \item user: Database username (default: USER environment variable)
 #'     \item password: Database password (default: PASSWORD environment variable)
 #'     \item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
+#'     \item write_table: Table name to write log messages (default: LOG_TABLE environment variable)
 #'   }
 #'
 #' @return A Shiny application object
@@ -66,7 +67,6 @@
 #'   shiny_config = list(
 #'     host = "0.0.0.0",
 #'     port = 3838,
-#'     workers = 1,
 #'     sanitize_errors = TRUE,
 #'     autoreload = FALSE
 #'   ),
@@ -84,6 +84,7 @@
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON
+#' @importFrom future plan multisession
 #'
 #' @param json Survey JSON string or object
 #' @param show_response Logical to show responses
@@ -106,7 +107,8 @@ survey_single <- function(json,
                             db_name = Sys.getenv("DB_NAME"),
                             user = Sys.getenv("USER"),
                             password = Sys.getenv("PASSWORD"),
-                            write_table = Sys.getenv("WRITE_TABLE")
+                            write_table = Sys.getenv("WRITE_TABLE"),
+                            log_table = Sys.getenv("LOG_TABLE")
                           )) {
   # Validate inputs with detailed error messages
   if (missing(json) || is.null(json)) {
@@ -127,6 +129,15 @@ survey_single <- function(json,
     ))
   }
 
+  # Set database environment variables
+  Sys.setenv(
+    "HOST" = db_config$host,
+    "PORT" = as.character(db_config$port),
+    "DB_NAME" = db_config$db_name,
+    "USER" = db_config$user,
+    "PASSWORD" = db_config$password
+  )
+
   # Apply Shiny configuration if provided
   if (!is.null(shiny_config)) {
     do.call(configure_shiny, shiny_config)
@@ -136,15 +147,21 @@ survey_single <- function(json,
   if (!exists("app_pool", envir = .GlobalEnv)) {
     tryCatch(
       {
-        assign("app_pool", do.call(initialize_pool,
-                                   db_config[c("host", "port", "db_name", "user", "password")]),
-               envir = .GlobalEnv)
+        assign("app_pool", do.call(
+          initialize_pool,
+          db_config[c("host", "port", "db_name", "user", "password")]
+        ),
+        envir = .GlobalEnv
+        )
       },
       error = function(e) {
         stop(sprintf("Failed to initialize database pool: %s", e$message))
       }
     )
   }
+
+  # Initialize future plan for async operations
+  future::plan(future::multisession)
 
   # Define UI
   ui <- function() {
@@ -174,6 +191,15 @@ survey_single <- function(json,
 
   # Define server with enhanced error handling
   server <- function(input, output, session) {
+    logger <- survey_logger$new(
+      log_table = db_config$log_table,
+      session_id = session$token,
+      survey_name = db_config$write_table,
+      db_config = db_config[c("host", "port", "db_name", "user", "password")]
+    )
+
+    logger$log_message("Starting survey")
+
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
       loading = FALSE,

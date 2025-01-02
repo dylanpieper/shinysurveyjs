@@ -19,17 +19,17 @@ and retrieval using PostgreSQL.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-db_ops-new}{\code{db_ops$new()}}
-\item \href{#method-db_ops-create_survey_data_table}{\code{db_ops$create_survey_data_table()}}
-\item \href{#method-db_ops-check_table_exists}{\code{db_ops$check_table_exists()}}
-\item \href{#method-db_ops-execute_db_operation}{\code{db_ops$execute_db_operation()}}
-\item \href{#method-db_ops-update_survey_data_table}{\code{db_ops$update_survey_data_table()}}
-\item \href{#method-db_ops-clone}{\code{db_ops$clone()}}
+\item \href{#method-Database Operations-new}{\code{db_ops$new()}}
+\item \href{#method-Database Operations-create_survey_data_table}{\code{db_ops$create_survey_data_table()}}
+\item \href{#method-Database Operations-check_table_exists}{\code{db_ops$check_table_exists()}}
+\item \href{#method-Database Operations-execute_db_operation}{\code{db_ops$execute_db_operation()}}
+\item \href{#method-Database Operations-update_survey_data_table}{\code{db_ops$update_survey_data_table()}}
+\item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-new"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-new}{}}}
+\if{html}{\out{<a id="method-Database Operations-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-new}{}}}
 \subsection{Method \code{new()}}{
 Initialize a new db_ops instance
 \subsection{Usage}{
@@ -50,8 +50,8 @@ A new db_ops object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-create_survey_data_table"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-create_survey_data_table}{}}}
+\if{html}{\out{<a id="method-Database Operations-create_survey_data_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-create_survey_data_table}{}}}
 \subsection{Method \code{create_survey_data_table()}}{
 Create a new survey data table
 \subsection{Usage}{
@@ -72,8 +72,8 @@ Character. Name of the created table (invisible)
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-check_table_exists"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-check_table_exists}{}}}
+\if{html}{\out{<a id="method-Database Operations-check_table_exists"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-check_table_exists}{}}}
 \subsection{Method \code{check_table_exists()}}{
 Check if a table exists in the database
 \subsection{Usage}{
@@ -92,8 +92,8 @@ Logical indicating if table exists
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-execute_db_operation"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-execute_db_operation}{}}}
+\if{html}{\out{<a id="method-Database Operations-execute_db_operation"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-execute_db_operation}{}}}
 \subsection{Method \code{execute_db_operation()}}{
 Execute a database operation with appropriate connection handling
 \subsection{Usage}{
@@ -114,8 +114,8 @@ Result of the database operation
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-update_survey_data_table"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-update_survey_data_table}{}}}
+\if{html}{\out{<a id="method-Database Operations-update_survey_data_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-update_survey_data_table}{}}}
 \subsection{Method \code{update_survey_data_table()}}{
 Update existing survey data table with new data
 \subsection{Usage}{
@@ -136,8 +136,8 @@ Character. Name of the updated table (invisible)
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-db_ops-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-db_ops-clone}{}}}
+\if{html}{\out{<a id="method-Database Operations-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{
