@@ -1,4 +1,4 @@
-#' @title Survey Response Logger
+#' @title Survey Response Logger Class
 #' @description An R6 class that provides asynchronous logging functionality for survey responses
 #' @format An R6 class object
 #' @details This class handles asynchronous logging of survey responses to a PostgreSQL database.
