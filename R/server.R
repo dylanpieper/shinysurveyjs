@@ -66,7 +66,7 @@
 #'   shiny_config = list(
 #'     host = "0.0.0.0",
 #'     port = 3838,
-#'     workers = 100,
+#'     workers = 1,
 #'     sanitize_errors = TRUE,
 #'     autoreload = FALSE
 #'   ),
@@ -136,7 +136,9 @@ survey_single <- function(json,
   if (!exists("app_pool", envir = .GlobalEnv)) {
     tryCatch(
       {
-        assign("app_pool", do.call(initialize_pool, db_config), envir = .GlobalEnv)
+        assign("app_pool", do.call(initialize_pool,
+                                   db_config[c("host", "port", "db_name", "user", "password")]),
+               envir = .GlobalEnv)
       },
       error = function(e) {
         stop(sprintf("Failed to initialize database pool: %s", e$message))
@@ -239,7 +241,7 @@ survey_single <- function(json,
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
           warning(rv$error_message)
-          hide_and_show_message("savingDataMessage", "invalidQueryMessage")
+          hide_and_show_message("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }
 
@@ -271,7 +273,7 @@ survey_single <- function(json,
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
             warning(rv$error_message)
-            hide_and_show_message("savingDataMessage", "invalidQueryMessage")
+            hide_and_show_message("savingDataMessage", "invalidDataMessage")
           }
         )
       }
