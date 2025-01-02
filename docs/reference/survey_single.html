@@ -59,101 +59,45 @@ Responses are stored in a PostgreSQL database with configurable table name.</p>
 
 
 <dl><dt id="arg-json">json<a class="anchor" aria-label="anchor" href="#arg-json"></a></dt>
-<dd><p>Survey JSON string or object</p></dd>
+<dd><p>Survey JSON string or object defining the survey structure</p></dd>
 
 
 <dt id="arg-show-response">show_response<a class="anchor" aria-label="anchor" href="#arg-show-response"></a></dt>
-<dd><p>Logical to show responses</p></dd>
+<dd><p>Logical. Whether to show responses after submission (default: TRUE)</p></dd>
 
 
 <dt id="arg-theme">theme<a class="anchor" aria-label="anchor" href="#arg-theme"></a></dt>
-<dd><p>Theme name</p></dd>
+<dd><p>Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")</p></dd>
 
 
 <dt id="arg-theme-color">theme_color<a class="anchor" aria-label="anchor" href="#arg-theme-color"></a></dt>
-<dd><p>Primary color hex</p></dd>
+<dd><p>Primary color hex code for theme customization</p></dd>
 
 
 <dt id="arg-theme-mode">theme_mode<a class="anchor" aria-label="anchor" href="#arg-theme-mode"></a></dt>
-<dd><p>Color mode</p></dd>
+<dd><p>Color mode selection: "light" or "dark" (default: "light")</p></dd>
 
 
 <dt id="arg-shiny-config">shiny_config<a class="anchor" aria-label="anchor" href="#arg-shiny-config"></a></dt>
-<dd><p>Shiny configuration</p></dd>
+<dd><p>Optional list. Shiny configuration parameters passed to configure_shiny()</p></dd>
 
 
 <dt id="arg-db-config">db_config<a class="anchor" aria-label="anchor" href="#arg-db-config"></a></dt>
-<dd><p>Database configuration</p></dd>
+<dd><p>List. Database connection parameters (defaults to environment variables):</p><ul><li><p>host: Database host (default: HOST environment variable)</p></li>
+<li><p>port: Database port (default: PORT environment variable)</p></li>
+<li><p>db_name: Database name (default: DB_NAME environment variable)</p></li>
+<li><p>user: Database username (default: USER environment variable)</p></li>
+<li><p>password: Database password (default: PASSWORD environment variable)</p></li>
+<li><p>write_table: Table name to write survey data (default: WRITE_TABLE environment variable)</p></li>
+<li><p>write_table: Table name to write log messages (default: LOG_TABLE environment variable)</p></li>
+</ul></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A Shiny application object</p>
-<p>Shiny application object</p>
     </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">shinysurveyjs</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Define a package feedback survey with rating and conditional comment</span></span></span>
-<span class="r-in"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="st">'{</span></span></span>
-<span class="r-in"><span><span class="st">  "title": "R Package Feedback",</span></span></span>
-<span class="r-in"><span><span class="st">  "pages": [</span></span></span>
-<span class="r-in"><span><span class="st">    {</span></span></span>
-<span class="r-in"><span><span class="st">      "name": "userInfo",</span></span></span>
-<span class="r-in"><span><span class="st">      "elements": [</span></span></span>
-<span class="r-in"><span><span class="st">        {</span></span></span>
-<span class="r-in"><span><span class="st">          "type": "rating",</span></span></span>
-<span class="r-in"><span><span class="st">          "name": "rating",</span></span></span>
-<span class="r-in"><span><span class="st">          "title": "Please rate the shinysurveyjs 📦:",</span></span></span>
-<span class="r-in"><span><span class="st">          "rateValues": [</span></span></span>
-<span class="r-in"><span><span class="st">            {"value": 1, "text": "⭐"},</span></span></span>
-<span class="r-in"><span><span class="st">            {"value": 2, "text": "⭐⭐"},</span></span></span>
-<span class="r-in"><span><span class="st">            {"value": 3, "text": "⭐⭐⭐"},</span></span></span>
-<span class="r-in"><span><span class="st">            {"value": 4, "text": "⭐⭐⭐⭐"},</span></span></span>
-<span class="r-in"><span><span class="st">            {"value": 5, "text": "⭐⭐⭐⭐⭐"}</span></span></span>
-<span class="r-in"><span><span class="st">          ],</span></span></span>
-<span class="r-in"><span><span class="st">          "rateMax": 5</span></span></span>
-<span class="r-in"><span><span class="st">        },</span></span></span>
-<span class="r-in"><span><span class="st">        {</span></span></span>
-<span class="r-in"><span><span class="st">          "type": "comment",</span></span></span>
-<span class="r-in"><span><span class="st">          "name": "feedback",</span></span></span>
-<span class="r-in"><span><span class="st">          "visibleIf": "{rating} notempty",</span></span></span>
-<span class="r-in"><span><span class="st">          "title": "Why did you rate it {rating} stars?",</span></span></span>
-<span class="r-in"><span><span class="st">          "rows": 2</span></span></span>
-<span class="r-in"><span><span class="st">        }</span></span></span>
-<span class="r-in"><span><span class="st">      ]</span></span></span>
-<span class="r-in"><span><span class="st">    }</span></span></span>
-<span class="r-in"><span><span class="st">  ]</span></span></span>
-<span class="r-in"><span><span class="st">}'</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Create and launch the survey application</span></span></span>
-<span class="r-in"><span><span class="fu">survey_single</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  json <span class="op">=</span> <span class="va">survey</span>,</span></span>
-<span class="r-in"><span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
-<span class="r-in"><span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span></span>
-<span class="r-in"><span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span></span>
-<span class="r-in"><span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,</span></span>
-<span class="r-in"><span>    port <span class="op">=</span> <span class="fl">3838</span>,</span></span>
-<span class="r-in"><span>    sanitize_errors <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
-<span class="r-in"><span>    autoreload <span class="op">=</span> <span class="cn">FALSE</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span>,</span></span>
-<span class="r-in"><span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    host <span class="op">=</span> <span class="st">"pooler.supabase.com"</span>,</span></span>
-<span class="r-in"><span>    port <span class="op">=</span> <span class="fl">5432</span>,</span></span>
-<span class="r-in"><span>    dbname <span class="op">=</span> <span class="st">"postgres"</span>,</span></span>
-<span class="r-in"><span>    user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_USER"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PASSWORD"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    write_table <span class="op">=</span> <span class="st">"survey_package_feedback"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
-<span class="r-in"><span></span></span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

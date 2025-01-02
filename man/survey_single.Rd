@@ -18,86 +18,33 @@ survey_single(
 )
 }
 \arguments{
-\item{json}{Survey JSON string or object}
+\item{json}{Survey JSON string or object defining the survey structure}
 
-\item{show_response}{Logical to show responses}
+\item{show_response}{Logical. Whether to show responses after submission (default: TRUE)}
 
-\item{theme}{Theme name}
+\item{theme}{Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")}
 
-\item{theme_color}{Primary color hex}
+\item{theme_color}{Primary color hex code for theme customization}
 
-\item{theme_mode}{Color mode}
+\item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
 
-\item{shiny_config}{Shiny configuration}
+\item{shiny_config}{Optional list. Shiny configuration parameters passed to configure_shiny()}
 
-\item{db_config}{Database configuration}
+\item{db_config}{List. Database connection parameters (defaults to environment variables):
+\itemize{
+\item host: Database host (default: HOST environment variable)
+\item port: Database port (default: PORT environment variable)
+\item db_name: Database name (default: DB_NAME environment variable)
+\item user: Database username (default: USER environment variable)
+\item password: Database password (default: PASSWORD environment variable)
+\item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
+\item write_table: Table name to write log messages (default: LOG_TABLE environment variable)
+}}
 }
 \value{
 A Shiny application object
-
-Shiny application object
 }
 \description{
 Creates a Shiny application for a single survey with database integration.
 Responses are stored in a PostgreSQL database with configurable table name.
-}
-\examples{
-\dontrun{
-library(shinysurveyjs)
-
-# Define a package feedback survey with rating and conditional comment
-survey <- '{
-  "title": "R Package Feedback",
-  "pages": [
-    {
-      "name": "userInfo",
-      "elements": [
-        {
-          "type": "rating",
-          "name": "rating",
-          "title": "Please rate the shinysurveyjs 📦:",
-          "rateValues": [
-            {"value": 1, "text": "⭐"},
-            {"value": 2, "text": "⭐⭐"},
-            {"value": 3, "text": "⭐⭐⭐"},
-            {"value": 4, "text": "⭐⭐⭐⭐"},
-            {"value": 5, "text": "⭐⭐⭐⭐⭐"}
-          ],
-          "rateMax": 5
-        },
-        {
-          "type": "comment",
-          "name": "feedback",
-          "visibleIf": "{rating} notempty",
-          "title": "Why did you rate it {rating} stars?",
-          "rows": 2
-        }
-      ]
-    }
-  ]
-}'
-
-# Create and launch the survey application
-survey_single(
-  json = survey,
-  show_response = TRUE,
-  theme_color = "#00AD6E",
-  theme_mode = "dark",
-  shiny_config = list(
-    host = "0.0.0.0",
-    port = 3838,
-    sanitize_errors = TRUE,
-    autoreload = FALSE
-  ),
-  db_config = list(
-    host = "pooler.supabase.com",
-    port = 5432,
-    dbname = "postgres",
-    user = Sys.getenv("DB_USER"),
-    password = Sys.getenv("DB_PASSWORD"),
-    write_table = "survey_package_feedback"
-  )
-)
-}
-
 }

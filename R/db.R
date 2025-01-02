@@ -469,7 +469,7 @@ survey_logger <- R6::R6Class(
          )",
         self$log_table
       )
-      DBI::dbExecute(conn, query)
+      suppressMessages(DBI::dbExecute(conn, query))
     }
   )
 )

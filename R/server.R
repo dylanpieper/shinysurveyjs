@@ -22,78 +22,11 @@
 #'
 #' @return A Shiny application object
 #'
-#' @examples
-#' \dontrun{
-#' library(shinysurveyjs)
-#'
-#' # Define a package feedback survey with rating and conditional comment
-#' survey <- '{
-#'   "title": "R Package Feedback",
-#'   "pages": [
-#'     {
-#'       "name": "userInfo",
-#'       "elements": [
-#'         {
-#'           "type": "rating",
-#'           "name": "rating",
-#'           "title": "Please rate the shinysurveyjs 📦:",
-#'           "rateValues": [
-#'             {"value": 1, "text": "⭐"},
-#'             {"value": 2, "text": "⭐⭐"},
-#'             {"value": 3, "text": "⭐⭐⭐"},
-#'             {"value": 4, "text": "⭐⭐⭐⭐"},
-#'             {"value": 5, "text": "⭐⭐⭐⭐⭐"}
-#'           ],
-#'           "rateMax": 5
-#'         },
-#'         {
-#'           "type": "comment",
-#'           "name": "feedback",
-#'           "visibleIf": "{rating} notempty",
-#'           "title": "Why did you rate it {rating} stars?",
-#'           "rows": 2
-#'         }
-#'       ]
-#'     }
-#'   ]
-#' }'
-#'
-#' # Create and launch the survey application
-#' survey_single(
-#'   json = survey,
-#'   show_response = TRUE,
-#'   theme_color = "#00AD6E",
-#'   theme_mode = "dark",
-#'   shiny_config = list(
-#'     host = "0.0.0.0",
-#'     port = 3838,
-#'     sanitize_errors = TRUE,
-#'     autoreload = FALSE
-#'   ),
-#'   db_config = list(
-#'     host = "pooler.supabase.com",
-#'     port = 5432,
-#'     dbname = "postgres",
-#'     user = Sys.getenv("DB_USER"),
-#'     password = Sys.getenv("DB_PASSWORD"),
-#'     write_table = "survey_package_feedback"
-#'   )
-#' )
-#' }
-#'
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON
 #' @importFrom future plan multisession
 #'
-#' @param json Survey JSON string or object
-#' @param show_response Logical to show responses
-#' @param theme Theme name
-#' @param theme_color Primary color hex
-#' @param theme_mode Color mode
-#' @param shiny_config Shiny configuration
-#' @param db_config Database configuration
-#' @return Shiny application object
 #' @export
 survey_single <- function(json,
                           show_response = TRUE,
@@ -112,11 +45,19 @@ survey_single <- function(json,
                           )) {
   # Validate inputs with detailed error messages
   if (missing(json) || is.null(json)) {
-    stop("Survey JSON is required")
+    msg <- "Survey JSON is required"
+    logger$log_message(msg,
+                       type = "WARN",
+                       zone = "SURVEY")
+    stop(msg)
   }
 
   if (!is.character(db_config$write_table) || nchar(db_config$write_table) == 0) {
-    stop("db_config$write_table must be a non-empty character string")
+    msg <- "db_config$write_table must be a non-empty character string"
+    logger$log_message(msg,
+                       type = "WARN",
+                       zone = "SURVEY")
+    stop(msg)
   }
 
   # Validate database configuration
@@ -212,7 +153,8 @@ survey_single <- function(json,
         db_ops$new(get("app_pool", envir = .GlobalEnv), session$token)
       },
       error = function(e) {
-        warning(sprintf("Failed to initialize db_ops: %s", e$message))
+        msg <- sprintf("Failed to initialize db_ops: %s", e$message)
+        logger$log_message(msg, type = "ERROR", zone = "DATABASE")
         NULL
       }
     )
@@ -227,10 +169,11 @@ survey_single <- function(json,
             json
           }
           session$sendCustomMessage("loadSurvey", survey_obj)
+          logger$log_message("Survey loaded successfully", zone = "SURVEY")
         },
         error = function(e) {
           rv$error_message <- sprintf("Error loading survey: %s", e$message)
-          warning(rv$error_message)
+          logger$log_message(rv$error_message, type = "ERROR", zone = "SURVEY")
           shinyjs::show("surveyNotDefinedMessage")
         }
       )
@@ -241,10 +184,13 @@ survey_single <- function(json,
       shinyjs::show("savingDataMessage")
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
+      logger$log_message("Survey completed by user", zone = "SURVEY")
     })
 
     # Handle survey responses with detailed error handling
     observeEvent(input$surveyData, {
+      logger$log_message("Processing survey response data", zone = "SURVEY")
+
       # Parse survey data
       parsed_data <- tryCatch(
         {
@@ -256,7 +202,7 @@ survey_single <- function(json,
         },
         error = function(e) {
           rv$error_message <- sprintf("Error parsing survey data: %s", e$message)
-          warning(rv$error_message)
+          logger$log_message(rv$error_message, type = "ERROR", zone = "DATA_PARSING")
           return(NULL)
         }
       )
@@ -265,7 +211,7 @@ survey_single <- function(json,
         # Validate parsed data
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
-          warning(rv$error_message)
+          logger$log_message(rv$error_message, type = "ERROR", zone = "DATA_VALIDATION")
           hide_and_show_message("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }
@@ -279,14 +225,20 @@ survey_single <- function(json,
         tryCatch(
           {
             if (is.null(db_ops)) {
+              logger$log_message("Database operations not initialized", type = "ERROR", zone = "DATABASE")
               stop("Database operations not initialized")
             }
 
             if (!db_ops$check_table_exists(db_config$write_table)) {
+              logger$log_message(
+                sprintf("Creating new table: %s", db_config$write_table),
+                zone = "DATABASE"
+              )
               db_ops$create_survey_data_table(db_config$write_table, parsed_data)
             }
 
             db_ops$update_survey_data_table(db_config$write_table, parsed_data)
+            logger$log_message("Survey data saved successfully", zone = "DATABASE")
 
             # Update reactive value after successful database operation
             rv$survey_responses <- parsed_data
@@ -297,7 +249,7 @@ survey_single <- function(json,
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
-            warning(rv$error_message)
+            logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
             hide_and_show_message("savingDataMessage", "invalidDataMessage")
           }
         )
@@ -335,6 +287,7 @@ survey_single <- function(json,
 
     # Clean up on session end
     session$onSessionEnded(function() {
+      logger$log_message("Survey session ended", zone = "SURVEY")
       cleanup_app(session)
     })
   }
