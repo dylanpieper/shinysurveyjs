@@ -49,7 +49,8 @@ survey <- '{
             {"value": 4, "text": "⭐⭐⭐⭐"},
             {"value": 5, "text": "⭐⭐⭐⭐⭐"}
           ],
-          "rateMax": 5
+          "rateMax": 5,
+          "isRequired": true
         },
         {
           "type": "comment",
@@ -77,7 +78,6 @@ survey_single(
   shiny_config = list(
     host = "0.0.0.0",
     port = 3838,
-    workers = 100,
     sanitize_errors = TRUE,
     autoreload = FALSE
   ),
@@ -91,3 +91,4 @@ survey_single(
   )
 )
 ```
+
