@@ -86,7 +86,7 @@ survey_single <- function(json,
     tryCatch(
       {
         assign("app_pool", do.call(
-          initialize_pool,
+          db_pool_open,
           db_config[c("host", "port", "db_name", "user", "password")]
         ),
         envir = .GlobalEnv
@@ -286,7 +286,7 @@ survey_single <- function(json,
     # Clean up on session end
     session$onSessionEnded(function() {
       logger$log_message("Survey session ended", zone = "SURVEY")
-      clean_pool(session)
+      db_pool_close(session)
     })
   }
 

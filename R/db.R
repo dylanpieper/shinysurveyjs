@@ -1,4 +1,4 @@
-#' Initialize Database Pool
+#' Open Database Pool
 #'
 #' Creates and manages a global database pool connection using PostgreSQL.
 #'
@@ -14,7 +14,7 @@
 #' @importFrom pool dbPool poolClose
 #' @importFrom RPostgres Postgres
 #' @export
-initialize_pool <- function(host = NULL,
+db_pool_open <- function(host = NULL,
                             port = NULL,
                             db_name = NULL,
                             user = NULL,
@@ -37,6 +37,24 @@ initialize_pool <- function(host = NULL,
   } else {
     stop("Database connection parameters are required")
   }
+}
+
+#' Close Database Pool
+#'
+#' Closes the database connection pool and performs cleanup operations
+#' when the application is shutting down.
+#'
+#' @param session Shiny session object
+#'
+#' @importFrom shiny onStop
+#' @export
+db_pool_close <- function(session) {
+  shiny::onStop(function() {
+    if (exists("app_pool", envir = .GlobalEnv)) {
+      cleanup_pool(get("app_pool", envir = .GlobalEnv))
+      rm(app_pool, envir = .GlobalEnv)
+    }
+  }, session)
 }
 
 #' Database Operations Class
