@@ -19,6 +19,7 @@ NULL (invisibly). Sets global options for Shiny.
 Configure Shiny App Settings
 }
 \examples{
+\dontrun{
 configure_shiny(
   host = "0.0.0.0",
   port = 3838,
@@ -26,13 +27,6 @@ configure_shiny(
   sanitize_errors = TRUE,
   autoreload = FALSE
 )
-
-# With custom type handler
-configure_shiny(
-  special_option = c(1, 2, 3),
-  type_handlers = list(
-    special_option = function(x) paste(x, collapse = ",")
-  )
-)
+}
 
 }

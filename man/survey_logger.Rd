@@ -7,10 +7,10 @@
 An R6 class object
 }
 \description{
-An R6 class that provides asynchronous logging functionality for survey responses
+An R6 class that provides asynchronous logging functionality for shiny app messages
 }
 \details{
-This class handles asynchronous logging of survey responses to a PostgreSQL database.
+This class handles asynchronous logging of shiny app messages to a PostgreSQL database.
 It uses connection pooling and futures for efficient database operations. The class maintains
 a single logging table per instance and handles all database connections internally.
 }

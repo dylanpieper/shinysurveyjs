@@ -7,21 +7,14 @@
 #' @return NULL (invisibly). Sets global options for Shiny.
 #'
 #' @examples
+#' \dontrun{
 #' configure_shiny(
 #'   host = "0.0.0.0",
 #'   port = 3838,
-#'   workers = 100,
 #'   sanitize_errors = TRUE,
 #'   autoreload = FALSE
 #' )
-#'
-#' # With custom type handler
-#' configure_shiny(
-#'   special_option = c(1, 2, 3),
-#'   type_handlers = list(
-#'     special_option = function(x) paste(x, collapse = ",")
-#'   )
-#' )
+#' }
 #'
 #' @export
 configure_shiny <- function(..., type_handlers = list()) {
