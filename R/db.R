@@ -326,11 +326,11 @@ db_ops <- R6::R6Class(
 #'       \item{db_config}{list. Optional database configuration parameters}
 #'     }
 #'   }
-#'   \item{log_message(message, message_type = "INFO", zone = "DEFAULT")}{
+#'   \item{log_message(message, type = "INFO", zone = "DEFAULT")}{
 #'     Logs a message asynchronously
 #'     \describe{
 #'       \item{message}{character. Message to log}
-#'       \item{message_type}{character. Type of message (e.g., "INFO", "ERROR")}
+#'       \item{type}{character. Type of message (e.g., "INFO", "ERROR")}
 #'       \item{zone}{character. Zone identifier for message categorization}
 #'     }
 #'   }
@@ -403,10 +403,10 @@ survey_logger <- R6::R6Class(
 
     #' @description Log a message asynchronously to the database
     #' @param message character. Message to log
-    #' @param message_type character. Type of message (default: "INFO")
+    #' @param type character. Type of message (default: "INFO")
     #' @param zone character. Zone identifier for message categorization (default: "DEFAULT")
     #' @return invisible(NULL)
-    log_message = function(message, message_type = "INFO", zone = "DEFAULT") {
+    log_message = function(message, type = "INFO", zone = "DEFAULT") {
       db_params <- self$db_params
       log_table <- self$log_table
       session_id <- self$session_id
@@ -418,7 +418,7 @@ survey_logger <- R6::R6Class(
 
         timestamp <- Sys.time()
         query <- sprintf(
-          "INSERT INTO %s (session_id, survey_name, timestamp, zone, message, message_type)
+          "INSERT INTO %s (session_id, survey_name, timestamp, zone, message, type)
            VALUES ($1, $2, $3, $4, $5, $6)",
           log_table
         )
@@ -432,7 +432,7 @@ survey_logger <- R6::R6Class(
             timestamp,
             zone,
             message,
-            message_type
+            type
           )
         )
       }) |>
@@ -465,7 +465,7 @@ survey_logger <- R6::R6Class(
            timestamp TIMESTAMP WITH TIME ZONE,
            zone TEXT,
            message TEXT,
-           message_type TEXT
+           type TEXT
          )",
         self$log_table
       )

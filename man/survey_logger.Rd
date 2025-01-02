@@ -36,11 +36,11 @@ Creates a new logger instance
 \item{db_config}{list. Optional database configuration parameters}
 }
 }
-\item{log_message(message, message_type = "INFO", zone = "DEFAULT")}{
+\item{log_message(message, type = "INFO", zone = "DEFAULT")}{
 Logs a message asynchronously
 \describe{
 \item{message}{character. Message to log}
-\item{message_type}{character. Type of message (e.g., "INFO", "ERROR")}
+\item{type}{character. Type of message (e.g., "INFO", "ERROR")}
 \item{zone}{character. Zone identifier for message categorization}
 }
 }
@@ -121,7 +121,7 @@ Initialize a new survey logger instance
 \subsection{Method \code{log_message()}}{
 Log a message asynchronously to the database
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_message(message, message_type = "INFO", zone = "DEFAULT")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_message(message, type = "INFO", zone = "DEFAULT")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -129,7 +129,7 @@ Log a message asynchronously to the database
 \describe{
 \item{\code{message}}{character. Message to log}
 
-\item{\code{message_type}}{character. Type of message (default: "INFO")}
+\item{\code{type}}{character. Type of message (default: "INFO")}
 
 \item{\code{zone}}{character. Zone identifier for message categorization (default: "DEFAULT")}
 }
