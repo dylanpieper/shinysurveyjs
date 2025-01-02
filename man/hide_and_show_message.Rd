@@ -2,7 +2,7 @@
 % Please edit documentation in R/helper.R
 \name{hide_and_show_message}
 \alias{hide_and_show_message}
-\title{Hide one message and show another}
+\title{Hide One Message and Show Another}
 \usage{
 hide_and_show_message(hide_id, show_id, fade_time = 1)
 }
@@ -14,5 +14,5 @@ hide_and_show_message(hide_id, show_id, fade_time = 1)
 \item{fade_time}{Time in seconds for fade animation (default: 1)}
 }
 \description{
-Hide one message and show another
+Hide One Message and Show Another
 }

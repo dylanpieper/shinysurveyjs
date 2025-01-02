@@ -73,7 +73,7 @@ clean_pool <- function(session) {
   }, session)
 }
 
-#' Hide one message and show another
+#' Hide One Message and Show Another
 #'
 #' @importFrom shinyjs hide show toggle
 #' @param hide_id ID of the message to hide
