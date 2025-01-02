@@ -250,6 +250,11 @@ survey_css <- function(
     opacity: 0.6;
 }
 
+/* HTML container padding */
+.sd-html {
+    padding: 20px;
+}
+
 /* Complete button special styling */
 .sd-btn--action[value='Complete'] {
     background: var(--primary) !important;
