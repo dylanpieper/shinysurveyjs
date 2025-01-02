@@ -194,11 +194,10 @@ survey_single <- function(json,
     logger <- survey_logger$new(
       log_table = db_config$log_table,
       session_id = session$token,
-      survey_name = db_config$write_table,
-      db_config = db_config[c("host", "port", "db_name", "user", "password")]
+      survey_name = db_config$write_table
     )
 
-    logger$log_message("Starting survey")
+    logger$log_message("Start survey", zone = "SURVEY")
 
     rv <- shiny::reactiveValues(
       survey_responses = NULL,

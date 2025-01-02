@@ -388,8 +388,7 @@ survey_logger <- R6::R6Class(
     #' @param log_table character. Name of the logging table
     #' @param session_id character. Unique session identifier
     #' @param survey_name character. Name of the survey
-    #' @param db_config list. Optional database configuration parameters
-    initialize = function(log_table, session_id, survey_name, db_config = NULL) {
+    initialize = function(log_table, session_id, survey_name) {
       self$log_table <- log_table
       self$session_id <- session_id
       self$survey_name <- survey_name

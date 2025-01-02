@@ -60,8 +60,9 @@
 <li><p>Host a single survey or multiple surveys in one app</p></li>
 <li><p>Design surveys and create json objects with a user-friendly <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a></p></li>
 <li><p>Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)</p></li>
+<li><p>Dynamically stage JSON objects in the database to modify surveys using a staging table</p></li>
 <li><p>URL query tokens and one-time access tokens for secure survey distribution</p></li>
-<li><p>Asynchronous worker to handle database updates in near real-time</p></li>
+<li><p>Asynchronous worker to handle database updates in near real-time, including sending app logs to the database, adding tokens for dynamic fields, and updating staged survey JSONs</p></li>
 </ul>
 <p>🚧 <strong>Warning</strong>: These features are under construction and being moved from the app <a href="https://github.com/dylanpieper/ShinySurveyJS-Template" class="external-link">template</a>.</p>
 </div>
@@ -137,7 +138,8 @@
 <span>    db_name <span class="op">=</span> <span class="st">"postgres"</span>,</span>
 <span>    user <span class="op">=</span> <span class="st">"username"</span>,</span>
 <span>    password <span class="op">=</span> <span class="st">"password"</span>,</span>
-<span>    write_table <span class="op">=</span> <span class="st">"survey_package_feedback"</span></span>
+<span>    write_table <span class="op">=</span> <span class="st">"survey_package_feedback"</span>,</span>
+<span>    log_table <span class="op">=</span> <span class="st">"survey_app_logs"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>

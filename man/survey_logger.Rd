@@ -100,7 +100,7 @@ logger$log_message("Invalid response format", "ERROR", "validation")
 \subsection{Method \code{new()}}{
 Initialize a new survey logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, db_config = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -111,8 +111,6 @@ Initialize a new survey logger instance
 \item{\code{session_id}}{character. Unique session identifier}
 
 \item{\code{survey_name}}{character. Name of the survey}
-
-\item{\code{db_config}}{list. Optional database configuration parameters}
 }
 \if{html}{\out{</div>}}
 }
