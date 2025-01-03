@@ -5,6 +5,14 @@
 #' It uses connection pooling and futures for efficient database operations. The class maintains
 #' a single logging table per instance and handles all database connections internally.
 #'
+#' @section Message Types:
+#' The logger supports different message types that are displayed with distinct visual styles:
+#' \describe{
+#'   \item{INFO}{Regular informational messages (displayed in green)}
+#'   \item{WARN}{Warning messages (displayed in yellow)}
+#'   \item{ERROR}{Error messages (displayed in red)}
+#' }
+#'
 #' @section Public Fields:
 #' \describe{
 #'   \item{log_table}{character. Name of the database table for logging}
@@ -25,29 +33,22 @@
 #'     }
 #'   }
 #'   \item{log_message(message, type = "INFO", zone = "DEFAULT")}{
-#'     Logs a message asynchronously
+#'     Logs a message asynchronously with appropriate visual styling
 #'     \describe{
 #'       \item{message}{character. Message to log}
-#'       \item{type}{character. Type of message (e.g., "INFO", "ERROR")}
+#'       \item{type}{character. Type of message ("INFO", "WARN", "ERROR")}
 #'       \item{zone}{character. Zone identifier for message categorization}
 #'     }
-#'   }
-#' }
-#'
-#' @section Private Methods:
-#' \describe{
-#'   \item{ensure_table_exists()}{
-#'     Creates the logging table if it doesn't exist. Uses the global connection pool
-#'     to execute the CREATE TABLE IF NOT EXISTS query.
 #'   }
 #' }
 #'
 #' @importFrom R6 R6Class
 #' @importFrom promises future_promise then catch
 #' @importFrom future future
-#' @importFrom DBI dbExecute dbConnect dbDisconnect
+#' @importFrom DBI dbExecute dbConnect dbDisconnect dbExistsTable
 #' @importFrom RPostgres Postgres
 #' @importFrom pool poolCheckout poolReturn
+#' @importFrom cli cli_alert_success cli_alert_danger cli_alert_warning cli_alert_info
 #'
 #' @examples
 #' \dontrun{
@@ -60,11 +61,9 @@
 #'
 #' # Log different types of messages
 #' logger$log_message("Survey started", "INFO", "initialization")
-#' logger$log_message("Question 1 completed", "INFO", "progress")
-#' logger$log_message("Invalid response format", "ERROR", "validation")
+#' logger$log_message("Missing optional field", "WARN", "validation")
+#' logger$log_message("Required field empty", "ERROR", "validation")
 #' }
-#'
-#' @export
 survey_logger <- R6::R6Class(
   "survey_logger",
   public = list(
@@ -95,13 +94,14 @@ survey_logger <- R6::R6Class(
         user = Sys.getenv("USER"),
         password = Sys.getenv("PASSWORD")
       )
+      cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Started logger")
       private$ensure_table_exists()
     },
 
-    #' @description Log a message asynchronously to the database
+    #' @description Log a message asynchronously to the database with appropriate visual styling
     #' @param message character. Message to log
-    #' @param type character. Type of message (default: "INFO")
-    #' @param zone character. Zone identifier for message categorization (default: "DEFAULT")
+    #' @param type character. Type of message ("INFO", "WARN", "ERROR")
+    #' @param zone character. Zone identifier for message categorization
     #' @return invisible(NULL)
     log_message = function(message, type = "INFO", zone = "DEFAULT") {
       db_params <- self$db_params
@@ -135,13 +135,30 @@ survey_logger <- R6::R6Class(
       }) |>
         promises::then(
           onFulfilled = function(value) {
-            message(sprintf("[Session %s] Logged: %s", session_id, message))
+            # Use appropriate cli styling based on message type
+            switch(type,
+                   "ERROR" = cli::cli_alert_danger(
+                     "[Session {.val {session_id}}] {.field {type}}: {message}",
+                     .envir = environment()
+                   ),
+                   "WARN" = cli::cli_alert_warning(
+                     "[Session {.val {session_id}}] {.field {type}}: {message}",
+                     .envir = environment()
+                   ),
+                   cli::cli_alert_success(
+                     "[Session {.val {session_id}}] {.field {type}}: {message}",
+                     .envir = environment()
+                   )
+            )
             invisible(value)
           }
         ) |>
         promises::catch(
           function(error) {
-            warning(sprintf("[Session %s] Logging error: %s", session_id, error$message))
+            cli::cli_alert_danger(
+              "[Session {.val {session_id}}] Logging error: {.error {error$message}}",
+              .envir = environment()
+            )
             NULL
           }
         )
@@ -153,19 +170,23 @@ survey_logger <- R6::R6Class(
       conn <- pool::poolCheckout(pool)
       on.exit(pool::poolReturn(conn))
 
-      query <- sprintf(
-        "CREATE TABLE IF NOT EXISTS %s (
-           id SERIAL PRIMARY KEY,
-           session_id TEXT,
-           survey_name TEXT,
-           timestamp TIMESTAMP WITH TIME ZONE,
-           zone TEXT,
-           message TEXT,
-           type TEXT
-         )",
-        self$log_table
-      )
-      suppressMessages(DBI::dbExecute(conn, query))
+      # First check if table exists
+      if (!DBI::dbExistsTable(conn, self$log_table)) {
+        query <- sprintf(
+          "CREATE TABLE %s (
+            id SERIAL PRIMARY KEY,
+            session_id TEXT,
+            survey_name TEXT,
+            timestamp TIMESTAMP WITH TIME ZONE,
+            zone TEXT,
+            message TEXT,
+            type TEXT
+          )",
+          self$log_table
+        )
+        DBI::dbExecute(conn, query)
+        cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Created table '{self$log_table}'")
+      }
     }
   )
 )

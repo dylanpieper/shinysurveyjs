@@ -13,14 +13,13 @@
 #' @return A database pool object
 #' @importFrom pool dbPool poolClose
 #' @importFrom RPostgres Postgres
-#' @export
 db_pool_open <- function(host = NULL,
-                            port = NULL,
-                            db_name = NULL,
-                            user = NULL,
-                            password = NULL,
-                            min_size = 1,
-                            max_size = Inf) {
+                         port = NULL,
+                         db_name = NULL,
+                         user = NULL,
+                         password = NULL,
+                         min_size = 1,
+                         max_size = Inf) {
   if (all(!is.null(c(host, port, db_name, user, password)))) {
     pool <- pool::dbPool(
       RPostgres::Postgres(),
@@ -32,7 +31,6 @@ db_pool_open <- function(host = NULL,
       minSize = min_size,
       maxSize = max_size
     )
-
     return(pool)
   } else {
     stop("Database connection parameters are required")
@@ -47,7 +45,6 @@ db_pool_open <- function(host = NULL,
 #' @param session Shiny session object
 #'
 #' @importFrom shiny onStop
-#' @export
 db_pool_close <- function(session) {
   shiny::onStop(function() {
     if (exists("app_pool", envir = .GlobalEnv)) {
@@ -59,51 +56,50 @@ db_pool_close <- function(session) {
 
 #' Database Operations Class
 #'
-#' @description
 #' R6 Class for managing database operations related to survey data storage
 #' and retrieval using PostgreSQL.
 #'
 #' @field session_id Character. Unique identifier for the current session
 #' @field pool Pool object. Database connection pool
+#' @field logger survey_logger object. Logger instance for tracking operations
 #'
 #' @importFrom R6 R6Class
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
 #' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
 #' @importFrom pool poolCheckout poolReturn
-#'
-#' @export
 db_ops <- R6::R6Class(
   "Database Operations",
   public = list(
     session_id = NULL,
     pool = NULL,
+    logger = NULL,
 
-    #' @description Initialize a new db_ops instance
-    #' @param pool Database connection pool
-    #' @param session_id Session identifier
-    #' @return A new db_ops object
-    initialize = function(pool, session_id) {
+    #' @description Initialize a new Database Operations instance
+    #' @param pool Pool object. Database connection pool
+    #' @param session_id Character. Unique identifier for the current session
+    #' @param logger survey_logger object. Logger instance for tracking operations
+    initialize = function(pool, session_id, logger) {
       if (is.null(pool)) {
-        stop(private$format_message("Database pool cannot be NULL"))
+        logger$log_message("Database pool cannot be NULL", "ERROR", "DATABASE")
+        stop()
       }
       self$pool <- pool
       self$session_id <- session_id
+      self$logger <- logger
     },
 
-    #' @description Create a new survey data table
-    #' @param survey_name Character. Name of the survey
-    #' @param data data.frame. Survey data to be stored
-    #' @return Character. Name of the created table (invisible)
-    create_survey_data_table = function(survey_name, data) {
-      if (is.null(survey_name) || !is.character(survey_name)) {
-        stop(private$format_message("Invalid survey_name"))
-      }
-
+    #' @description Create a new survey data table in the database
+    #' @param write_table Character. Name of the table to create
+    #' @param data data.frame. Data frame containing the schema for the new table
+    #' @details Creates a new table with appropriate column types based on the input data frame.
+    #' Also creates a timestamp trigger for tracking updates.
+    create_survey_data_table = function(write_table, data) {
       if (!is.data.frame(data) || nrow(data) == 0) {
-        stop(private$format_message("Invalid data: must be a non-empty data frame"))
+        self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
+        stop()
       }
 
-      table_name <- private$sanitize_survey_table_name(survey_name)
+      table_name <- private$sanitize_survey_table_name(write_table)
 
       self$execute_db_operation(function(conn) {
         if (!DBI::dbExistsTable(conn, table_name)) {
@@ -124,41 +120,34 @@ db_ops <- R6::R6Class(
             DBI::dbQuoteIdentifier(conn, table_name)
           )
           DBI::dbExecute(conn, trigger_query)
-          private$log_message(sprintf("Created new table '%s'", table_name))
+
+          self$logger$log_message(
+            sprintf("Created new table '%s'", table_name),
+            "INFO",
+            "DATABASE"
+          )
         }
       }, sprintf("Failed to create table '%s'", table_name))
 
       invisible(table_name)
     },
 
-    #' @description Check if a table exists in the database
-    #' @param table_name Character. Name of the table to check
-    #' @return Logical indicating if table exists
-    check_table_exists = function(table_name) {
-      if (is.null(table_name) || !is.character(table_name)) {
-        stop(private$format_message("Invalid table_name"))
-      }
-
-      self$execute_db_operation(function(conn) {
-        exists <- DBI::dbExistsTable(conn, table_name)
-        private$log_message(sprintf("Table '%s' exists: %s", table_name, exists))
-        exists
-      }, sprintf("Error checking table %s", table_name))
-    },
-
-    #' @description Execute a database operation with appropriate connection handling
+    #' @description Execute a database operation with transaction handling
     #' @param operation Function. The database operation to execute
-    #' @param error_message Character. Error message if operation fails
-    #' @return Result of the database operation
+    #' @param error_message Character. Message to display if operation fails
+    #' @details Handles connection pooling, transaction management, and error handling.
+    #' Ensures proper cleanup of database connections.
     execute_db_operation = function(operation, error_message) {
       if (is.null(self$pool)) {
-        stop(private$format_message("Database pool is not initialized"))
+        self$logger$log_message("Database pool is not initialized", "ERROR", "DATABASE")
+        stop()
       }
 
       conn <- NULL
       tryCatch({
         conn <- pool::poolCheckout(self$pool)
         if (is.null(conn) || !DBI::dbIsValid(conn)) {
+          self$logger$log_message("Failed to obtain valid database connection", "ERROR", "DATABASE")
           stop("Failed to obtain valid database connection")
         }
 
@@ -172,14 +161,23 @@ db_ops <- R6::R6Class(
           tryCatch(
             {
               DBI::dbRollback(conn)
+              self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
             },
             error = function(rollback_error) {
-              private$log_message(sprintf("Rollback error: %s", rollback_error$message))
+              self$logger$log_message(
+                sprintf("Rollback error: %s", rollback_error$message),
+                "ERROR",
+                "DATABASE"
+              )
             }
           )
         }
-        private$log_message(sprintf("%s: %s", error_message, e$message))
-        stop(private$format_message(sprintf("%s: %s", error_message, e$message)))
+        self$logger$log_message(
+          sprintf("%s: %s", error_message, e$message),
+          "ERROR",
+          "DATABASE"
+        )
+        stop(sprintf("%s: %s", error_message, e$message))
       }, finally = {
         if (!is.null(conn)) {
           tryCatch(
@@ -187,33 +185,42 @@ db_ops <- R6::R6Class(
               pool::poolReturn(conn)
             },
             error = function(return_error) {
-              private$log_message(sprintf(
-                "Error returning connection to pool: %s",
-                return_error$message
-              ))
+              self$logger$log_message(
+                sprintf("Error returning connection to pool: %s", return_error$message),
+                "ERROR",
+                "DATABASE"
+              )
             }
           )
         }
       })
     },
 
-    #' @description Update existing survey data table with new data
-    #' @param survey_name Character. Name of the survey
-    #' @param data data.frame. New survey data to append
-    #' @return Character. Name of the updated table (invisible)
-    update_survey_data_table = function(survey_name, data) {
-      if (is.null(survey_name) || !is.character(survey_name)) {
-        stop(private$format_message("Invalid survey_name"))
+    #' @description Update an existing survey data table with new data
+    #' @param write_table Character. Name of the table to update
+    #' @param data data.frame. Data frame containing the new data
+    #' @details Updates an existing table with new data, adding new columns if necessary.
+    #' Automatically determines appropriate PostgreSQL data types.
+    update_survey_data_table = function(write_table, data) {
+      if (is.null(write_table) || !is.character(write_table)) {
+        self$logger$log_message("Invalid write_table parameter", "ERROR", "DATABASE")
+        stop()
       }
 
       if (!is.data.frame(data) || nrow(data) == 0) {
-        stop(private$format_message("Invalid data: must be a non-empty data frame"))
+        self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
+        stop()
       }
 
-      table_name <- private$sanitize_survey_table_name(survey_name)
+      table_name <- private$sanitize_survey_table_name(write_table)
 
       self$execute_db_operation(function(conn) {
         if (!DBI::dbExistsTable(conn, table_name)) {
+          self$logger$log_message(
+            sprintf("Table '%s' does not exist", table_name),
+            "ERROR",
+            "table_check"
+          )
           stop(sprintf("Table '%s' does not exist", table_name))
         }
 
@@ -236,7 +243,11 @@ db_ops <- R6::R6Class(
             col_type
           )
           DBI::dbExecute(conn, alter_query)
-          private$log_message(sprintf("Added column %s to '%s'", col, table_name))
+          self$logger$log_message(
+            sprintf("Added column %s to '%s'", col, table_name),
+            "INFO",
+            "DATABASE"
+          )
         }
 
         DBI::dbWriteTable(
@@ -247,25 +258,22 @@ db_ops <- R6::R6Class(
           row.names = FALSE
         )
 
-        private$log_message(sprintf(
-          "Inserted survey data into '%s' (n = %d)",
-          table_name, nrow(data)
-        ))
+        self$logger$log_message(
+          sprintf("Inserted data into '%s' (n = %d)", table_name, nrow(data)),
+          "INFO",
+          "DATABASE"
+        )
       }, sprintf("Failed to update table '%s'", table_name))
 
       invisible(table_name)
     }
   ),
+
   private = list(
-    log_message = function(msg) {
-      message(private$format_message(msg))
-    },
-    format_message = function(msg) {
-      sprintf("[Session %s] %s", self$session_id, msg)
-    },
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
+
     generate_column_definitions = function(data) {
       vapply(names(data), function(col) {
         type <- private$get_postgres_type(data[[col]])
@@ -276,6 +284,7 @@ db_ops <- R6::R6Class(
         )
       }, character(1))
     },
+
     get_postgres_type = function(vector) {
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {

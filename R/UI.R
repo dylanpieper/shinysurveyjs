@@ -10,7 +10,6 @@
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
-#' @export
 surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
                      primary = "#003594", mode = "light") {
   css_file <- switch(theme,

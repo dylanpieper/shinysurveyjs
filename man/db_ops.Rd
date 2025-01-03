@@ -4,8 +4,22 @@
 \alias{db_ops}
 \title{Database Operations Class}
 \description{
+Database Operations Class
+
+Database Operations Class
+}
+\details{
 R6 Class for managing database operations related to survey data storage
 and retrieval using PostgreSQL.
+
+Creates a new table with appropriate column types based on the input data frame.
+Also creates a timestamp trigger for tracking updates.
+
+Handles connection pooling, transaction management, and error handling.
+Ensures proper cleanup of database connections.
+
+Updates an existing table with new data, adding new columns if necessary.
+Automatically determines appropriate PostgreSQL data types.
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -13,6 +27,8 @@ and retrieval using PostgreSQL.
 \item{\code{session_id}}{Character. Unique identifier for the current session}
 
 \item{\code{pool}}{Pool object. Database connection pool}
+
+\item{\code{logger}}{survey_logger object. Logger instance for tracking operations}
 }
 \if{html}{\out{</div>}}
 }
@@ -21,7 +37,6 @@ and retrieval using PostgreSQL.
 \itemize{
 \item \href{#method-Database Operations-new}{\code{db_ops$new()}}
 \item \href{#method-Database Operations-create_survey_data_table}{\code{db_ops$create_survey_data_table()}}
-\item \href{#method-Database Operations-check_table_exists}{\code{db_ops$check_table_exists()}}
 \item \href{#method-Database Operations-execute_db_operation}{\code{db_ops$execute_db_operation()}}
 \item \href{#method-Database Operations-update_survey_data_table}{\code{db_ops$update_survey_data_table()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
@@ -31,71 +46,47 @@ and retrieval using PostgreSQL.
 \if{html}{\out{<a id="method-Database Operations-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-new}{}}}
 \subsection{Method \code{new()}}{
-Initialize a new db_ops instance
+Initialize a new Database Operations instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$new(pool, session_id)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$new(pool, session_id, logger)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pool}}{Database connection pool}
+\item{\code{pool}}{Pool object. Database connection pool}
 
-\item{\code{session_id}}{Session identifier}
+\item{\code{session_id}}{Character. Unique identifier for the current session}
+
+\item{\code{logger}}{survey_logger object. Logger instance for tracking operations}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A new db_ops object
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-create_survey_data_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-create_survey_data_table}{}}}
 \subsection{Method \code{create_survey_data_table()}}{
-Create a new survey data table
+Create a new survey data table in the database
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_data_table(survey_name, data)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_data_table(write_table, data)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{survey_name}}{Character. Name of the survey}
+\item{\code{write_table}}{Character. Name of the table to create}
 
-\item{\code{data}}{data.frame. Survey data to be stored}
+\item{\code{data}}{data.frame. Data frame containing the schema for the new table}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Character. Name of the created table (invisible)
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-check_table_exists"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-check_table_exists}{}}}
-\subsection{Method \code{check_table_exists()}}{
-Check if a table exists in the database
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$check_table_exists(table_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{table_name}}{Character. Name of the table to check}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Logical indicating if table exists
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-execute_db_operation"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-execute_db_operation}{}}}
 \subsection{Method \code{execute_db_operation()}}{
-Execute a database operation with appropriate connection handling
+Execute a database operation with transaction handling
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$execute_db_operation(operation, error_message)}\if{html}{\out{</div>}}
 }
@@ -105,34 +96,28 @@ Execute a database operation with appropriate connection handling
 \describe{
 \item{\code{operation}}{Function. The database operation to execute}
 
-\item{\code{error_message}}{Character. Error message if operation fails}
+\item{\code{error_message}}{Character. Message to display if operation fails}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Result of the database operation
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-update_survey_data_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-update_survey_data_table}{}}}
 \subsection{Method \code{update_survey_data_table()}}{
-Update existing survey data table with new data
+Update an existing survey data table with new data
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$update_survey_data_table(survey_name, data)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$update_survey_data_table(write_table, data)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{survey_name}}{Character. Name of the survey}
+\item{\code{write_table}}{Character. Name of the table to update}
 
-\item{\code{data}}{data.frame. New survey data to append}
+\item{\code{data}}{data.frame. Data frame containing the new data}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Character. Name of the updated table (invisible)
 }
 }
 \if{html}{\out{<hr>}}

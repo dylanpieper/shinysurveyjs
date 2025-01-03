@@ -27,5 +27,4 @@ configure_shiny(
   autoreload = FALSE
 )
 }
-
 }

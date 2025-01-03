@@ -14,6 +14,16 @@ This class handles asynchronous logging of shiny app messages to a PostgreSQL da
 It uses connection pooling and futures for efficient database operations. The class maintains
 a single logging table per instance and handles all database connections internally.
 }
+\section{Message Types}{
+
+The logger supports different message types that are displayed with distinct visual styles:
+\describe{
+\item{INFO}{Regular informational messages (displayed in green)}
+\item{WARN}{Warning messages (displayed in yellow)}
+\item{ERROR}{Error messages (displayed in red)}
+}
+}
+
 \section{Public Fields}{
 
 \describe{
@@ -37,22 +47,12 @@ Creates a new logger instance
 }
 }
 \item{log_message(message, type = "INFO", zone = "DEFAULT")}{
-Logs a message asynchronously
+Logs a message asynchronously with appropriate visual styling
 \describe{
 \item{message}{character. Message to log}
-\item{type}{character. Type of message (e.g., "INFO", "ERROR")}
+\item{type}{character. Type of message ("INFO", "WARN", "ERROR")}
 \item{zone}{character. Zone identifier for message categorization}
 }
-}
-}
-}
-
-\section{Private Methods}{
-
-\describe{
-\item{ensure_table_exists()}{
-Creates the logging table if it doesn't exist. Uses the global connection pool
-to execute the CREATE TABLE IF NOT EXISTS query.
 }
 }
 }
@@ -68,10 +68,9 @@ logger <- survey_logger$new(
 
 # Log different types of messages
 logger$log_message("Survey started", "INFO", "initialization")
-logger$log_message("Question 1 completed", "INFO", "progress")
-logger$log_message("Invalid response format", "ERROR", "validation")
+logger$log_message("Missing optional field", "WARN", "validation")
+logger$log_message("Required field empty", "ERROR", "validation")
 }
-
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -119,7 +118,7 @@ Initialize a new survey logger instance
 \if{html}{\out{<a id="method-survey_logger-log_message"></a>}}
 \if{latex}{\out{\hypertarget{method-survey_logger-log_message}{}}}
 \subsection{Method \code{log_message()}}{
-Log a message asynchronously to the database
+Log a message asynchronously to the database with appropriate visual styling
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_message(message, type = "INFO", zone = "DEFAULT")}\if{html}{\out{</div>}}
 }
@@ -129,9 +128,9 @@ Log a message asynchronously to the database
 \describe{
 \item{\code{message}}{character. Message to log}
 
-\item{\code{type}}{character. Type of message (default: "INFO")}
+\item{\code{type}}{character. Type of message ("INFO", "WARN", "ERROR")}
 
-\item{\code{zone}}{character. Zone identifier for message categorization (default: "DEFAULT")}
+\item{\code{zone}}{character. Zone identifier for message categorization}
 }
 \if{html}{\out{</div>}}
 }

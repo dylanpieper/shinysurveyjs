@@ -17,7 +17,7 @@
 #'     \item user: Database username (default: USER environment variable)
 #'     \item password: Database password (default: PASSWORD environment variable)
 #'     \item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
-#'     \item write_table: Table name to write log messages (default: LOG_TABLE environment variable)
+#'     \item log_table: Table name to write log messages (default: LOG_TABLE environment variable)
 #'   }
 #'
 #' @return A Shiny application object
@@ -43,63 +43,13 @@ survey_single <- function(json,
                             write_table = Sys.getenv("WRITE_TABLE"),
                             log_table = Sys.getenv("LOG_TABLE")
                           )) {
-  # Validate inputs with detailed error messages
+  # Validate survey JSON
   if (missing(json) || is.null(json)) {
     stop("Survey JSON is required")
   }
 
-  if (!is.character(db_config$write_table) || nchar(db_config$write_table) == 0) {
-    msg <- "db_config$write_table must be a non-empty character string"
-    logger$log_message(msg,
-      type = "ERROR",
-      zone = "SURVEY"
-    )
-    stop(msg)
-  }
-
-  # Validate database configuration
-  required_db_fields <- c("host", "port", "db_name", "user", "password")
-  missing_fields <- required_db_fields[!required_db_fields %in% names(db_config)]
-  if (length(missing_fields) > 0) {
-    stop(sprintf(
-      "Missing required database configuration fields: %s",
-      paste(missing_fields, collapse = ", ")
-    ))
-  }
-
-  # Set database environment variables
-  Sys.setenv(
-    "HOST" = db_config$host,
-    "PORT" = as.character(db_config$port),
-    "DB_NAME" = db_config$db_name,
-    "USER" = db_config$user,
-    "PASSWORD" = db_config$password
-  )
-
-  # Apply Shiny configuration if provided
-  if (!is.null(shiny_config)) {
-    do.call(configure_shiny, shiny_config)
-  }
-
-  # Initialize global database pool with error handling
-  if (!exists("app_pool", envir = .GlobalEnv)) {
-    tryCatch(
-      {
-        assign("app_pool", do.call(
-          db_pool_open,
-          db_config[c("host", "port", "db_name", "user", "password")]
-        ),
-        envir = .GlobalEnv
-        )
-      },
-      error = function(e) {
-        stop("Failed to initialize database pool: %s")
-      }
-    )
-  }
-
-  # Initialize future plan for async operations
-  future::plan(future::multisession)
+  # Initialize survey
+  setup_survey(db_config, shiny_config)
 
   # Define UI
   ui <- function() {
@@ -135,7 +85,7 @@ survey_single <- function(json,
       survey_name = db_config$write_table
     )
 
-    logger$log_message("Survey session started", zone = "SURVEY")
+    logger$log_message("Started session", zone = "SURVEY")
 
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
@@ -147,7 +97,7 @@ survey_single <- function(json,
     # Initialize database operations with error logging
     db_ops <- tryCatch(
       {
-        db_ops$new(get("app_pool", envir = .GlobalEnv), session$token)
+        db_ops$new(get("app_pool", envir = .GlobalEnv), session$token, logger)
       },
       error = function(e) {
         msg <- sprintf("Failed to initialize db_ops: %s", e$message)
@@ -166,7 +116,7 @@ survey_single <- function(json,
             json
           }
           session$sendCustomMessage("loadSurvey", survey_obj)
-          logger$log_message("Survey loaded successfully", zone = "SURVEY")
+          logger$log_message("Loaded survey", zone = "SURVEY")
         },
         error = function(e) {
           rv$error_message <- sprintf("Error loading survey: %s", e$message)
@@ -181,12 +131,12 @@ survey_single <- function(json,
       shinyjs::show("savingDataMessage")
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
-      logger$log_message("Survey completed by user", zone = "SURVEY")
+      logger$log_message("Completed survey", zone = "SURVEY")
     })
 
     # Handle survey responses with detailed error handling
     observeEvent(input$surveyData, {
-      logger$log_message("Processing survey response data", zone = "SURVEY")
+      logger$log_message("Processing data", zone = "SURVEY")
 
       # Parse survey data
       parsed_data <- tryCatch(
@@ -227,16 +177,9 @@ survey_single <- function(json,
               stop(msg)
             }
 
-            if (!db_ops$check_table_exists(db_config$write_table)) {
-              logger$log_message(
-                sprintf("Creating new table: %s", db_config$write_table),
-                zone = "DATABASE"
-              )
-              db_ops$create_survey_data_table(db_config$write_table, parsed_data)
-            }
+            db_ops$create_survey_data_table(db_config$write_table, parsed_data)
 
             db_ops$update_survey_data_table(db_config$write_table, parsed_data)
-            logger$log_message("Survey data saved successfully", zone = "DATABASE")
 
             # Update reactive value after successful database operation
             rv$survey_responses <- parsed_data
@@ -285,7 +228,7 @@ survey_single <- function(json,
 
     # Clean up on session end
     session$onSessionEnded(function() {
-      logger$log_message("Survey session ended", zone = "SURVEY")
+      logger$log_message("Ended session", zone = "SURVEY")
       db_pool_close(session)
     })
   }

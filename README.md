@@ -6,7 +6,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Host a single survey or multiple surveys in one app
 
--   Design surveys and create json objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
+-   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
 
 -   Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)
 
@@ -14,7 +14,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   URL query tokens and one-time access tokens for secure survey distribution
 
--   Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged survey JSONs, and managing tokens
+-   Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged JSON objects, and managing tokens
 
 🚧 **Warning**: These features are under construction and being moved from the app [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
 

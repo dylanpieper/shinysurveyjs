@@ -38,7 +38,7 @@ survey_single(
 \item user: Database username (default: USER environment variable)
 \item password: Database password (default: PASSWORD environment variable)
 \item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
-\item write_table: Table name to write log messages (default: LOG_TABLE environment variable)
+\item log_table: Table name to write log messages (default: LOG_TABLE environment variable)
 }}
 }
 \value{
