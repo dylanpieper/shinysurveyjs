@@ -136,7 +136,7 @@ survey_single <- function(json,
 
     # Handle survey responses with detailed error handling
     observeEvent(input$surveyData, {
-      logger$log_message("Processing data", zone = "SURVEY")
+      logger$log_message("Processed data", zone = "SURVEY")
 
       # Parse survey data
       parsed_data <- tryCatch(
@@ -149,7 +149,7 @@ survey_single <- function(json,
         },
         error = function(e) {
           rv$error_message <- sprintf("Error parsing survey data: %s", e$message)
-          logger$log_message(rv$error_message, type = "ERROR", zone = "DATA_PARSING")
+          logger$log_message(rv$error_message, type = "ERROR", zone = "SURVEY")
           return(NULL)
         }
       )
@@ -158,7 +158,7 @@ survey_single <- function(json,
         # Validate parsed data
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
-          logger$log_message(rv$error_message, type = "ERROR", zone = "DATA_VALIDATION")
+          logger$log_message(rv$error_message, type = "ERROR", zone = "SURVEY")
           hide_and_show_message("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }

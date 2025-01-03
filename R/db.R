@@ -122,12 +122,12 @@ db_ops <- R6::R6Class(
           DBI::dbExecute(conn, trigger_query)
 
           self$logger$log_message(
-            sprintf("Created new table '%s'", table_name),
+            "Created new survey table",
             "INFO",
             "DATABASE"
           )
         }
-      }, sprintf("Failed to create table '%s'", table_name))
+      }, "Failed to create survey table")
 
       invisible(table_name)
     },
@@ -259,7 +259,7 @@ db_ops <- R6::R6Class(
         )
 
         self$logger$log_message(
-          sprintf("Inserted data into '%s' (n = %d)", table_name, nrow(data)),
+          sprintf("Inserted survey data (n = %d)", nrow(data)),
           "INFO",
           "DATABASE"
         )
