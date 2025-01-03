@@ -47,6 +47,21 @@ It uses connection pooling and futures for efficient database operations. The cl
 a single logging table per instance and handles all database connections internally.</p>
     </div>
     <div class="section level2">
+    <h2 id="message-types">Message Types<a class="anchor" aria-label="anchor" href="#message-types"></a></h2>
+
+
+<p>The logger supports different message types that are displayed with distinct visual styles:</p><dl><dt>INFO</dt>
+<dd><p>Regular informational messages (displayed in green)</p></dd>
+
+<dt>WARN</dt>
+<dd><p>Warning messages (displayed in yellow)</p></dd>
+
+<dt>ERROR</dt>
+<dd><p>Error messages (displayed in red)</p></dd>
+
+
+</dl></div>
+    <div class="section level2">
     <h2 id="public-fields">Public Fields<a class="anchor" aria-label="anchor" href="#public-fields"></a></h2>
 
 
@@ -85,27 +100,17 @@ a single logging table per instance and handles all database connections interna
 </dl></dd>
 
 <dt>log_message(message, type = "INFO", zone = "DEFAULT")</dt>
-<dd><p>Logs a message asynchronously</p><dl><dt>message</dt>
+<dd><p>Logs a message asynchronously with appropriate visual styling</p><dl><dt>message</dt>
 <dd><p>character. Message to log</p></dd>
 
 <dt>type</dt>
-<dd><p>character. Type of message (e.g., "INFO", "ERROR")</p></dd>
+<dd><p>character. Type of message ("INFO", "WARN", "ERROR")</p></dd>
 
 <dt>zone</dt>
 <dd><p>character. Zone identifier for message categorization</p></dd>
 
 
 </dl></dd>
-
-
-</dl></div>
-    <div class="section level2">
-    <h2 id="private-methods">Private Methods<a class="anchor" aria-label="anchor" href="#private-methods"></a></h2>
-
-
-<dl><dt>ensure_table_exists()</dt>
-<dd><p>Creates the logging table if it doesn't exist. Uses the global connection pool
-to execute the CREATE TABLE IF NOT EXISTS query.</p></dd>
 
 
 </dl></div>
@@ -164,7 +169,7 @@ to execute the CREATE TABLE IF NOT EXISTS query.</p></dd>
 
 </div><p></p><hr><a id="method-survey_logger-log_message"></a><div class="section">
 <h3 id="method-log-message-">Method <code>log_message()</code><a class="anchor" aria-label="anchor" href="#method-log-message-"></a></h3>
-<p>Log a message asynchronously to the database</p><div class="section">
+<p>Log a message asynchronously to the database with appropriate visual styling</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="va">message</span>, type <span class="op">=</span> <span class="st">"INFO"</span>, zone <span class="op">=</span> <span class="st">"DEFAULT"</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
@@ -176,11 +181,11 @@ to execute the CREATE TABLE IF NOT EXISTS query.</p></dd>
 
 
 <dt><code>type</code></dt>
-<dd><p>character. Type of message (default: "INFO")</p></dd>
+<dd><p>character. Type of message ("INFO", "WARN", "ERROR")</p></dd>
 
 
 <dt><code>zone</code></dt>
-<dd><p>character. Zone identifier for message categorization (default: "DEFAULT")</p></dd>
+<dd><p>character. Zone identifier for message categorization</p></dd>
 
 
 </dl><p></p></div>
@@ -222,10 +227,9 @@ to execute the CREATE TABLE IF NOT EXISTS query.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Log different types of messages</span></span></span>
 <span class="r-in"><span><span class="va">logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="st">"Survey started"</span>, <span class="st">"INFO"</span>, <span class="st">"initialization"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="st">"Question 1 completed"</span>, <span class="st">"INFO"</span>, <span class="st">"progress"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="st">"Invalid response format"</span>, <span class="st">"ERROR"</span>, <span class="st">"validation"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="st">"Missing optional field"</span>, <span class="st">"WARN"</span>, <span class="st">"validation"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">logger</span><span class="op">$</span><span class="fu">log_message</span><span class="op">(</span><span class="st">"Required field empty"</span>, <span class="st">"ERROR"</span>, <span class="st">"validation"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
-<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
