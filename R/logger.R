@@ -135,7 +135,6 @@ survey_logger <- R6::R6Class(
       }) |>
         promises::then(
           onFulfilled = function(value) {
-            # Use appropriate cli styling based on message type
             switch(type,
                    "ERROR" = cli::cli_alert_danger(
                      "[Session {.val {session_id}}] {.field {type}}: {message}",
@@ -170,7 +169,6 @@ survey_logger <- R6::R6Class(
       conn <- pool::poolCheckout(pool)
       on.exit(pool::poolReturn(conn))
 
-      # First check if table exists
       if (!DBI::dbExistsTable(conn, self$log_table)) {
         query <- sprintf(
           "CREATE TABLE %s (
@@ -185,7 +183,7 @@ survey_logger <- R6::R6Class(
           self$log_table
         )
         DBI::dbExecute(conn, query)
-        cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Created table '{self$log_table}'")
+        cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Created logger table")
       }
     }
   )

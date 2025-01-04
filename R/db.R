@@ -122,7 +122,7 @@ db_ops <- R6::R6Class(
           DBI::dbExecute(conn, trigger_query)
 
           self$logger$log_message(
-            "Created new survey table",
+            "Created survey table",
             "INFO",
             "DATABASE"
           )

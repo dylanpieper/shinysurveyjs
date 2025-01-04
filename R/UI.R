@@ -1,4 +1,4 @@
-#' Create Survey UI with Message Components
+#' Create Survey UI with CSS and Message Components
 #'
 #' @param id Optional id for the survey div container (default is "surveyContainer")
 #' @param theme Theme name ("defaultV2" or "modern")
@@ -10,7 +10,7 @@
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
-surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
+survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
                      primary = "#003594", mode = "light") {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
@@ -330,5 +330,46 @@ surveyUI <- function(id = "surveyContainer", theme = "defaultV2",
     ),
     # Main survey container
     shiny::div(id = id)
+  )
+}
+
+#' Create Survey UI Wrapper
+#'
+#' Creates a Shiny UI wrapper for displaying a survey with an optional response table.
+#' The UI includes a loading spinner and conditional panels based on survey state.
+#'
+#' @param theme The theme configuration for styling the survey
+#' @param theme_color Primary color used for UI elements like the loading spinner
+#' @param theme_mode The theme mode (e.g., 'light' or 'dark')
+#' @return A Shiny UI definition
+#'
+#' @importFrom shiny fluidPage conditionalPanel div h3
+#' @importFrom shinyjs useShinyjs
+#' @importFrom shinycssloaders withSpinner
+#' @importFrom DT DTOutput
+#'
+#' @export
+survey_ui_wrapper <- function(theme = NULL, theme_color = "#000000", theme_mode = "light") {
+  shiny::fluidPage(
+    shinyjs::useShinyjs(),
+    survey_ui(theme = theme, primary = theme_color, mode = theme_mode),
+    shiny::conditionalPanel(
+      condition = "output.showResponseTable",
+      shiny::div(
+        id = "surveyResponseContainer",
+        style = "display: none;",
+        shiny::h3("Your Response:"),
+        shiny::div(
+          class = "nested-spinner-container",
+          shinycssloaders::withSpinner(
+            DT::DTOutput("surveyResponseTable"),
+            type = 8,
+            color = theme_color,
+            size = 1,
+            proxy.height = "200px"
+          )
+        )
+      )
+    )
   )
 }

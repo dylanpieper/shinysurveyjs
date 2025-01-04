@@ -48,34 +48,13 @@ survey_single <- function(json,
     stop("Survey JSON is required")
   }
 
-  # Initialize survey
+  # Setup survey
   setup_survey(db_config, shiny_config)
 
   # Define UI
-  ui <- function() {
-    shiny::fluidPage(
-      shinyjs::useShinyjs(),
-      surveyUI(theme = theme, primary = theme_color, mode = theme_mode),
-      shiny::conditionalPanel(
-        condition = "output.showResponseTable",
-        shiny::div(
-          id = "surveyResponseContainer",
-          style = "display: none;",
-          shiny::h3("Your Response:"),
-          shiny::div(
-            class = "nested-spinner-container",
-            shinycssloaders::withSpinner(
-              DT::DTOutput("surveyResponseTable"),
-              type = 8,
-              color = theme_color,
-              size = 1,
-              proxy.height = "200px"
-            )
-          )
-        )
-      )
-    )
-  }
+  ui <- fluidPage(
+    survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode)
+  )
 
   # Define server with enhanced error handling
   server <- function(input, output, session) {
