@@ -8,6 +8,58 @@
 survey_single_js <- function() {
   "$(document).ready(function() {
     var survey;
+    const COOKIE_NAME = 'surveyProgress';
+    const COOKIE_EXPIRATION_DAYS = 7;
+
+    // Utility functions for cookie handling
+    function setCookie(name, value, days) {
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = name + '=' + encodeURIComponent(JSON.stringify(value)) + ';expires=' + expires.toUTCString() + ';path=/';
+    }
+
+    function getCookie(name) {
+        const nameEQ = name + '=';
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) {
+                try {
+                    return JSON.parse(decodeURIComponent(c.substring(nameEQ.length, c.length)));
+                } catch (e) {
+                    console.error('Error parsing cookie:', e);
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    function deleteCookie(name) {
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/';
+    }
+
+    function saveSurveyProgress(survey) {
+        const data = {
+            data: survey.data,
+            currentPageNo: survey.currentPageNo,
+            timestamp: new Date().getTime()
+        };
+        setCookie(COOKIE_NAME, data, COOKIE_EXPIRATION_DAYS);
+    }
+
+    function loadSurveyProgress(survey) {
+        const savedData = getCookie(COOKIE_NAME);
+        if (savedData && savedData.data) {
+            survey.data = savedData.data;
+            if (savedData.currentPageNo !== undefined) {
+                survey.currentPageNo = savedData.currentPageNo;
+            }
+            return true;
+        }
+        return false;
+    }
 
     $('#surveyContainer').show();
 
@@ -16,35 +68,43 @@ survey_single_js <- function() {
             if (typeof surveyJSON === 'string') {
                 surveyJSON = JSON.parse(surveyJSON);
             }
-
             // Update document title if available
             if (surveyJSON.title) {
                 document.title = surveyJSON.title;
             }
-
             // Clear the container without removing it
             $('#surveyContainer').empty();
-
             // Create the survey
             survey = new Survey.Model(surveyJSON);
 
+            // Add auto-save functionality
+            survey.onValueChanged.add(function(sender, options) {
+                saveSurveyProgress(survey);
+            });
+
+            survey.onCurrentPageChanged.add(function(sender, options) {
+                saveSurveyProgress(survey);
+            });
+
+            // Load saved progress if available
+            const hasProgress = loadSurveyProgress(survey);
+
             survey.onComplete.add(function(result) {
+                // Delete the progress cookie on completion
+                deleteCookie(COOKIE_NAME);
+
                 // First trigger completion to show loading state
                 Shiny.setInputValue('surveyComplete', true);
-
                 // Keep the container visible
                 $('#surveyContainer').show();
-
                 // Show saving message with spinner
                 $('#savingDataMessage').show();
-
                 // Set z-index for completion page
                 $('.sv-completedpage').css({
                     'position': 'relative',
                     'z-index': '10000',
                     'opacity': '1'
                 });
-
                 Shiny.setInputValue('surveyData', JSON.stringify(result.data));
             });
 
@@ -54,6 +114,13 @@ survey_single_js <- function() {
                 onComplete: function(survey, options) {
                     // Ensure container stays visible after completion
                     $('#surveyContainer').show();
+                }
+            });
+
+            // Add window unload handler to save progress
+            $(window).on('beforeunload', function() {
+                if (!survey.isCompleted) {
+                    saveSurveyProgress(survey);
                 }
             });
 
