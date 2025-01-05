@@ -90,9 +90,11 @@ survey_single(
     port = 5432,
     db_name = "postgres",
     user = "username",
-    password = "password",
+    password = "password", # Use an environmental variable with encryption
     write_table = "survey_package_feedback",
     log_table = "survey_app_logs"
   )
 )
 ```
+
+By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from an or encrypted `.env` or `.yaml` file or a secrets manager.
