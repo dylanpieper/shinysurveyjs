@@ -55,17 +55,24 @@
 </h1></div>
 <p>The goal of this package is to integrate the flexible frontend of the <a href="https://surveyjs.io/" class="external-link">SurveyJS</a> library with the reactive backend of <a href="https://shiny.posit.co/" class="external-link">Shiny</a> to interface with a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.</p>
 <div class="section level2">
-<h2 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+<h2 id="basic-features">Basic Features<a class="anchor" aria-label="anchor" href="#basic-features"></a>
 </h2>
 <ul>
 <li><p>Host a single survey or multiple surveys in one app</p></li>
 <li><p>Design surveys and create JSON objects with a user-friendly <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a></p></li>
+<li><p>Save survey progress as cookies and resume later</p></li>
+<li><p>Change the primary theme color and select from dark and light themes</p></li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="advanced-features">Advanced Features<a class="anchor" aria-label="anchor" href="#advanced-features"></a>
+</h2>
+<ul>
 <li><p>Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)</p></li>
 <li><p>Dynamically stage JSON objects in the database to modify surveys using a staging table</p></li>
 <li><p>URL query tokens and one-time access tokens for secure survey distribution</p></li>
 <li><p>Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged JSON objects, and managing tokens</p></li>
 </ul>
-<p>🚧 <strong>Warning</strong>: These features are under construction and being moved from the app <a href="https://github.com/dylanpieper/ShinySurveyJS-Template" class="external-link">template</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -129,9 +136,7 @@
 <span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
 <span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,</span>
-<span>    port <span class="op">=</span> <span class="fl">3838</span>,</span>
-<span>    sanitize_errors <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>    autoreload <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>    port <span class="op">=</span> <span class="fl">3838</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    host <span class="op">=</span> <span class="st">"aws-0-us-east-2.pooler.supabase.com"</span>,</span>
