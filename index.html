@@ -139,16 +139,16 @@
 <span>    port <span class="op">=</span> <span class="fl">3838</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    host <span class="op">=</span> <span class="st">"aws-0-us-east-2.pooler.supabase.com"</span>,</span>
-<span>    port <span class="op">=</span> <span class="fl">5432</span>,</span>
-<span>    db_name <span class="op">=</span> <span class="st">"postgres"</span>,</span>
-<span>    user <span class="op">=</span> <span class="st">"username"</span>,</span>
-<span>    password <span class="op">=</span> <span class="st">"password"</span>, <span class="co"># Use an environmental variable with encryption</span></span>
-<span>    write_table <span class="op">=</span> <span class="st">"survey_package_feedback"</span>,</span>
-<span>    log_table <span class="op">=</span> <span class="st">"survey_app_logs"</span></span>
+<span>    host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"HOST"</span><span class="op">)</span>,</span>
+<span>    port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    db_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
+<span>    user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"USER"</span><span class="op">)</span>,</span>
+<span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PASSWORD"</span><span class="op">)</span>,</span>
+<span>    write_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"WRITE_TABLE"</span><span class="op">)</span>,</span>
+<span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>By default, the database configuration looks for environmental variables (e.g., <code>Sys.getenv("PASSWORD")</code>) that can be loaded from an or encrypted <code>.env</code> or <code>.yaml</code> file or a secrets manager.</p>
+<p>By default, the database configuration looks for environmental variables (e.g., <code>Sys.getenv("PASSWORD")</code>) that can be loaded from an <code>.env</code> or <code>.yaml</code> file or a secrets manager. Using encrypted secrets is recommended for production environments.</p>
 </div>
 </div>
 </div>
