@@ -79,8 +79,6 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
     stop("Missing required database fields")
   }
 
-  cli::cli_alert_success("Validated database configuration exists")
-
   # List of environment variables to check and set
   cli::cli_h2("Environment Setup")
   env_vars <- list(

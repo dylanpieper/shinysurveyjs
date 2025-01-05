@@ -14,7 +14,8 @@ survey_single(
   db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
-    Sys.getenv("LOG_TABLE"))
+    Sys.getenv("LOG_TABLE")),
+  cookie_expiration_days = 7
 )
 }
 \arguments{

@@ -2,15 +2,33 @@
 % Please edit documentation in R/www.R
 \name{survey_single_js}
 \alias{survey_single_js}
-\title{Single Survey JavaScript}
+\title{Generate JavaScript Code for Single Survey Integration}
 \usage{
-survey_single_js()
+survey_single_js(cookie_expiration_days = 7)
+}
+\arguments{
+\item{cookie_expiration_days}{Integer specifying how many days the survey progress cookie should
+persist. Defaults to 7 days. The cookie is automatically deleted when the survey is completed.}
 }
 \value{
-A character string containing the JavaScript code for survey initialization
+A character string containing the JavaScript code for survey initialization and management.
+The code includes functionality for:
+\itemize{
+\item Survey progress persistence through cookies
+\item Automatic progress saving on page changes and value updates
+\item Survey completion handling and data transmission to Shiny
+\item Error handling and user feedback
+}
 }
 \description{
 Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
-This JavaScript code sets up event handlers for survey completion and enables communication between the survey and Shiny.
+This JavaScript code sets up event handlers for survey completion, manages survey progress persistence
+through cookies, and enables communication between the survey and Shiny.
 }
-\keyword{internal}
+\examples{
+# Generate JavaScript with default 7-day cookie expiration
+js_code <- survey_single_js()
+
+# Generate JavaScript with 30-day cookie expiration
+js_code <- survey_single_js(cookie_expiration_days = 30)
+}

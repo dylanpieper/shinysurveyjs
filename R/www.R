@@ -1,15 +1,30 @@
-#' Single Survey JavaScript
+#' Generate JavaScript Code for Single Survey Integration
 #'
 #' Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
-#' This JavaScript code sets up event handlers for survey completion and enables communication between the survey and Shiny.
+#' This JavaScript code sets up event handlers for survey completion, manages survey progress persistence
+#' through cookies, and enables communication between the survey and Shiny.
 #'
-#' @return A character string containing the JavaScript code for survey initialization
-#' @keywords internal
-survey_single_js <- function() {
-  "$(document).ready(function() {
+#' @param cookie_expiration_days Integer specifying how many days the survey progress cookie should
+#'   persist. Defaults to 7 days. The cookie is automatically deleted when the survey is completed.
+#'
+#' @return A character string containing the JavaScript code for survey initialization and management.
+#'   The code includes functionality for:
+#'   * Survey progress persistence through cookies
+#'   * Automatic progress saving on page changes and value updates
+#'   * Survey completion handling and data transmission to Shiny
+#'   * Error handling and user feedback
+#'
+#' @examples
+#' # Generate JavaScript with default 7-day cookie expiration
+#' js_code <- survey_single_js()
+#'
+#' # Generate JavaScript with 30-day cookie expiration
+#' js_code <- survey_single_js(cookie_expiration_days = 30)
+survey_single_js <- function(cookie_expiration_days = 7) {
+  sprintf("$(document).ready(function() {
     var survey;
     const COOKIE_NAME = 'surveyProgress';
-    const COOKIE_EXPIRATION_DAYS = 7;
+    const COOKIE_EXPIRATION_DAYS = %d;
 
     // Utility functions for cookie handling
     function setCookie(name, value, days) {
@@ -135,7 +150,7 @@ survey_single_js <- function() {
     Shiny.addCustomMessageHandler('loadSurvey', function(surveyJSON) {
         initializeSurvey(surveyJSON);
     });
-});"
+});", cookie_expiration_days)
 }
 
 #' Survey CSS with Theme Support

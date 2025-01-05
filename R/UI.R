@@ -11,7 +11,8 @@
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
 survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
-                     primary = "#003594", mode = "light") {
+                     primary = "#003594", mode = "light",
+                     cookie_expiration_days = 7) {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -264,7 +265,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       htmltools::tags$style(HTML(dark_mode_css)),
       htmltools::tags$style(HTML(message_ui_css)),
       htmltools::tags$style(HTML(animation_css)),
-      htmltools::tags$script(HTML(survey_single_js())),
+      htmltools::tags$script(HTML(survey_single_js(cookie_expiration_days = cookie_expiration_days))),
       shinyjs::useShinyjs()
     ),
     # Message containers
@@ -345,10 +346,10 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 #' @importFrom DT DTOutput
 #'
 #' @export
-survey_ui_wrapper <- function(theme = NULL, theme_color = "#000000", theme_mode = "light") {
+survey_ui_wrapper <- function(theme = NULL, theme_color = "#000000", theme_mode = "light", cookie_expiration_days = 7) {
   shiny::fluidPage(
     shinyjs::useShinyjs(),
-    survey_ui(theme = theme, primary = theme_color, mode = theme_mode),
+    survey_ui(theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days),
     shiny::conditionalPanel(
       condition = "output.showResponseTable",
       shiny::div(

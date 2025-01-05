@@ -45,7 +45,8 @@ survey_single <- function(json,
                             password = Sys.getenv("PASSWORD"),
                             write_table = Sys.getenv("WRITE_TABLE"),
                             log_table = Sys.getenv("LOG_TABLE")
-                          )) {
+                          ),
+                          cookie_expiration_days = 7) {
   # Validate survey JSON
   if (missing(json) || is.null(json)) {
     stop("Survey JSON is required")
@@ -56,7 +57,7 @@ survey_single <- function(json,
 
   # Define UI
   ui <- fluidPage(
-    survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode)
+    survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode, cookie_expiration_days = cookie_expiration_days)
   )
 
   # Define server with enhanced error handling

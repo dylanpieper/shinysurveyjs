@@ -6,6 +6,8 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Host a single survey or multiple surveys in one app
 
+-   Store and manage survey data in a [PostgreSQL](https://www.postgresql.org/) database
+
 -   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
 
 -   Save survey progress as cookies and resume later
@@ -86,14 +88,15 @@ survey_single(
     port = 3838
   ),
   db_config = list(
-    host = Sys.getenv("HOST"),
-    port = as.numeric(Sys.getenv("PORT")),
-    db_name = Sys.getenv("DB_NAME"),
-    user = Sys.getenv("USER"),
-    password = Sys.getenv("PASSWORD"),
-    write_table = Sys.getenv("WRITE_TABLE"),
-    log_table = Sys.getenv("LOG_TABLE")
-  )
+    host = Sys.getenv("HOST"), # aws-0-us-east-2.pooler.supabase.com
+    port = as.numeric(Sys.getenv("PORT")), # 5432
+    db_name = Sys.getenv("DB_NAME"), # postgres
+    user = Sys.getenv("USER"), # username
+    password = Sys.getenv("PASSWORD"), # password
+    write_table = Sys.getenv("WRITE_TABLE"), # survey_package_feedback
+    log_table = Sys.getenv("LOG_TABLE") # survey_app_logs
+  ),
+  cookie_expiration_days = 7
 )
 ```
 

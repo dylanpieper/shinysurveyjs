@@ -4,7 +4,12 @@
 \alias{survey_ui_wrapper}
 \title{Create Survey UI Wrapper}
 \usage{
-survey_ui_wrapper(theme = NULL, theme_color = "#000000", theme_mode = "light")
+survey_ui_wrapper(
+  theme = NULL,
+  theme_color = "#000000",
+  theme_mode = "light",
+  cookie_expiration_days = 7
+)
 }
 \arguments{
 \item{theme}{The theme configuration for styling the survey}

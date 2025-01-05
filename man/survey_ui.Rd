@@ -8,7 +8,8 @@ survey_ui(
   id = "surveyContainer",
   theme = "defaultV2",
   primary = "#003594",
-  mode = "light"
+  mode = "light",
+  cookie_expiration_days = 7
 )
 }
 \arguments{
