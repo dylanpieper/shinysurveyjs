@@ -1,8 +1,8 @@
 #' Smoothly Transition Between Two Elements
 #'
-#' Creates a smooth fade transition between any two elements by fading out one element
+#' Creates a smooth fade transition between any two DIV elements by fading out one element
 #' and fading in another. This creates a polished user interface when switching between
-#' different elements like messages, panels, forms, or any content containers.
+#' different elements like messages, panels, or content containers.
 #'
 #' @param hide_id Character string specifying the ID of the element to fade out
 #' @param show_id Character string specifying the ID of the element to fade in
@@ -13,9 +13,6 @@
 #' 1. Ensures the target element exists in the DIV but is hidden
 #' 2. Fades out the currently visible element
 #' 3. After the fade-out completes, fades in the target element
-#'
-#' @note The total transition time will be twice the fade_time parameter since
-#'   there are two sequential animations (fade out + fade in).
 #'
 #' @importFrom shinyjs hide show toggle delay
 #' @export

@@ -6,7 +6,7 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Host a single survey or multiple surveys in one app
 
--   Store and manage survey data in a [PostgreSQL](https://www.postgresql.org/) database
+-   Store and manage survey data in a [PostgreSQL](https://www.postgresql.org/) database, including metadata such as date created and updated timestamps, Shiny session ID, IP address, and the duration of the survey
 
 -   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
 

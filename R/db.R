@@ -1,4 +1,4 @@
-#' @title Shiny App Logger Class
+#' @title Open Database Pool
 #'
 #' @description Creates and manages a global database pool connection using PostgreSQL.
 #'
@@ -57,47 +57,67 @@ db_pool_close <- function(session) {
 
 #' Database Operations Class
 #'
+#' @description
 #' R6 Class for managing database operations related to survey data storage
-#' and retrieval using PostgreSQL.
+#' and retrieval using PostgreSQL. Includes automatic tracking of creation date,
+#' update date, session ID, and IP address.
 #'
-#' @field session_id Character. Unique identifier for the current session
-#' @field pool Pool object. Database connection pool
-#' @field logger survey_logger object. Logger instance for tracking operations
+#' @details
+#' This class handles all database interactions for survey data, including:
+#' * Table creation and modification with tracking columns
+#' * Data insertion with automatic timestamp management
+#' * Session and IP tracking
+#' * Transaction management
+#' * Error handling and logging
 #'
-#' @importFrom R6 R6Class
+#' Tracking columns automatically added to each table:
+#' * date_created: Timestamp when record was created
+#' * date_updated: Timestamp when record was last updated
+#' * session_id: Shiny session identifier
+#' * ip_address: Client IP address
+#'
+#' @import R6
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
 #' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
 #' @importFrom pool poolCheckout poolReturn
+#' @importFrom shiny getDefaultReactiveDomain parseQueryString
 db_ops <- R6::R6Class(
   "Database Operations",
+
   public = list(
+    #' @field session_id Unique identifier for the current session
     session_id = NULL,
+
+    #' @field pool Database connection pool
     pool = NULL,
+
+    #' @field logger Logger instance for tracking operations
     logger = NULL,
 
-    #' @description Initialize a new Database Operations instance
+    #' @description Create a new Database Operations instance
     #' @param pool Pool object. Database connection pool
     #' @param session_id Character. Unique identifier for the current session
     #' @param logger survey_logger object. Logger instance for tracking operations
     initialize = function(pool, session_id, logger) {
       if (is.null(pool)) {
         logger$log_message("Database pool cannot be NULL", "ERROR", "DATABASE")
-        stop()
+        stop("Database pool is required")
       }
       self$pool <- pool
       self$session_id <- session_id
       self$logger <- logger
+
+      private$init_tracking_triggers()
     },
 
-    #' @description Database Operation with Transaction Handling
+    #' @description Execute a database operation with transaction handling
     #' @param operation Function. The database operation to execute
     #' @param error_message Character. Message to display if operation fails
-    #' @details Handles connection pooling, transaction management, and error handling.
-    #' Ensures proper cleanup of database connections.
+    #' @return Result of the operation or error message if failed
     operate = function(operation, error_message) {
       if (is.null(self$pool)) {
         self$logger$log_message("Database pool is not initialized", "ERROR", "DATABASE")
-        stop()
+        stop("Database pool not initialized")
       }
 
       conn <- NULL
@@ -153,64 +173,191 @@ db_ops <- R6::R6Class(
       })
     },
 
-    #' @description Create New Survey Data Table
+    #' @description Ensure tracking columns exist in a table
+    #' @param table_name Character. Name of the table to check/modify
+    #' @return Invisible NULL
+    ensure_tracking_columns = function(table_name) {
+      self$operate(function(conn) {
+        # Get existing columns
+        cols_query <- sprintf(
+          "SELECT column_name, data_type
+           FROM information_schema.columns
+           WHERE table_name = '%s';",
+          table_name
+        )
+        existing_cols <- DBI::dbGetQuery(conn, cols_query)
+
+        # Define tracking columns with their types
+        tracking_cols <- list(
+          date_created = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+          date_updated = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+          session_id = "TEXT",
+          ip_address = "INET"
+        )
+
+        # Add missing tracking columns
+        for (col_name in names(tracking_cols)) {
+          if (!col_name %in% existing_cols$column_name) {
+            alter_query <- sprintf(
+              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+              DBI::dbQuoteIdentifier(conn, table_name),
+              DBI::dbQuoteIdentifier(conn, col_name),
+              tracking_cols[[col_name]]
+            )
+            DBI::dbExecute(conn, alter_query)
+
+            # For existing rows, set date_created and date_updated to current timestamp
+            if (col_name %in% c("date_created", "date_updated")) {
+              update_query <- sprintf(
+                "UPDATE %s SET %s = CURRENT_TIMESTAMP WHERE %s IS NULL;",
+                DBI::dbQuoteIdentifier(conn, table_name),
+                DBI::dbQuoteIdentifier(conn, col_name),
+                DBI::dbQuoteIdentifier(conn, col_name)
+              )
+              DBI::dbExecute(conn, update_query)
+            }
+
+            self$logger$log_message(
+              sprintf("Added column '%s' to table '%s'", col_name, table_name),
+              "INFO",
+              "DATABASE"
+            )
+          }
+        }
+
+        # Check if trigger exists
+        trigger_name <- paste0("update_date_updated_", table_name)
+        trigger_exists_query <- sprintf(
+          "SELECT 1 FROM pg_trigger WHERE tgname = '%s'",
+          trigger_name
+        )
+        trigger_exists <- nrow(DBI::dbGetQuery(conn, trigger_exists_query)) > 0
+
+        # Create trigger if it doesn't exist
+        if (!trigger_exists) {
+          trigger_query <- sprintf(
+            "CREATE TRIGGER %s
+             BEFORE UPDATE ON %s
+             FOR EACH ROW
+             EXECUTE FUNCTION update_date_updated();",
+            trigger_name,
+            DBI::dbQuoteIdentifier(conn, table_name)
+          )
+          DBI::dbExecute(conn, trigger_query)
+
+          self$logger$log_message(
+            sprintf("Added update trigger to table '%s'", table_name),
+            "INFO",
+            "DATABASE"
+          )
+        }
+
+        invisible(NULL)
+      }, sprintf("Failed to ensure tracking columns for table '%s'", table_name))
+    },
+
+    #' @description Create new survey data table with tracking columns
     #' @param write_table Character. Name of the table to create
     #' @param data data.frame. Data frame containing the schema for the new table
-    #' @details Creates a new table with appropriate column types based on the input data frame.
-    #' Also creates a timestamp trigger for tracking updates.
+    #' @return Character. The sanitized table name
     create_survey_table = function(write_table, data) {
       if (!is.data.frame(data) || nrow(data) == 0) {
         self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
-        stop()
+        stop("Invalid data format")
       }
 
       table_name <- private$sanitize_survey_table_name(write_table)
 
       self$operate(function(conn) {
-        if (!DBI::dbExistsTable(conn, table_name)) {
+        # Check if table exists
+        table_exists <- DBI::dbExistsTable(conn, table_name)
+
+        if (!table_exists) {
+          # Define tracking columns
+          tracking_cols <- c(
+            "date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+            "date_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+            "session_id TEXT",
+            "ip_address INET"
+          )
+
           col_defs <- private$generate_column_definitions(data)
           create_query <- sprintf(
-            "CREATE TABLE %s (id SERIAL PRIMARY KEY, %s);",
+            "CREATE TABLE %s (
+              id SERIAL PRIMARY KEY,
+              %s,
+              %s
+            );",
             DBI::dbQuoteIdentifier(conn, table_name),
-            paste(col_defs, collapse = ", ")
+            paste(col_defs, collapse = ", "),
+            paste(tracking_cols, collapse = ", ")
           )
           DBI::dbExecute(conn, create_query)
 
+          # Create trigger for automatic date_updated
           trigger_query <- sprintf(
-            "CREATE TRIGGER update_timestamp_trigger_%s
+            "CREATE TRIGGER update_date_updated_%s
              BEFORE UPDATE ON %s
              FOR EACH ROW
-             EXECUTE FUNCTION update_timestamp();",
+             EXECUTE FUNCTION update_date_updated();",
             table_name,
             DBI::dbQuoteIdentifier(conn, table_name)
           )
           DBI::dbExecute(conn, trigger_query)
 
           self$logger$log_message(
-            "Created survey table",
+            sprintf("Created survey table '%s'", table_name),
             "INFO",
             "DATABASE"
           )
+        } else {
+          # Ensure tracking columns exist in existing table
+          self$ensure_tracking_columns(table_name)
+
+          # Add any missing columns from the data
+          cols_query <- sprintf(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = '%s';",
+            table_name
+          )
+          existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
+
+          for (col in names(data)) {
+            if (!col %in% existing_cols) {
+              col_type <- private$get_postgres_type(data[[col]])
+              alter_query <- sprintf(
+                "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+                DBI::dbQuoteIdentifier(conn, table_name),
+                DBI::dbQuoteIdentifier(conn, col),
+                col_type
+              )
+              DBI::dbExecute(conn, alter_query)
+              self$logger$log_message(
+                sprintf("Added column '%s' to existing table '%s'", col, table_name),
+                "INFO",
+                "DATABASE"
+              )
+            }
+          }
         }
-      }, "Failed to create survey table")
+      }, "Failed to create/update survey table")
 
       invisible(table_name)
     },
 
-    #' @description Update Existing Survey Table With New Data
+    #' Update existing survey table with new data
+    #'
     #' @param write_table Character. Name of the table to update
     #' @param data data.frame. Data frame containing the new data
-    #' @details Updates an existing table with new data, adding new columns if necessary.
-    #' Automatically determines appropriate PostgreSQL data types.
+    #' @return Character. The sanitized table name
     update_survey_table = function(write_table, data) {
       if (is.null(write_table) || !is.character(write_table)) {
         self$logger$log_message("Invalid write_table parameter", "ERROR", "DATABASE")
-        stop()
+        stop("Invalid table name")
       }
 
       if (!is.data.frame(data) || nrow(data) == 0) {
         self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
-        stop()
+        stop("Invalid data format")
       }
 
       table_name <- private$sanitize_survey_table_name(write_table)
@@ -225,6 +372,14 @@ db_ops <- R6::R6Class(
           stop(sprintf("Table '%s' does not exist", table_name))
         }
 
+        # Ensure tracking columns exist
+        self$ensure_tracking_columns(table_name)
+
+        # Add tracking data
+        data$session_id <- self$session_id
+        data$ip_address <- private$get_client_ip()
+
+        # Check for new columns
         cols_query <- sprintf(
           "SELECT column_name, data_type
            FROM information_schema.columns
@@ -235,22 +390,26 @@ db_ops <- R6::R6Class(
 
         new_cols <- setdiff(names(data), existing_cols$column_name)
 
+        # Add new columns if needed
         for (col in new_cols) {
-          col_type <- private$get_postgres_type(data[[col]])
-          alter_query <- sprintf(
-            "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-            DBI::dbQuoteIdentifier(conn, table_name),
-            DBI::dbQuoteIdentifier(conn, col),
-            col_type
-          )
-          DBI::dbExecute(conn, alter_query)
-          self$logger$log_message(
-            sprintf("Added column %s to '%s'", col, table_name),
-            "INFO",
-            "DATABASE"
-          )
+          if (!col %in% c("date_created", "date_updated", "session_id", "ip_address")) {
+            col_type <- private$get_postgres_type(data[[col]])
+            alter_query <- sprintf(
+              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+              DBI::dbQuoteIdentifier(conn, table_name),
+              DBI::dbQuoteIdentifier(conn, col),
+              col_type
+            )
+            DBI::dbExecute(conn, alter_query)
+            self$logger$log_message(
+              sprintf("Added column '%s' to '%s'", col, table_name),
+              "INFO",
+              "DATABASE"
+            )
+          }
         }
 
+        # Insert data
         DBI::dbWriteTable(
           conn,
           name = table_name,
@@ -271,6 +430,21 @@ db_ops <- R6::R6Class(
   ),
 
   private = list(
+    init_tracking_triggers = function() {
+      self$operate(function(conn) {
+        # Create trigger function for updating date_updated
+        trigger_func_query <- "
+          CREATE OR REPLACE FUNCTION update_date_updated()
+          RETURNS TRIGGER AS $$
+          BEGIN
+            NEW.date_updated = CURRENT_TIMESTAMP;
+            RETURN NEW;
+          END;
+          $$ LANGUAGE plpgsql;"
+        DBI::dbExecute(conn, trigger_func_query)
+      }, "Failed to initialize tracking triggers")
+    },
+
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
@@ -297,7 +471,7 @@ db_ops <- R6::R6Class(
         return("BOOLEAN")
       }
       if (inherits(vector, "POSIXt")) {
-        return("TIMESTAMP")
+        return("TIMESTAMP WITH TIME ZONE")
       }
       if (is.factor(vector)) {
         return("TEXT")
@@ -306,6 +480,22 @@ db_ops <- R6::R6Class(
         return("JSONB")
       }
       return("TEXT")
+    },
+
+    get_client_ip = function() {
+      headers <- as.list(shiny::parseQueryString(shiny::getDefaultReactiveDomain()$REQUEST))
+
+      ip <- headers$`X-Real-IP` %||%
+        headers$`X-Forwarded-For` %||%
+        headers$REMOTE_ADDR %||%
+        "0.0.0.0"
+
+      # If X-Forwarded-For contains multiple IPs, get the first one
+      if (grepl(",", ip)) {
+        ip <- trimws(strsplit(ip, ",")[[1]][1])
+      }
+
+      return(ip)
     }
   )
 )

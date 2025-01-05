@@ -4,31 +4,36 @@
 \alias{db_ops}
 \title{Database Operations Class}
 \description{
-Database Operations Class
-
-Database Operations Class
+R6 Class for managing database operations related to survey data storage
+and retrieval using PostgreSQL. Includes automatic tracking of creation date,
+update date, session ID, and IP address.
 }
 \details{
-R6 Class for managing database operations related to survey data storage
-and retrieval using PostgreSQL.
+This class handles all database interactions for survey data, including:
+\itemize{
+\item Table creation and modification with tracking columns
+\item Data insertion with automatic timestamp management
+\item Session and IP tracking
+\item Transaction management
+\item Error handling and logging
+}
 
-Handles connection pooling, transaction management, and error handling.
-Ensures proper cleanup of database connections.
-
-Creates a new table with appropriate column types based on the input data frame.
-Also creates a timestamp trigger for tracking updates.
-
-Updates an existing table with new data, adding new columns if necessary.
-Automatically determines appropriate PostgreSQL data types.
+Tracking columns automatically added to each table:
+\itemize{
+\item date_created: Timestamp when record was created
+\item date_updated: Timestamp when record was last updated
+\item session_id: Shiny session identifier
+\item ip_address: Client IP address
+}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{session_id}}{Character. Unique identifier for the current session}
+\item{\code{session_id}}{Unique identifier for the current session}
 
-\item{\code{pool}}{Pool object. Database connection pool}
+\item{\code{pool}}{Database connection pool}
 
-\item{\code{logger}}{survey_logger object. Logger instance for tracking operations}
+\item{\code{logger}}{Logger instance for tracking operations}
 }
 \if{html}{\out{</div>}}
 }
@@ -37,6 +42,7 @@ Automatically determines appropriate PostgreSQL data types.
 \itemize{
 \item \href{#method-Database Operations-new}{\code{db_ops$new()}}
 \item \href{#method-Database Operations-operate}{\code{db_ops$operate()}}
+\item \href{#method-Database Operations-ensure_tracking_columns}{\code{db_ops$ensure_tracking_columns()}}
 \item \href{#method-Database Operations-create_survey_table}{\code{db_ops$create_survey_table()}}
 \item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
@@ -46,7 +52,7 @@ Automatically determines appropriate PostgreSQL data types.
 \if{html}{\out{<a id="method-Database Operations-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-new}{}}}
 \subsection{Method \code{new()}}{
-Initialize a new Database Operations instance
+Create a new Database Operations instance
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$new(pool, session_id, logger)}\if{html}{\out{</div>}}
 }
@@ -67,7 +73,7 @@ Initialize a new Database Operations instance
 \if{html}{\out{<a id="method-Database Operations-operate"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-operate}{}}}
 \subsection{Method \code{operate()}}{
-Database Operation with Transaction Handling
+Execute a database operation with transaction handling
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$operate(operation, error_message)}\if{html}{\out{</div>}}
 }
@@ -81,12 +87,35 @@ Database Operation with Transaction Handling
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+Result of the operation or error message if failed
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-ensure_tracking_columns"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-ensure_tracking_columns}{}}}
+\subsection{Method \code{ensure_tracking_columns()}}{
+Ensure tracking columns exist in a table
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$ensure_tracking_columns(table_name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{table_name}}{Character. Name of the table to check/modify}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible NULL
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-create_survey_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-create_survey_table}{}}}
 \subsection{Method \code{create_survey_table()}}{
-Create New Survey Data Table
+Create new survey data table with tracking columns
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data)}\if{html}{\out{</div>}}
 }
@@ -100,12 +129,15 @@ Create New Survey Data Table
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+Character. The sanitized table name
+Update existing survey table with new data
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-update_survey_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-update_survey_table}{}}}
 \subsection{Method \code{update_survey_table()}}{
-Update Existing Survey Table With New Data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$update_survey_table(write_table, data)}\if{html}{\out{</div>}}
 }
@@ -118,6 +150,9 @@ Update Existing Survey Table With New Data
 \item{\code{data}}{data.frame. Data frame containing the new data}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Character. The sanitized table name
 }
 }
 \if{html}{\out{<hr>}}

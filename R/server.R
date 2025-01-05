@@ -60,8 +60,19 @@ survey_single <- function(json,
     survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode, cookie_expiration_days = cookie_expiration_days)
   )
 
-  # Define server with enhanced error handling
+  # Define server with async app logger
   server <- function(input, output, session) {
+    # Initialize reactive values at the start of server function
+    rv <- shiny::reactiveValues(
+      survey_responses = NULL,
+      loading = FALSE,
+      survey_completed = FALSE,
+      error_message = NULL,
+      start_time = Sys.time(),
+      complete_time = NULL,
+      duration = NULL
+    )
+
     logger <- survey_logger$new(
       log_table = db_config$log_table,
       session_id = session$token,
@@ -69,13 +80,6 @@ survey_single <- function(json,
     )
 
     logger$log_message("Started session", zone = "SURVEY")
-
-    rv <- shiny::reactiveValues(
-      survey_responses = NULL,
-      loading = FALSE,
-      survey_completed = FALSE,
-      error_message = NULL
-    )
 
     # Initialize database operations with error logging
     db_ops <- tryCatch(
@@ -114,12 +118,13 @@ survey_single <- function(json,
       shinyjs::show("savingDataMessage")
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
+      rv$complete_time <- Sys.time()
+      rv$duration <- difftime(rv$complete_time, rv$start_time, units = "secs")
       logger$log_message("Completed survey", zone = "SURVEY")
     })
 
     # Handle survey responses with detailed error handling
     observeEvent(input$surveyData, {
-      logger$log_message("Processed data", zone = "SURVEY")
 
       # Parse survey data
       parsed_data <- tryCatch(
@@ -159,6 +164,8 @@ survey_single <- function(json,
               logger$log_message(msg, type = "ERROR", zone = "DATABASE")
               stop(msg)
             }
+
+            parsed_data$duration_complete <- rv$duration
 
             db_ops$create_survey_table(db_config$write_table, parsed_data)
 

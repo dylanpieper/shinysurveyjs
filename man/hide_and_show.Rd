@@ -15,9 +15,9 @@ hide_and_show(hide_id, show_id, fade_time = 1)
 in seconds (default: 1). The total transition time is twice the length (default: 1 x 2).}
 }
 \description{
-Creates a smooth fade transition between any two elements by fading out one element
+Creates a smooth fade transition between any two DIV elements by fading out one element
 and fading in another. This creates a polished user interface when switching between
-different elements like messages, panels, forms, or any content containers.
+different elements like messages, panels, or content containers.
 }
 \details{
 The transition occurs in three steps:
@@ -26,8 +26,4 @@ The transition occurs in three steps:
 \item Fades out the currently visible element
 \item After the fade-out completes, fades in the target element
 }
-}
-\note{
-The total transition time will be twice the fade_time parameter since
-there are two sequential animations (fade out + fade in).
 }

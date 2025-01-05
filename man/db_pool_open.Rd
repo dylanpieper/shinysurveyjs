@@ -2,7 +2,7 @@
 % Please edit documentation in R/db.R
 \name{db_pool_open}
 \alias{db_pool_open}
-\title{Shiny App Logger Class}
+\title{Open Database Pool}
 \format{
 An R6 class object
 }
