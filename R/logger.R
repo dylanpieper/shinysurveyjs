@@ -1,5 +1,7 @@
 #' @title Shiny App Logger Class
-#' @description An R6 class that provides asynchronous logging functionality for shiny app messages
+#'
+#' @description An R6 class that provides asynchronous logging functionality for shiny app messages.
+#'
 #' @format An R6 class object
 #' @details This class handles asynchronous logging of shiny app messages to a PostgreSQL database.
 #' It uses connection pooling and futures for efficient database operations. The class maintains

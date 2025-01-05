@@ -2,7 +2,10 @@
 % Please edit documentation in R/db.R
 \name{db_pool_open}
 \alias{db_pool_open}
-\title{Open Database Pool}
+\title{Shiny App Logger Class}
+\format{
+An R6 class object
+}
 \usage{
 db_pool_open(
   host = NULL,

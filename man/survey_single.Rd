@@ -2,7 +2,7 @@
 % Please edit documentation in R/server.R
 \name{survey_single}
 \alias{survey_single}
-\title{Create a Single Survey}
+\title{Create Single Survey}
 \usage{
 survey_single(
   json,
@@ -10,7 +10,7 @@ survey_single(
   theme = "defaultV2",
   theme_color = "#003594",
   theme_mode = "light",
-  shiny_config = NULL,
+  shiny_config = list(host = "0.0.0.0", port = 3838),
   db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
@@ -32,13 +32,13 @@ survey_single(
 
 \item{db_config}{List. Database connection parameters (defaults to environment variables):
 \itemize{
-\item host: Database host (default: HOST environment variable)
-\item port: Database port (default: PORT environment variable)
-\item db_name: Database name (default: DB_NAME environment variable)
-\item user: Database username (default: USER environment variable)
-\item password: Database password (default: PASSWORD environment variable)
-\item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
-\item log_table: Table name to write log messages (default: LOG_TABLE environment variable)
+\item \strong{host}: Database host (default: HOST environment variable)
+\item \strong{port}: Database port (default: PORT environment variable)
+\item \strong{db_name}: Database name (default: DB_NAME environment variable)
+\item \strong{user}: Database username (default: USER environment variable)
+\item \strong{password}: Database password (default: PASSWORD environment variable)
+\item \strong{write_table}: Table name to write survey data (default: WRITE_TABLE environment variable)
+\item \strong{log_table}: Table name to write log messages (default: LOG_TABLE environment variable)
 }}
 }
 \value{

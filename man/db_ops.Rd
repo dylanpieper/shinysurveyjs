@@ -12,11 +12,11 @@ Database Operations Class
 R6 Class for managing database operations related to survey data storage
 and retrieval using PostgreSQL.
 
-Creates a new table with appropriate column types based on the input data frame.
-Also creates a timestamp trigger for tracking updates.
-
 Handles connection pooling, transaction management, and error handling.
 Ensures proper cleanup of database connections.
+
+Creates a new table with appropriate column types based on the input data frame.
+Also creates a timestamp trigger for tracking updates.
 
 Updates an existing table with new data, adding new columns if necessary.
 Automatically determines appropriate PostgreSQL data types.
@@ -36,9 +36,9 @@ Automatically determines appropriate PostgreSQL data types.
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-Database Operations-new}{\code{db_ops$new()}}
-\item \href{#method-Database Operations-create_survey_data_table}{\code{db_ops$create_survey_data_table()}}
-\item \href{#method-Database Operations-execute_db_operation}{\code{db_ops$execute_db_operation()}}
-\item \href{#method-Database Operations-update_survey_data_table}{\code{db_ops$update_survey_data_table()}}
+\item \href{#method-Database Operations-operate}{\code{db_ops$operate()}}
+\item \href{#method-Database Operations-create_survey_table}{\code{db_ops$create_survey_table()}}
+\item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
@@ -64,31 +64,12 @@ Initialize a new Database Operations instance
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-create_survey_data_table"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-create_survey_data_table}{}}}
-\subsection{Method \code{create_survey_data_table()}}{
-Create a new survey data table in the database
+\if{html}{\out{<a id="method-Database Operations-operate"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-operate}{}}}
+\subsection{Method \code{operate()}}{
+Database Operation with Transaction Handling
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_data_table(write_table, data)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{write_table}}{Character. Name of the table to create}
-
-\item{\code{data}}{data.frame. Data frame containing the schema for the new table}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-execute_db_operation"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-execute_db_operation}{}}}
-\subsection{Method \code{execute_db_operation()}}{
-Execute a database operation with transaction handling
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$execute_db_operation(operation, error_message)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$operate(operation, error_message)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -102,12 +83,31 @@ Execute a database operation with transaction handling
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-update_survey_data_table"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-update_survey_data_table}{}}}
-\subsection{Method \code{update_survey_data_table()}}{
-Update an existing survey data table with new data
+\if{html}{\out{<a id="method-Database Operations-create_survey_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-create_survey_table}{}}}
+\subsection{Method \code{create_survey_table()}}{
+Create New Survey Data Table
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$update_survey_data_table(write_table, data)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{write_table}}{Character. Name of the table to create}
+
+\item{\code{data}}{data.frame. Data frame containing the schema for the new table}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-update_survey_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-update_survey_table}{}}}
+\subsection{Method \code{update_survey_table()}}{
+Update Existing Survey Table With New Data
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$update_survey_table(write_table, data)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

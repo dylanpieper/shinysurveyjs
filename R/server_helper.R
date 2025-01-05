@@ -59,7 +59,7 @@
 #' @importFrom future plan multisession multicore
 #'
 #' @return Invisibly returns the initialized database pool object
-setup_survey <- function(db_config, shiny_config = NULL, workers = 2L) {
+survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
 
@@ -95,7 +95,7 @@ setup_survey <- function(db_config, shiny_config = NULL, workers = 2L) {
   cli::cli_alert_info("Checking environment variables")
   for (var_name in names(env_vars)) {
     if (Sys.getenv(var_name) == "") {
-      Sys.setenv(!!var_name := env_vars[[var_name]])
+      do.call(Sys.setenv, setNames(list(env_vars[[var_name]]), var_name))
       cli::cli_alert_success("Set {.env {var_name}}")
     } else {
       cli::cli_alert_success("Found existing {.env {var_name}}")

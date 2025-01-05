@@ -1,7 +1,8 @@
-#' Open Database Pool
+#' @title Shiny App Logger Class
 #'
-#' Creates and manages a global database pool connection using PostgreSQL.
+#' @description Creates and manages a global database pool connection using PostgreSQL.
 #'
+#' @format An R6 class object
 #' @param host Database host
 #' @param port Database port
 #' @param db_name Database name
@@ -88,56 +89,12 @@ db_ops <- R6::R6Class(
       self$logger <- logger
     },
 
-    #' @description Create a new survey data table in the database
-    #' @param write_table Character. Name of the table to create
-    #' @param data data.frame. Data frame containing the schema for the new table
-    #' @details Creates a new table with appropriate column types based on the input data frame.
-    #' Also creates a timestamp trigger for tracking updates.
-    create_survey_data_table = function(write_table, data) {
-      if (!is.data.frame(data) || nrow(data) == 0) {
-        self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
-        stop()
-      }
-
-      table_name <- private$sanitize_survey_table_name(write_table)
-
-      self$execute_db_operation(function(conn) {
-        if (!DBI::dbExistsTable(conn, table_name)) {
-          col_defs <- private$generate_column_definitions(data)
-          create_query <- sprintf(
-            "CREATE TABLE %s (id SERIAL PRIMARY KEY, %s);",
-            DBI::dbQuoteIdentifier(conn, table_name),
-            paste(col_defs, collapse = ", ")
-          )
-          DBI::dbExecute(conn, create_query)
-
-          trigger_query <- sprintf(
-            "CREATE TRIGGER update_timestamp_trigger_%s
-             BEFORE UPDATE ON %s
-             FOR EACH ROW
-             EXECUTE FUNCTION update_timestamp();",
-            table_name,
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
-          DBI::dbExecute(conn, trigger_query)
-
-          self$logger$log_message(
-            "Created survey table",
-            "INFO",
-            "DATABASE"
-          )
-        }
-      }, "Failed to create survey table")
-
-      invisible(table_name)
-    },
-
-    #' @description Execute a database operation with transaction handling
+    #' @description Database Operation with Transaction Handling
     #' @param operation Function. The database operation to execute
     #' @param error_message Character. Message to display if operation fails
     #' @details Handles connection pooling, transaction management, and error handling.
     #' Ensures proper cleanup of database connections.
-    execute_db_operation = function(operation, error_message) {
+    operate = function(operation, error_message) {
       if (is.null(self$pool)) {
         self$logger$log_message("Database pool is not initialized", "ERROR", "DATABASE")
         stop()
@@ -196,12 +153,56 @@ db_ops <- R6::R6Class(
       })
     },
 
-    #' @description Update an existing survey data table with new data
+    #' @description Create New Survey Data Table
+    #' @param write_table Character. Name of the table to create
+    #' @param data data.frame. Data frame containing the schema for the new table
+    #' @details Creates a new table with appropriate column types based on the input data frame.
+    #' Also creates a timestamp trigger for tracking updates.
+    create_survey_table = function(write_table, data) {
+      if (!is.data.frame(data) || nrow(data) == 0) {
+        self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
+        stop()
+      }
+
+      table_name <- private$sanitize_survey_table_name(write_table)
+
+      self$operate(function(conn) {
+        if (!DBI::dbExistsTable(conn, table_name)) {
+          col_defs <- private$generate_column_definitions(data)
+          create_query <- sprintf(
+            "CREATE TABLE %s (id SERIAL PRIMARY KEY, %s);",
+            DBI::dbQuoteIdentifier(conn, table_name),
+            paste(col_defs, collapse = ", ")
+          )
+          DBI::dbExecute(conn, create_query)
+
+          trigger_query <- sprintf(
+            "CREATE TRIGGER update_timestamp_trigger_%s
+             BEFORE UPDATE ON %s
+             FOR EACH ROW
+             EXECUTE FUNCTION update_timestamp();",
+            table_name,
+            DBI::dbQuoteIdentifier(conn, table_name)
+          )
+          DBI::dbExecute(conn, trigger_query)
+
+          self$logger$log_message(
+            "Created survey table",
+            "INFO",
+            "DATABASE"
+          )
+        }
+      }, "Failed to create survey table")
+
+      invisible(table_name)
+    },
+
+    #' @description Update Existing Survey Table With New Data
     #' @param write_table Character. Name of the table to update
     #' @param data data.frame. Data frame containing the new data
     #' @details Updates an existing table with new data, adding new columns if necessary.
     #' Automatically determines appropriate PostgreSQL data types.
-    update_survey_data_table = function(write_table, data) {
+    update_survey_table = function(write_table, data) {
       if (is.null(write_table) || !is.character(write_table)) {
         self$logger$log_message("Invalid write_table parameter", "ERROR", "DATABASE")
         stop()
@@ -214,7 +215,7 @@ db_ops <- R6::R6Class(
 
       table_name <- private$sanitize_survey_table_name(write_table)
 
-      self$execute_db_operation(function(conn) {
+      self$operate(function(conn) {
         if (!DBI::dbExistsTable(conn, table_name)) {
           self$logger$log_message(
             sprintf("Table '%s' does not exist", table_name),

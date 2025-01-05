@@ -2,11 +2,17 @@
 
 The goal of this package is to integrate the flexible frontend of the [SurveyJS](https://surveyjs.io/) library with the reactive backend of [Shiny](https://shiny.posit.co/) to interface with a [PostgreSQL](https://www.postgresql.org/) database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.
 
-## Key Features
+## Basic Features
 
 -   Host a single survey or multiple surveys in one app
 
 -   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
+
+-   Save survey progress as cookies and resume later
+
+-   Change the primary theme color and select from dark and light themes
+
+## Advanced Features
 
 -   Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)
 
@@ -15,8 +21,6 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 -   URL query tokens and one-time access tokens for secure survey distribution
 
 -   Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged JSON objects, and managing tokens
-
-🚧 **Warning**: These features are under construction and being moved from the app [template](https://github.com/dylanpieper/ShinySurveyJS-Template).
 
 ## Installation
 
@@ -79,9 +83,7 @@ survey_single(
   theme_mode = "dark",
   shiny_config = list(
     host = "0.0.0.0",
-    port = 3838,
-    sanitize_errors = TRUE,
-    autoreload = FALSE
+    port = 3838
   ),
   db_config = list(
     host = "aws-0-us-east-2.pooler.supabase.com",

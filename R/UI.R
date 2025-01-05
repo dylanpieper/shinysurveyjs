@@ -99,7 +99,6 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
     dark_container_bg, dark_border # question
   )
 
-  # Message UI CSS
   message_ui_css <- sprintf(
     "
     .message-container {
@@ -110,7 +109,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       height: 100%%;
       background: %s;
       opacity: 0.90;
-      z-index: 10000; /* Increased z-index */
+      z-index: 10000;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -123,26 +122,22 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       transition: opacity 0.3s ease;
       padding: clamp(1rem, 5vw, 2rem);
       box-sizing: border-box;
-      overflow: hidden; /* Prevent content overflow */
+      overflow: hidden;
     }
 
-    /* Content wrapper to ensure proper containment */
-    .message-container > div {
-      max-width: min(90vw, 600px);
-      margin: 0 auto;
-      padding: 1rem;
-    }
-
-    #surveyContainer {
+    .sv-root-modern {
+      background-color: %s;
       position: relative;
       z-index: 1;
     }
 
-    .sv-completedpage {
-      position: relative;
-      z-index: 1;
-      background-color: %s !important;
-      opacity: 1 !important;
+    .sv-body {
+      background-color: %s;
+      color: %s;
+    }
+
+    .sv-container-modern {
+      color: %s;
     }
 
     #surveyResponseContainer {
@@ -164,35 +159,18 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       content: '';
       position: absolute;
       inset: 0;
-      border: min(4px, 0.8vw) solid %s;
+      border: min(4px, 0.8vw) solid transparent;
       border-radius: 50%%;
       animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
 
+    .loading-spinner::before {
+      border-color: %s; /* Primary color */
+    }
+
     .loading-spinner::after {
+      border-color: %s; /* Lighter variant of primary */
       animation-delay: -1s;
-    }
-
-    /* Keep the original pulsating animation */
-    @keyframes pulse {
-      0%% {
-        transform: scale(0.8);
-        opacity: 1;
-      }
-      50%% {
-        transform: scale(1.2);
-        opacity: 0.2;
-      }
-      100%% {
-        transform: scale(0.8);
-        opacity: 1;
-      }
-    }
-
-    .sv-root-modern {
-      background-color: %s;
-      position: relative;
-      z-index: 1;
     }
 
     /* Error message containment */
@@ -207,6 +185,21 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       width: 100%%;
       word-wrap: break-word;
       overflow-wrap: break-word;
+    }
+
+    @keyframes pulse {
+      0%% {
+        transform: scale(0.8);
+        opacity: 1;
+      }
+      50%% {
+        transform: scale(1.2);
+        opacity: 0.2;
+      }
+      100%% {
+        transform: scale(0.8);
+        opacity: 1;
+      }
     }
 
     /* Media query for better mobile containment */
@@ -224,14 +217,17 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       }
     }
     ",
-    dark_bg, # Background color
-    dark_text, # Text color
-    dark_container_bg, # Completed page background
-    dark_container_bg, # Response container background
-    gradient_color2, # Spinner color
-    dark_container_bg, # Survey root background
-    dark_text, # Error message text color
-    dark_container_bg # Error message background
+    dark_bg,                               # Background color for message container
+    dark_text,                             # Text color for message container
+    dark_container_bg,                     # Background color for sv-root-modern
+    dark_container_bg,                     # Background color for sv-body
+    dark_text,                             # Text color for sv-body
+    dark_text,                             # Text color for sv-container-modern
+    dark_container_bg,                     # Background color for surveyResponseContainer
+    primary,                               # Primary color for first spinner
+    adjust_hex(primary, 20, lighten = TRUE), # Lighter variant of primary for second spinner
+    dark_text,                             # Text color for error message
+    dark_container_bg                      # Background color for error message
   )
 
   # Animation keyframes

@@ -1,4 +1,4 @@
-#' Create a Single Survey
+#' Create Single Survey
 #'
 #' Creates a Shiny application for a single survey with database integration.
 #' Responses are stored in a PostgreSQL database with configurable table name.
@@ -11,13 +11,13 @@
 #' @param shiny_config Optional list. Shiny configuration parameters passed to configure_shiny()
 #' @param db_config List. Database connection parameters (defaults to environment variables):
 #'   \itemize{
-#'     \item host: Database host (default: HOST environment variable)
-#'     \item port: Database port (default: PORT environment variable)
-#'     \item db_name: Database name (default: DB_NAME environment variable)
-#'     \item user: Database username (default: USER environment variable)
-#'     \item password: Database password (default: PASSWORD environment variable)
-#'     \item write_table: Table name to write survey data (default: WRITE_TABLE environment variable)
-#'     \item log_table: Table name to write log messages (default: LOG_TABLE environment variable)
+#'     \item **host**: Database host (default: HOST environment variable)
+#'     \item **port**: Database port (default: PORT environment variable)
+#'     \item **db_name**: Database name (default: DB_NAME environment variable)
+#'     \item **user**: Database username (default: USER environment variable)
+#'     \item **password**: Database password (default: PASSWORD environment variable)
+#'     \item **write_table**: Table name to write survey data (default: WRITE_TABLE environment variable)
+#'     \item **log_table**: Table name to write log messages (default: LOG_TABLE environment variable)
 #'   }
 #'
 #' @return A Shiny application object
@@ -33,7 +33,10 @@ survey_single <- function(json,
                           theme = "defaultV2",
                           theme_color = "#003594",
                           theme_mode = "light",
-                          shiny_config = NULL,
+                          shiny_config = list(
+                            host = "0.0.0.0",
+                            port = 3838
+                          ),
                           db_config = list(
                             host = Sys.getenv("HOST"),
                             port = as.numeric(Sys.getenv("PORT")),
@@ -49,7 +52,7 @@ survey_single <- function(json,
   }
 
   # Setup survey
-  setup_survey(db_config, shiny_config)
+  survey_setup(db_config, shiny_config)
 
   # Define UI
   ui <- fluidPage(
@@ -138,7 +141,7 @@ survey_single <- function(json,
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
           logger$log_message(rv$error_message, type = "ERROR", zone = "SURVEY")
-          hide_and_show_message("savingDataMessage", "invalidDataMessage")
+          hide_and_show("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }
 
@@ -156,21 +159,21 @@ survey_single <- function(json,
               stop(msg)
             }
 
-            db_ops$create_survey_data_table(db_config$write_table, parsed_data)
+            db_ops$create_survey_table(db_config$write_table, parsed_data)
 
-            db_ops$update_survey_data_table(db_config$write_table, parsed_data)
+            db_ops$update_survey_table(db_config$write_table, parsed_data)
 
             # Update reactive value after successful database operation
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
 
             # Hide saving spinner and show response table
-            hide_and_show_message("savingDataMessage", "surveyResponseContainer")
+            hide_and_show("savingDataMessage", "surveyResponseContainer")
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
             logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
-            hide_and_show_message("savingDataMessage", "invalidDataMessage")
+            hide_and_show("savingDataMessage", "invalidDataMessage")
           }
         )
       }

@@ -7,7 +7,7 @@
 An R6 class object
 }
 \description{
-An R6 class that provides asynchronous logging functionality for shiny app messages
+An R6 class that provides asynchronous logging functionality for shiny app messages.
 }
 \details{
 This class handles asynchronous logging of shiny app messages to a PostgreSQL database.

@@ -43,10 +43,10 @@ Database Operations Class"></head><body>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>R6 Class for managing database operations related to survey data storage
 and retrieval using PostgreSQL.</p>
-<p>Creates a new table with appropriate column types based on the input data frame.
-Also creates a timestamp trigger for tracking updates.</p>
 <p>Handles connection pooling, transaction management, and error handling.
 Ensures proper cleanup of database connections.</p>
+<p>Creates a new table with appropriate column types based on the input data frame.
+Also creates a timestamp trigger for tracking updates.</p>
 <p>Updates an existing table with new data, adding new columns if necessary.
 Automatically determines appropriate PostgreSQL data types.</p>
     </div>
@@ -73,9 +73,9 @@ Automatically determines appropriate PostgreSQL data types.</p>
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 
 <ul><li><p><a href="#method-Database%20Operations-new"><code>db_ops$new()</code></a></p></li>
-<li><p><a href="#method-Database%20Operations-create_survey_data_table"><code>db_ops$create_survey_data_table()</code></a></p></li>
-<li><p><a href="#method-Database%20Operations-execute_db_operation"><code>db_ops$execute_db_operation()</code></a></p></li>
-<li><p><a href="#method-Database%20Operations-update_survey_data_table"><code>db_ops$update_survey_data_table()</code></a></p></li>
+<li><p><a href="#method-Database%20Operations-operate"><code>db_ops$operate()</code></a></p></li>
+<li><p><a href="#method-Database%20Operations-create_survey_table"><code>db_ops$create_survey_table()</code></a></p></li>
+<li><p><a href="#method-Database%20Operations-update_survey_table"><code>db_ops$update_survey_table()</code></a></p></li>
 <li><p><a href="#method-Database%20Operations-clone"><code>db_ops$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Database Operations-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
@@ -101,35 +101,15 @@ Automatically determines appropriate PostgreSQL data types.</p>
 </dl><p></p></div>
 </div>
 
-</div><p></p><hr><a id="method-Database Operations-create_survey_data_table"></a><div class="section">
-<h3 id="method-create-survey-data-table-">Method <code>create_survey_data_table()</code><a class="anchor" aria-label="anchor" href="#method-create-survey-data-table-"></a></h3>
-<p>Create a new survey data table in the database</p><div class="section">
+</div><p></p><hr><a id="method-Database Operations-operate"></a><div class="section">
+<h3 id="method-operate-">Method <code>operate()</code><a class="anchor" aria-label="anchor" href="#method-operate-"></a></h3>
+<p>Database Operation with Transaction Handling</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">create_survey_data_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">operate</span><span class="op">(</span><span class="va">operation</span>, <span class="va">error_message</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>write_table</code></dt>
-<dd><p>Character. Name of the table to create</p></dd>
-
-
-<dt><code>data</code></dt>
-<dd><p>data.frame. Data frame containing the schema for the new table</p></dd>
-
-
-</dl><p></p></div>
-</div>
-
-</div><p></p><hr><a id="method-Database Operations-execute_db_operation"></a><div class="section">
-<h3 id="method-execute-db-operation-">Method <code>execute_db_operation()</code><a class="anchor" aria-label="anchor" href="#method-execute-db-operation-"></a></h3>
-<p>Execute a database operation with transaction handling</p><div class="section">
-<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">execute_db_operation</span><span class="op">(</span><span class="va">operation</span>, <span class="va">error_message</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
-<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>operation</code></dt>
 <dd><p>Function. The database operation to execute</p></dd>
 
@@ -141,11 +121,31 @@ Automatically determines appropriate PostgreSQL data types.</p>
 </dl><p></p></div>
 </div>
 
-</div><p></p><hr><a id="method-Database Operations-update_survey_data_table"></a><div class="section">
-<h3 id="method-update-survey-data-table-">Method <code>update_survey_data_table()</code><a class="anchor" aria-label="anchor" href="#method-update-survey-data-table-"></a></h3>
-<p>Update an existing survey data table with new data</p><div class="section">
+</div><p></p><hr><a id="method-Database Operations-create_survey_table"></a><div class="section">
+<h3 id="method-create-survey-table-">Method <code>create_survey_table()</code><a class="anchor" aria-label="anchor" href="#method-create-survey-table-"></a></h3>
+<p>Create New Survey Data Table</p><div class="section">
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">create_survey_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>write_table</code></dt>
+<dd><p>Character. Name of the table to create</p></dd>
+
+
+<dt><code>data</code></dt>
+<dd><p>data.frame. Data frame containing the schema for the new table</p></dd>
+
+
+</dl><p></p></div>
+</div>
+
+</div><p></p><hr><a id="method-Database Operations-update_survey_table"></a><div class="section">
+<h3 id="method-update-survey-table-">Method <code>update_survey_table()</code><a class="anchor" aria-label="anchor" href="#method-update-survey-table-"></a></h3>
+<p>Update Existing Survey Table With New Data</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">update_survey_data_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">update_survey_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">

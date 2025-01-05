@@ -1,21 +1,34 @@
-#' Hide One Message and Show Another
+#' Smoothly Transition Between Two Elements
 #'
-#' @importFrom shinyjs hide show toggle
-#' @param hide_id ID of the message to hide
-#' @param show_id ID of the message to show
-#' @param fade_time Time in seconds for fade animation (default: 1)
-hide_and_show_message <- function(hide_id, show_id, fade_time = 1) {
+#' Creates a smooth fade transition between any two elements by fading out one element
+#' and fading in another. This creates a polished user interface when switching between
+#' different elements like messages, panels, forms, or any content containers.
+#'
+#' @param hide_id Character string specifying the ID of the element to fade out
+#' @param show_id Character string specifying the ID of the element to fade in
+#' @param fade_time Numeric value specifying the duration of each fade animation
+#'   in seconds (default: 1). The total transition time is twice the length (default: 1 x 2).
+#'
+#' @details The transition occurs in three steps:
+#' 1. Ensures the target element exists in the DIV but is hidden
+#' 2. Fades out the currently visible element
+#' 3. After the fade-out completes, fades in the target element
+#'
+#' @note The total transition time will be twice the fade_time parameter since
+#'   there are two sequential animations (fade out + fade in).
+#'
+#' @importFrom shinyjs hide show toggle delay
+#' @export
+hide_and_show <- function(hide_id, show_id, fade_time = 1) {
   # First ensure the show element exists but is hidden
   shinyjs::toggle(show_id, condition = FALSE, anim = FALSE)
-
   # Then do the hide animation
   shinyjs::hide(hide_id, anim = TRUE, animType = "fade", time = fade_time)
-
   # Use setTimeout to delay the show animation
   shinyjs::delay(fade_time * 1000, {
     shinyjs::toggle(show_id,
-      condition = TRUE, anim = TRUE,
-      animType = "fade", time = fade_time
+                    condition = TRUE, anim = TRUE,
+                    animType = "fade", time = fade_time
     )
   })
 }
