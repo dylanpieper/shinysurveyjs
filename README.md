@@ -86,15 +86,15 @@ survey_single(
     port = 3838
   ),
   db_config = list(
-    host = "aws-0-us-east-2.pooler.supabase.com",
-    port = 5432,
-    db_name = "postgres",
-    user = "username",
-    password = "password", # Use an environmental variable with encryption
-    write_table = "survey_package_feedback",
-    log_table = "survey_app_logs"
+    host = Sys.getenv("HOST"),
+    port = as.numeric(Sys.getenv("PORT")),
+    db_name = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("USER"),
+    password = Sys.getenv("PASSWORD"),
+    write_table = Sys.getenv("WRITE_TABLE"),
+    log_table = Sys.getenv("LOG_TABLE")
   )
 )
 ```
 
-By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from an or encrypted `.env` or `.yaml` file or a secrets manager.
+By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from an `.env` or `.yaml` file or a secrets manager. Using encrypted secrets is recommended for production environments.
