@@ -6,7 +6,7 @@
 \usage{
 survey_single(
   json,
-  show_response = TRUE,
+  show_response = FALSE,
   theme = "defaultV2",
   theme_color = "#003594",
   theme_mode = "light",

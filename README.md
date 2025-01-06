@@ -88,13 +88,13 @@ survey_single(
     port = 3838
   ),
   db_config = list(
-    host = Sys.getenv("HOST"), # aws-0-us-east-2.pooler.supabase.com
-    port = as.numeric(Sys.getenv("PORT")), # 5432
-    db_name = Sys.getenv("DB_NAME"), # postgres
-    user = Sys.getenv("USER"), # username
-    password = Sys.getenv("PASSWORD"), # password
-    write_table = Sys.getenv("WRITE_TABLE"), # survey_package_feedback
-    log_table = Sys.getenv("LOG_TABLE") # survey_app_logs
+    host = Sys.getenv("HOST"),                # aws-0-us-east-2.pooler.supabase.com
+    port = as.numeric(Sys.getenv("PORT")),    # 5432
+    db_name = Sys.getenv("DB_NAME"),          # postgres
+    user = Sys.getenv("USER"),                # username
+    password = Sys.getenv("PASSWORD"),        # password
+    write_table = Sys.getenv("WRITE_TABLE"),  # survey_package_feedback
+    log_table = Sys.getenv("LOG_TABLE")       # survey_app_logs
   ),
   cookie_expiration_days = 7
 )
