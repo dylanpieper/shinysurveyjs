@@ -25,6 +25,7 @@
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON
+#' @importFrom shinyjs hide show
 #' @importFrom future plan multisession
 #'
 #' @export
@@ -60,9 +61,12 @@ survey_single <- function(json,
     survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode, cookie_expiration_days = cookie_expiration_days)
   )
 
-  # Define server with async app logger
+  # Define server
   server <- function(input, output, session) {
-    # Initialize reactive values at the start of server function
+
+    shinyjs::show("waitingMessage", anim = TRUE, animType = "fade", time = .25)
+
+    # Setup reactive values
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
       loading = FALSE,
@@ -73,25 +77,16 @@ survey_single <- function(json,
       duration = NULL
     )
 
-    logger <- survey_logger$new(
-      log_table = db_config$log_table,
-      session_id = session$token,
-      survey_name = db_config$write_table
-    )
+    # Setup survey app logger and database pool
+    server_setup(
+       session = session,
+       db_config = db_config,
+       app_pool = app_pool,
+       survey_logger = survey_logger,
+       db_ops = db_ops
+     )
 
-    logger$log_message("Started session", zone = "SURVEY")
-
-    # Initialize database operations with error logging
-    db_ops <- tryCatch(
-      {
-        db_ops$new(get("app_pool", envir = .GlobalEnv), session$token, logger)
-      },
-      error = function(e) {
-        msg <- sprintf("Failed to initialize db_ops: %s", e$message)
-        logger$log_message(msg, type = "ERROR", zone = "DATABASE")
-        NULL
-      }
-    )
+    shinyjs::hide("waitingMessage", anim = TRUE, animType = "fade", time = .25)
 
     # Load survey with error handling
     shiny::observe({
@@ -189,40 +184,13 @@ survey_single <- function(json,
       rv$loading <- FALSE
     })
 
-    # Render response table with error handling
-    output$surveyResponseTable <- DT::renderDT({
-      shiny::req(rv$survey_completed)
-      shiny::validate(need(!rv$loading, "Loading data..."))
-      shiny::req(rv$survey_responses)
-
-      if (!is.null(rv$error_message)) {
-        return(NULL)
-      }
-
-      DT::datatable(
-        rv$survey_responses,
-        options = list(
-          pageLength = 5,
-          scrollX = TRUE,
-          dom = "tp"
-        ),
-        rownames = FALSE
-      )
-    })
-
-    # Control response table visibility
-    output$showResponseTable <- shiny::reactive({
-      show_response && rv$survey_completed && is.null(rv$error_message)
-    })
-    shiny::outputOptions(output, "showResponseTable", suspendWhenHidden = FALSE)
+    # Render response table
+    server_response(output, rv, show_response = show_response)
 
     # Clean up on session end
-    session$onSessionEnded(function() {
-      logger$log_message("Ended session", zone = "SURVEY")
-      db_pool_close(session)
-    })
+    server_clean(session, logger)
   }
 
-  # Create and return Shiny app
+  # Start Shiny app
   shiny::shinyApp(ui, server)
 }

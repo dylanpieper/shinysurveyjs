@@ -1,8 +1,8 @@
-#' Initialize Survey Environment and Database Connection
+#' Setup Global Survey Environment and Database Connection
 #'
 #' @description
-#' Initializes a complete survey environment by setting up database connections,
-#' environment variables, and asynchronous processing capabilities. The function:
+#' Setup the global survey environment by creating database connections,
+#' environment variables, and a future asynchronous processing plan. The function:
 #' \itemize{
 #'   \item Validates database configuration parameters
 #'   \item Sets required environment variables if not already present
@@ -25,8 +25,8 @@
 #'   before database initialization.
 #' @param workers Number of workers for parallel processing. Default is 3.
 #'
-#' @return Invisibly returns the initialized database pool object. The pool is also
-#'   assigned to 'app_pool' in the global environment.
+#' @return Invisibly returns the database pool object. The pool is also assigned to
+#'   'app_pool' in the global environment.
 #'
 #' @details
 #' The function performs several initialization steps:
@@ -199,4 +199,197 @@ configure_shiny <- function(..., type_handlers = list()) {
   }
 
   invisible(NULL)
+}
+
+#' Setup Server Components for Survey Application
+#'
+#' @description
+#' Setup the server-side components of the survey application by setting up
+#' logging and database operations in the parent environment. Creates a new logger instance
+#' and attempts to establish database operations, with error handling for database
+#' initialization failures.
+#'
+#' @param session A Shiny session object containing the session token
+#' @param db_config A list containing database configuration with elements:
+#'   \itemize{
+#'     \item log_table: Name of the logging table in the database
+#'     \item write_table: Name of the survey table in the database
+#'   }
+#' @param app_pool A database connection pool object from the global environment
+#' @param survey_logger A reference class object for logging functionality
+#' @param db_ops A reference class object for database operations
+#'
+#' @details
+#' This function creates two objects in the parent environment:
+#'   \itemize{
+#'     \item logger: The initialized survey logger object
+#'     \item db_ops: The initialized database operations object (or NULL if initialization failed)
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' server_setup(
+#'   session = session,
+#'   db_config = db_config,
+#'   app_pool = app_pool,
+#'   survey_logger = survey_logger,
+#'   db_ops = db_ops
+#' )
+#' # After running, 'logger' and 'db_ops' are available in the parent environment
+#' }
+#'
+#' @export
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops) {
+  # Initialize survey app logger
+  logger <- survey_logger$new(
+    log_table = db_config$log_table,
+    session_id = session$token,
+    survey_name = db_config$write_table
+  )
+
+  logger$log_message("Started session", zone = "SURVEY")
+
+  # Initialize database operations with error logging
+  db_operations <- tryCatch(
+    {
+      db_ops$new(app_pool, session$token, logger)
+    },
+    error = function(e) {
+      msg <- sprintf("Failed to initialize db_ops: %s", e$message)
+      logger$log_message(msg, type = "ERROR", zone = "DATABASE")
+      NULL
+    }
+  )
+
+  # Assign objects to parent environment
+  assign("logger", logger, envir = parent.frame())
+  assign("db_ops", db_operations, envir = parent.frame())
+
+  invisible()
+}
+
+#' Create Survey Response Table Output
+#'
+#' This function sets up the server-side logic for displaying a survey response
+#' data table in a Shiny application. It handles the rendering of the response
+#' table and controls its visibility based on various reactive values.
+#'
+#' @param output The Shiny output object
+#' @param rv A reactive values object containing:
+#'   \itemize{
+#'     \item survey_completed - Boolean indicating if survey is completed
+#'     \item loading - Boolean indicating loading state
+#'     \item survey_responses - Data frame of survey responses
+#'     \item error_message - String containing error message if any
+#'   }
+#' @param show_response Boolean indicating whether to show the response table
+#'
+#' @return None (called for side effects)
+#'
+#' @details
+#' The function creates two reactive outputs:
+#' \itemize{
+#'   \item surveyResponseTable - A DataTable showing survey responses
+#'   \item showResponseTable - Controls visibility of the response table
+#' }
+#'
+#' The table will only be shown when:
+#' \itemize{
+#'   \item The survey is completed
+#'   \item Data is not loading
+#'   \item There are no error messages
+#'   \item show_response parameter is TRUE
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' server <- function(input, output, session) {
+#'   rv <- reactiveValues(
+#'     survey_completed = FALSE,
+#'     loading = FALSE,
+#'     survey_responses = data.frame(),
+#'     error_message = NULL
+#'   )
+#'
+#'   server_response(output, rv, show_response = TRUE)
+#' }
+#' }
+#'
+#' @importFrom shiny req validate need reactive outputOptions
+#' @importFrom DT renderDT datatable
+#' @export
+server_response <- function(output, rv, show_response = TRUE) {
+  # Render the response table with error handling
+  output$surveyResponseTable <- renderDT({
+    req(rv$survey_completed)
+    validate(need(!rv$loading, "Loading data..."))
+    req(rv$survey_responses)
+
+    if (!is.null(rv$error_message)) {
+      return(NULL)
+    }
+
+    datatable(
+      rv$survey_responses,
+      options = list(
+        pageLength = 5,
+        scrollX = TRUE,
+        dom = "tp"
+      ),
+      rownames = FALSE
+    )
+  })
+
+  # Control response table visibility
+  output$showResponseTable <- reactive({
+    show_response && rv$survey_completed && is.null(rv$error_message)
+  })
+
+  # Set output options
+  outputOptions(output, "showResponseTable", suspendWhenHidden = FALSE)
+}
+
+#' Clean Up Server Session Resources
+#'
+#' This function handles cleanup tasks when a Shiny session ends. It ensures proper
+#' resource disposal by logging the session end and closing database connections.
+#'
+#' @param session The Shiny session object
+#' @param logger A logger object with a log_message method for recording events
+#' @param zone Character string specifying the logging zone (default: "SURVEY")
+#'
+#' @return None (called for side effects)
+#'
+#' @details
+#' The function performs the following cleanup tasks:
+#' \itemize{
+#'   \item Logs the session end event
+#'   \item Closes any open database pool connections
+#' }
+#'
+#' This function should be called within the server function of a Shiny application
+#' to ensure proper resource management.
+#'
+#' @examples
+#' \dontrun{
+#' server <- function(input, output, session) {
+#'   # Setup logger
+#'   logger <- LoggerFactory$new()
+#'
+#'   # Register cleanup
+#'   server_clean(session, logger)
+#' }
+#' }
+#'
+#' @importFrom shiny onSessionEnded
+#' @export
+server_clean <- function(session, logger, zone = "SURVEY") {
+  # Register cleanup actions for session end
+  session$onSessionEnded(function() {
+    # Log session end
+    logger$log_message("Ended session", zone = zone)
+
+    # Close database connections
+    db_pool_close(session)
+  })
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/server_helper.R
 \name{survey_setup}
 \alias{survey_setup}
-\title{Initialize Survey Environment and Database Connection}
+\title{Setup Global Survey Environment and Database Connection}
 \usage{
 survey_setup(db_config, shiny_config = NULL, workers = 2L)
 }
@@ -24,14 +24,14 @@ before database initialization.}
 \item{workers}{Number of workers for parallel processing. Default is 3.}
 }
 \value{
-Invisibly returns the initialized database pool object. The pool is also
-assigned to 'app_pool' in the global environment.
+Invisibly returns the database pool object. The pool is also assigned to
+'app_pool' in the global environment.
 
 Invisibly returns the initialized database pool object
 }
 \description{
-Initializes a complete survey environment by setting up database connections,
-environment variables, and asynchronous processing capabilities. The function:
+Setup the global survey environment by creating database connections,
+environment variables, and a future asynchronous processing plan. The function:
 \itemize{
 \item Validates database configuration parameters
 \item Sets required environment variables if not already present

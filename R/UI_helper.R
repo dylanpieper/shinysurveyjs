@@ -17,11 +17,11 @@
 #' @importFrom shinyjs hide show toggle delay
 #' @export
 hide_and_show <- function(hide_id, show_id, fade_time = 1) {
-  # First ensure the show element exists but is hidden
+  # First ensure the show element exists but is hidden (prevent flicker)
   shinyjs::toggle(show_id, condition = FALSE, anim = FALSE)
-  # Then do the hide animation
+  # Then hide animation
   shinyjs::hide(hide_id, anim = TRUE, animType = "fade", time = fade_time)
-  # Use setTimeout to delay the show animation
+  # Use setTimeout to delay show animation (smooth transition)
   shinyjs::delay(fade_time * 1000, {
     shinyjs::toggle(show_id,
                     condition = TRUE, anim = TRUE,
