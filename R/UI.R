@@ -11,8 +11,8 @@
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
 survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
-                     primary = "#003594", mode = "light",
-                     cookie_expiration_days = 7) {
+                      primary = "#003594", mode = "light",
+                      cookie_expiration_days = 7) {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -112,8 +112,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       min-width: 280px;
       height: auto;
       max-height: 90vh;
-      background: %s;
-      opacity: 0.90;
+      background: transparent;
       z-index: 10000;
       display: flex;
       justify-content: center;
@@ -129,6 +128,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       box-sizing: border-box;
       overflow-y: auto;
     }
+
     .sv-root-modern {
       background-color: %s;
       position: relative;
@@ -221,17 +221,16 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       }
     }
     ",
-    dark_bg,                               # Background color for message container
-    dark_text,                             # Text color for message container
-    dark_container_bg,                     # Background color for sv-root-modern
-    dark_container_bg,                     # Background color for sv-body
-    dark_text,                             # Text color for sv-body
-    dark_text,                             # Text color for sv-container-modern
-    dark_container_bg,                     # Background color for surveyResponseContainer
-    primary,                               # Primary color for first spinner
+    dark_text, # Text color for message container
+    dark_container_bg, # Background color for sv-root-modern
+    dark_container_bg, # Background color for sv-body
+    dark_text, # Text color for sv-body
+    dark_text, # Text color for sv-container-modern
+    dark_container_bg, # Background color for surveyResponseContainer
+    primary, # Primary color for first spinner
     adjust_hex(primary, 20, lighten = TRUE), # Lighter variant of primary for second spinner
-    dark_text,                             # Text color for error message
-    dark_container_bg                      # Background color for error message
+    dark_text, # Text color for error message
+    dark_container_bg # Background color for error message
   )
 
   # Animation keyframes

@@ -96,7 +96,7 @@ survey_single(
     write_table = Sys.getenv("WRITE_TABLE"),  # survey_package_feedback
     log_table = Sys.getenv("LOG_TABLE")       # survey_app_logs
   ),
-  cookie_expiration_days = 7
+  cookie_expiration_days = 3
 )
 ```
 

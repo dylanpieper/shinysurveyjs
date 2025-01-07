@@ -166,14 +166,6 @@ dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_l
           survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
         }
       } else {
-        # Check required fields based on group_type
-        if (config$group_type == "choice" && !"choices_col" %in% names(config)) {
-          error_msg <- paste0(prefix, "choices_col is required for group_type='choice'")
-          errors <- c(errors, error_msg)
-          if (!is.null(survey_logger)) {
-            survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
-          }
-        }
         if (config$group_type == "param" && !"display_col" %in% names(config)) {
           error_msg <- paste0(prefix, "display_col is required for group_type='param'")
           errors <- c(errors, error_msg)
