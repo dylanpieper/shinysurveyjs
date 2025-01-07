@@ -6,13 +6,13 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 -   Host a single survey or multiple surveys in one app
 
--   Store and manage survey data in a [PostgreSQL](https://www.postgresql.org/) database, including metadata such as the duration to load and complete the survey, date created and updated, Shiny session ID, and IP address
+-   Store survey data in a [PostgreSQL](https://www.postgresql.org/) database, including metadata such as the duration to load and complete the survey, date created and updated, session ID, and IP address
 
 -   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
 
--   Save survey progress as cookies and resume later
+-   Save survey progress as cookies and automatically resume later
 
--   Change the primary theme color and select from dark and light themes
+-   Change the primary theme color and select from light to dark themes
 
 ## Advanced Features
 
@@ -95,8 +95,7 @@ survey_single(
     password = Sys.getenv("PASSWORD"),        # password
     write_table = Sys.getenv("WRITE_TABLE"),  # survey_package_feedback
     log_table = Sys.getenv("LOG_TABLE")       # survey_app_logs
-  ),
-  cookie_expiration_days = 3
+  )
 )
 ```
 

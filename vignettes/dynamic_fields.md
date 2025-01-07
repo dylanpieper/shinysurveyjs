@@ -218,7 +218,6 @@ survey_single(
       group_col = "source",
       display_col = "display_text"
     )
-  ),
-  cookie_expiration_days = 3
+  )
 )
 ```

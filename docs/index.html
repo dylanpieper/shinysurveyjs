@@ -59,10 +59,10 @@
 </h2>
 <ul>
 <li><p>Host a single survey or multiple surveys in one app</p></li>
-<li><p>Store and manage survey data in a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database, including metadata such as the duration to load and complete the survey, date created and updated, Shiny session ID, and IP address</p></li>
+<li><p>Store survey data in a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database, including metadata such as the duration to load and complete the survey, date created and updated, session ID, and IP address</p></li>
 <li><p>Design surveys and create JSON objects with a user-friendly <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a></p></li>
-<li><p>Save survey progress as cookies and resume later</p></li>
-<li><p>Change the primary theme color and select from dark and light themes</p></li>
+<li><p>Save survey progress as cookies and automatically resume later</p></li>
+<li><p>Change the primary theme color and select from light to dark themes</p></li>
 </ul>
 </div>
 <div class="section level2">
@@ -147,8 +147,7 @@
 <span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PASSWORD"</span><span class="op">)</span>,        <span class="co"># password</span></span>
 <span>    write_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"WRITE_TABLE"</span><span class="op">)</span>,  <span class="co"># survey_package_feedback</span></span>
 <span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span>       <span class="co"># survey_app_logs</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  cookie_expiration_days <span class="op">=</span> <span class="fl">7</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>By default, the database configuration looks for environmental variables (e.g., <code>Sys.getenv("PASSWORD")</code>) that can be loaded from an <code>.env</code> or <code>.yaml</code> file or a secrets manager. Using encrypted secrets is recommended for production environments.</p>
 </div>
