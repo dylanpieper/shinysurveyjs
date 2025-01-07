@@ -47,6 +47,7 @@ survey_single <- function(json,
                             write_table = Sys.getenv("WRITE_TABLE"),
                             log_table = Sys.getenv("LOG_TABLE")
                           ),
+                          dynamic_config = NULL,
                           cookie_expiration_days = 7) {
   # Validate survey JSON
   if (missing(json) || is.null(json)) {
@@ -58,69 +59,174 @@ survey_single <- function(json,
 
   # Define UI
   ui <- fluidPage(
-    survey_ui_wrapper(theme = theme, theme_color = theme_color, theme_mode = theme_mode, cookie_expiration_days = cookie_expiration_days)
+    survey_ui_wrapper(
+      theme = theme,
+      theme_color = theme_color,
+      theme_mode = theme_mode,
+      cookie_expiration_days = cookie_expiration_days
+    )
   )
 
   # Define server
   server <- function(input, output, session) {
 
-    shinyjs::show("waitingMessage", anim = TRUE, animType = "fade", time = .25)
+    hide_and_show("surveyContainer", "waitingMessage")
 
-    # Setup reactive values
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
       loading = FALSE,
       survey_completed = FALSE,
       error_message = NULL,
-      start_time = Sys.time(),
+      load_start_time = Sys.time(),
+      start_time = NULL,
       complete_time = NULL,
-      duration = NULL
+      duration_load = NULL,
+      duration_complete = NULL,
+      validated_params = NULL
     )
 
     # Setup survey app logger and database pool
     server_setup(
-       session = session,
-       db_config = db_config,
-       app_pool = app_pool,
-       survey_logger = survey_logger,
-       db_ops = db_ops
-     )
+      session = session,
+      db_config = db_config,
+      app_pool = app_pool,
+      survey_logger = survey_logger,
+      db_ops = db_ops
+    )
 
-    shinyjs::hide("waitingMessage", anim = TRUE, animType = "fade", time = .25)
+    # Create reactive expressions for cached config and validation
+    config_list_reactive <- reactive({
+      req(!is.null(dynamic_config))
+      read_and_cache(
+        db_ops = db_ops,
+        dynamic_config = dynamic_config
+      )
+    })
+
+    validate_params_reactive <- reactive({
+      req(!is.null(dynamic_config))
+
+      # Get cached config
+      config_list <- config_list_reactive()
+
+      # Validate configuration
+      config_validation <- dynamic_config_validate(
+        dynamic_config = dynamic_config,
+        config_list = config_list,
+        survey_logger = logger
+      )
+
+      if (!config_validation$valid) {
+        msg <- paste(
+          "Configuration validation failed:",
+          paste(config_validation$errors, collapse = "; ")
+        )
+        logger$log_message(msg, type = "ERROR", zone = "SURVEY")
+        return(list(valid = FALSE, errors = config_validation$errors))
+      }
+
+      # Parse URL parameters
+      query_list <- parse_query(session)
+
+      # Validate parameters
+      param_validation <- url_parameters_validate(
+        dynamic_config = dynamic_config,
+        config_list = config_list,
+        query_list = query_list,
+        survey_logger = logger
+      )
+
+      if (!param_validation$valid) {
+        msg <- paste(
+          "URL parameter validation failed:",
+          paste(param_validation$errors, collapse = "; ")
+        )
+        logger$log_message(msg, type = "ERROR", zone = "SURVEY")
+        return(list(valid = FALSE, errors = param_validation$errors))
+        hide_and_show("waitingMessage", "invalidQueryMessage")
+      }
+
+      return(list(
+        valid = TRUE,
+        values = param_validation$values
+      ))
+    })
 
     # Load survey with error handling
-    shiny::observe({
-      tryCatch(
-        {
+    observe({
+      req(session)
+
+      tryCatch({
+        isolate({
+          if (!is.null(dynamic_config)) {
+            # Get validated parameters
+            validation_result <- validate_params_reactive()
+
+            if (!validation_result$valid) {
+              hide_and_show("waitingMessage", "invalidQueryMessage")
+              return()
+            }
+
+            # Store validated params in reactive values
+            rv$validated_params <- validation_result$values
+
+            # Log the parameters we're about to send
+            logger$log_message(
+              sprintf(
+                "Sending parameters to survey: %s",
+                jsonlite::toJSON(rv$validated_params)
+              ),
+              zone = "SURVEY"
+            )
+          }
+
+          # Parse survey JSON if needed
           survey_obj <- if (is.character(json)) {
             jsonlite::fromJSON(json, simplifyVector = FALSE)
           } else {
             json
           }
-          session$sendCustomMessage("loadSurvey", survey_obj)
+
+          # Construct the data to send to JavaScript with validated parameters
+          validated_params <- transform_validated_params(rv$validated_params, config_list_reactive())
+          survey_data <- list(
+            survey = survey_obj,
+            params = validated_params
+          )
+
+          # Send survey and parameters to client
+          session$sendCustomMessage("loadSurvey", survey_data)
+
+          hide_and_show("waitingMessage", "surveyContainer")
+
+          # Update timing information
+          rv$start_time <- Sys.time()
+          rv$duration_load <- as.numeric(
+            difftime(rv$start_time, rv$load_start_time, units = "secs")
+          )
+
+          # Log successful initialization
           logger$log_message("Loaded survey", zone = "SURVEY")
-        },
-        error = function(e) {
-          rv$error_message <- sprintf("Error loading survey: %s", e$message)
-          logger$log_message(rv$error_message, type = "ERROR", zone = "SURVEY")
-          shinyjs::show("surveyNotDefinedMessage")
-        }
-      )
-    })
+        })
+      },
+      error = function(e) {
+        msg <- sprintf("Survey initialization error: %s", e$message)
+        logger$log_message(msg, type = "ERROR", zone = "SURVEY")
+        shinyjs::show("surveyNotDefinedMessage")
+        shinyjs::hide("waitingMessage")
+      })
+    }) |> bindEvent(session$clientData$url_search, ignoreInit = FALSE)
 
     # Handle survey completion
     observeEvent(input$surveyComplete, {
-      shinyjs::show("savingDataMessage")
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
       rv$complete_time <- Sys.time()
-      rv$duration <- difftime(rv$complete_time, rv$start_time, units = "secs")
-      logger$log_message("Completed survey", zone = "SURVEY")
+      rv$duration_complete <- as.numeric(difftime(rv$complete_time, rv$start_time, units = "secs"))
     })
 
-    # Handle survey responses with detailed error handling
+    # Handle survey responses with timing data
     observeEvent(input$surveyData, {
-
       # Parse survey data
       parsed_data <- tryCatch(
         {
@@ -151,6 +257,13 @@ survey_single <- function(json,
           parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
         }
 
+        # Add only validated parameters to the data frame
+        if (!is.null(rv$validated_params) && length(rv$validated_params) > 0) {
+          for (param_name in names(rv$validated_params)) {
+            parsed_data[[param_name]] <- rv$validated_params[[param_name]]
+          }
+        }
+
         # Store in database with error handling
         tryCatch(
           {
@@ -160,17 +273,20 @@ survey_single <- function(json,
               stop(msg)
             }
 
-            parsed_data$duration_complete <- rv$duration
+            # Add timing data
+            parsed_data$duration_load <- rv$duration_load
+            parsed_data$duration_complete <- rv$duration_complete
 
+            # Create/update table schema if needed
             db_ops$create_survey_table(db_config$write_table, parsed_data)
 
+            # Insert the data
             db_ops$update_survey_table(db_config$write_table, parsed_data)
 
             # Update reactive value after successful database operation
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
 
-            # Hide saving spinner and show response table
             hide_and_show("savingDataMessage", "surveyResponseContainer")
           },
           error = function(e) {

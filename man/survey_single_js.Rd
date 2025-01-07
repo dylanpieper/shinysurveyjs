@@ -2,33 +2,38 @@
 % Please edit documentation in R/www.R
 \name{survey_single_js}
 \alias{survey_single_js}
-\title{Generate JavaScript Code for Single Survey Integration}
+\title{Create JavaScript code for handling survey functionality}
 \usage{
 survey_single_js(cookie_expiration_days = 7)
 }
 \arguments{
-\item{cookie_expiration_days}{Integer specifying how many days the survey progress cookie should
-persist. Defaults to 7 days. The cookie is automatically deleted when the survey is completed.}
+\item{cookie_expiration_days}{Numeric value specifying how many days the survey
+progress cookie should persist. Must be a positive number. Default is 7 days.}
 }
 \value{
-A character string containing the JavaScript code for survey initialization and management.
-The code includes functionality for:
-\itemize{
-\item Survey progress persistence through cookies
-\item Automatic progress saving on page changes and value updates
-\item Survey completion handling and data transmission to Shiny
-\item Error handling and user feedback
-}
+A character string containing the generated JavaScript code.
 }
 \description{
-Returns the JavaScript code needed to initialize and handle a single survey in a Shiny application.
-This JavaScript code sets up event handlers for survey completion, manages survey progress persistence
-through cookies, and enables communication between the survey and Shiny.
+Generates JavaScript code that manages survey functionality including cookie handling,
+survey initialization, and data persistence. The code includes robust error handling
+and proper type definitions.
+}
+\details{
+The generated JavaScript code includes several key components:
+\itemize{
+\item Cookie management (setting, getting, and deleting)
+\item Survey progress persistence
+\item Hidden field management
+\item Survey initialization and event handling
+\item Error reporting to Shiny
+}
+
+The code uses proper type definitions and includes comprehensive error handling
+throughout all operations.
 }
 \examples{
-# Generate JavaScript with default 7-day cookie expiration
-js_code <- survey_single_js()
+\dontrun{
+js_code <- survey_single_js(cookie_expiration_days = 14)
+}
 
-# Generate JavaScript with 30-day cookie expiration
-js_code <- survey_single_js(cookie_expiration_days = 30)
 }

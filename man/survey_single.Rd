@@ -15,6 +15,7 @@ survey_single(
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
+  dynamic_config = NULL,
   cookie_expiration_days = 7
 )
 }

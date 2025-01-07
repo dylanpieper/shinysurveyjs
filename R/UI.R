@@ -104,10 +104,14 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
     "
     .message-container {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%%;
-      height: 100%%;
+      top: 50%%;
+      left: 50%%;
+      transform: translate(-50%%, -50%%);
+      width: auto;
+      max-width: min(600px, 90%%);
+      min-width: 280px;
+      height: auto;
+      max-height: 90vh;
       background: %s;
       opacity: 0.90;
       z-index: 10000;
@@ -116,16 +120,15 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       align-items: center;
       flex-direction: column;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      font-size: clamp(2rem, 2vw, 1.25rem);
+      font-size: clamp(2rem, 3vw + 0.5rem, 1.5rem);
       color: %s;
       text-align: center;
       letter-spacing: -0.01em;
       transition: opacity 0.3s ease;
-      padding: clamp(1rem, 5vw, 2rem);
+      padding: 1.5rem;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow-y: auto;
     }
-
     .sv-root-modern {
       background-color: %s;
       position: relative;
@@ -176,7 +179,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 
     /* Error message containment */
     .error-message {
-      font-size: clamp(1rem, 4vw, 1.5rem);
+      font-size: clamp(2rem, 4vw, 1.5rem);
       font-weight: 600;
       color: %s;
       padding: clamp(0.5rem, 2vw, 1rem);

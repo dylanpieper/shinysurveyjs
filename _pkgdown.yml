@@ -1,4 +1,7 @@
 url: ~
+repo:
+  url:
+    home: https://github.com/dylanpieper/shinysurveyjs
 template:
   bootstrap: 5
   bslib:

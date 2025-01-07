@@ -393,3 +393,78 @@ server_clean <- function(session, logger, zone = "SURVEY") {
     db_pool_close(session)
   })
 }
+
+#' Parse URL Query Parameters
+#'
+#' Extracts query parameters from either a URL string or a Shiny session object
+#' and returns them as a named list. The function handles URL encoding, empty values,
+#' and multiple parameters with the same name.
+#'
+#' @param input Either a character string containing a URL with query parameters,
+#'              or a Shiny session object
+#' @return A named list where names are parameter names and values are parameter values
+#' @examples
+#' # From URL string
+#' parse_query("https://example.com/page?name=John&age=25")
+#'
+#' # From Shiny session (within Shiny server function)
+#' server <- function(input, output, session) {
+#'   params <- parse_query(session)
+#' }
+#'
+#' @export
+parse_query <- function(input) {
+  # Check if input is a Shiny session object
+  if (inherits(input, "ShinySession")) {
+    # Extract query string from Shiny session
+    query_string <- input$clientData$url_search
+    # Remove leading '?' if present
+    query_string <- sub("^\\?", "", query_string)
+  } else if (is.character(input)) {
+    # Extract query string after '?'
+    query_string <- sub(".*\\?", "", input)
+  } else {
+    stop("Input must be either a URL string or a Shiny session object")
+  }
+
+  # Return empty list if no query parameters
+  if (is.null(query_string) || query_string == "") {
+    return(list())
+  }
+
+  # Split parameters into key-value pairs
+  params <- strsplit(query_string, "&")[[1]]
+
+  # Initialize empty list for results
+  result <- list()
+
+  # Process each parameter
+  for (param in params) {
+    # Skip empty parameters
+    if (param == "") next
+
+    # Split into key and value
+    parts <- strsplit(param, "=")[[1]]
+    key <- parts[1]
+
+    # Handle cases where value might be missing
+    value <- if (length(parts) > 1) {
+      utils::URLdecode(parts[2])
+    } else {
+      NA
+    }
+
+    # If key already exists, convert to vector
+    if (key %in% names(result)) {
+      if (is.vector(result[[key]])) {
+        result[[key]] <- c(result[[key]], value)
+      } else {
+        result[[key]] <- c(result[[key]], value)
+      }
+    } else {
+      result[[key]] <- value
+    }
+  }
+
+  return(result)
+}

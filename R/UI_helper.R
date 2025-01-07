@@ -1,33 +1,16 @@
-#' Smoothly Transition Between Two Elements
+#' Switch Visibility Between Two Elements
 #'
-#' Creates a smooth fade transition between any two DIV elements by fading out one element
-#' and fading in another. This creates a polished user interface when switching between
-#' different elements like messages, panels, or content containers.
+#' Shows one element while hiding another. Simple toggle between two DIV elements
+#' without animations.
 #'
-#' @param hide_id Character string specifying the ID of the element to fade out
-#' @param show_id Character string specifying the ID of the element to fade in
-#' @param fade_time Numeric value specifying the duration of each fade animation
-#'   in seconds (default: 1). The total transition time is twice the length (default: 1 x 2).
+#' @param hide_id Character string specifying the ID of the element to hide
+#' @param show_id Character string specifying the ID of the element to show
 #'
-#' @details The transition occurs in three steps:
-#' 1. Ensures the target element exists in the DIV but is hidden
-#' 2. Fades out the currently visible element
-#' 3. After the fade-out completes, fades in the target element
-#'
-#' @importFrom shinyjs hide show toggle delay
+#' @importFrom shinyjs hide show
 #' @export
-hide_and_show <- function(hide_id, show_id, fade_time = 1) {
-  # First ensure the show element exists but is hidden (prevent flicker)
-  shinyjs::toggle(show_id, condition = FALSE, anim = FALSE)
-  # Then hide animation
-  shinyjs::hide(hide_id, anim = TRUE, animType = "fade", time = fade_time)
-  # Use setTimeout to delay show animation (smooth transition)
-  shinyjs::delay(fade_time * 1000, {
-    shinyjs::toggle(show_id,
-                    condition = TRUE, anim = TRUE,
-                    animType = "fade", time = fade_time
-    )
-  })
+hide_and_show <- function(hide_id, show_id) {
+  shinyjs::hide(hide_id)
+  shinyjs::show(show_id)
 }
 
 #' Adjust Hexadecimal Color Values

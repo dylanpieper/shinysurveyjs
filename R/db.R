@@ -332,7 +332,7 @@ db_ops <- R6::R6Class(
               )
               DBI::dbExecute(conn, alter_query)
               self$logger$log_message(
-                sprintf("Added column '%s' to existing table '%s'", col, table_name),
+                sprintf("Added column '%s' to table '%s'", col, table_name),
                 "INFO",
                 "DATABASE"
               )
@@ -426,6 +426,126 @@ db_ops <- R6::R6Class(
       }, sprintf("Failed to update table '%s'", table_name))
 
       invisible(table_name)
+    },
+
+    #' @description Read data from a survey table with optional filtering
+    #' @param table_name Character. Name of the table to read from
+    #' @param columns Character vector. Specific columns to read (NULL for all columns)
+    #' @param filters List. Named list of filter conditions (e.g., list(status = "active"))
+    #' @param order_by Character vector. Columns to order by
+    #' @param desc Logical. If TRUE, sort in descending order
+    #' @param limit Numeric. Maximum number of rows to return (NULL for all rows)
+    #' @return data.frame. The requested data
+    read_table = function(table_name, columns = NULL, filters = NULL,
+                          order_by = NULL, desc = FALSE, limit = NULL) {
+      if (is.null(table_name) || !is.character(table_name)) {
+        self$logger$log_message("Invalid table_name parameter", "ERROR", "DATABASE")
+        stop("Invalid table name")
+      }
+
+      sanitized_table <- private$sanitize_survey_table_name(table_name)
+
+      self$operate(function(conn) {
+        # Check if table exists
+        if (!DBI::dbExistsTable(conn, sanitized_table)) {
+          self$logger$log_message(
+            sprintf("Table '%s' does not exist", sanitized_table),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Table '%s' does not exist", sanitized_table))
+        }
+
+        # Build SELECT clause
+        select_cols <- "*"
+        if (!is.null(columns)) {
+          if (!is.character(columns)) {
+            self$logger$log_message("Columns must be a character vector", "ERROR", "DATABASE")
+            stop("Invalid columns parameter")
+          }
+          select_cols <- paste(
+            vapply(columns, function(col) {
+              DBI::dbQuoteIdentifier(conn, col)
+            }, character(1)),
+            collapse = ", "
+          )
+        }
+
+        # Build WHERE clause
+        where_clause <- ""
+        if (!is.null(filters)) {
+          if (!is.list(filters)) {
+            self$logger$log_message("Filters must be a named list", "ERROR", "DATABASE")
+            stop("Invalid filters parameter")
+          }
+
+          where_conditions <- vapply(names(filters), function(col) {
+            value <- filters[[col]]
+            if (is.null(value)) {
+              sprintf("%s IS NULL", DBI::dbQuoteIdentifier(conn, col))
+            } else if (is.character(value)) {
+              sprintf("%s = %s",
+                      DBI::dbQuoteIdentifier(conn, col),
+                      DBI::dbQuoteString(conn, value))
+            } else {
+              sprintf("%s = %s",
+                      DBI::dbQuoteIdentifier(conn, col),
+                      value)
+            }
+          }, character(1))
+
+          if (length(where_conditions) > 0) {
+            where_clause <- paste("WHERE", paste(where_conditions, collapse = " AND "))
+          }
+        }
+
+        # Build ORDER BY clause
+        order_clause <- ""
+        if (!is.null(order_by)) {
+          if (!is.character(order_by)) {
+            self$logger$log_message("order_by must be a character vector", "ERROR", "DATABASE")
+            stop("Invalid order_by parameter")
+          }
+          direction <- if (desc) "DESC" else "ASC"
+          order_cols <- paste(
+            vapply(order_by, function(col) {
+              paste(DBI::dbQuoteIdentifier(conn, col), direction)
+            }, character(1)),
+            collapse = ", "
+          )
+          order_clause <- paste("ORDER BY", order_cols)
+        }
+
+        # Build LIMIT clause
+        limit_clause <- ""
+        if (!is.null(limit)) {
+          if (!is.numeric(limit) || limit < 0) {
+            self$logger$log_message("limit must be a non-negative number", "ERROR", "DATABASE")
+            stop("Invalid limit parameter")
+          }
+          limit_clause <- sprintf("LIMIT %d", as.integer(limit))
+        }
+
+        # Construct and execute query
+        query <- sprintf(
+          "SELECT %s FROM %s %s %s %s",
+          select_cols,
+          DBI::dbQuoteIdentifier(conn, sanitized_table),
+          where_clause,
+          order_clause,
+          limit_clause
+        )
+
+        result <- DBI::dbGetQuery(conn, query)
+
+        self$logger$log_message(
+          sprintf("Read n = %d rows from '%s'", nrow(result), sanitized_table),
+          "INFO",
+          "DATABASE"
+        )
+
+        return(result)
+      }, sprintf("Failed to read from table '%s'", sanitized_table))
     }
   ),
 
