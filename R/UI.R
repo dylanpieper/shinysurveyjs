@@ -26,7 +26,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 
   # Get gradient colors based on mode
   gradient_color1 <- if (mode == "dark") primary else "#DBEEFF"
-  gradient_color2 <- if (mode == "dark") adjust_hex(primary, 15, lighten = TRUE) else "#00AD6E"
+  gradient_color2 <- if (mode == "dark") adjust_hex(primary, 15) else "#00AD6E"
 
   # Define dark mode CSS
   dark_mode_css <- sprintf(
@@ -228,7 +228,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
     dark_text, # Text color for sv-container-modern
     dark_container_bg, # Background color for surveyResponseContainer
     primary, # Primary color for first spinner
-    adjust_hex(primary, 20, lighten = TRUE), # Lighter variant of primary for second spinner
+    adjust_hex(primary, 20), # Lighter variant of primary for second spinner
     dark_text, # Text color for error message
     dark_container_bg # Background color for error message
   )

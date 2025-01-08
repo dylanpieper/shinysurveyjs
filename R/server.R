@@ -19,6 +19,7 @@
 #'     \item **write_table**: Table name to write survey data (default: WRITE_TABLE environment variable)
 #'     \item **log_table**: Table name to write log messages (default: LOG_TABLE environment variable)
 #'   }
+#' @param cookie_expiration_days Number of days to keep cookies for URL parameters (default: 7)
 #'
 #' @return A Shiny application object
 #'

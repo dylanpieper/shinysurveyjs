@@ -18,30 +18,7 @@ The package supports two main types of dynamic configurations:
 
 ### Basic Structure
 
-The dynamic configuration is specified through the `dynamic_config` parameter in `survey_single()`. It accepts a list of configuration objects:
-
-``` r
-dynamic_config = list(
-  list(
-    group_type = "choice",                   # Type of configuration
-    table_name = "config_packages",          # Database table
-    group_col = "package"                    # Column for grouping/lookup
-  ),
-  list(
-    group_type = "choice",                   # Type of configuration
-    table_name = "config_packages_versions", # Database table
-    parent_table_name = "config_packages",   # Parent table for dependency
-    parent_id_col = "package_id",            # Parent id column for dependency
-    group_col = "version"                    # Column for grouping/lookup
-  ),
-  list(
-    table_name = "config_source",            # Database table
-    group_type = "param",                    # Type of configuration
-    group_col = "source",                    # URL parameter name
-    display_col = "display_text"             # Optional: Show display text
-  )
-)
-```
+The dynamic configuration is specified through the `dynamic_config` parameter in `survey_single()`. It accepts a list of configuration objects.
 
 ## Choice Configuration
 
@@ -64,7 +41,7 @@ CREATE TABLE car_models (
 );
 ```
 
-Configure your survey with dynamic dropdowns:
+Configure your survey with dynamic dropdowns and dependent fields:
 
 ``` r
 dynamic_config = list(
@@ -96,7 +73,7 @@ Parameter configuration allows you to:
 ### URL Parameter Example
 
 ``` r
-# URL: http://survey.com/?source=github
+# URL: http://127.0.0.1:3838/?source=github
 
 dynamic_config = list(
   list(
@@ -110,9 +87,89 @@ dynamic_config = list(
 
 This feature is useful for tracking individuals, groups, or referral sources. It also allows you to pipe data into the survey from other systems.
 
+### Parameter Dependencies
+
+The dynamic configuration can be combined to create complex field dependencies. For example, you can use a URL query parameter to set the package name and then use the choice to populate a radio button field for the versions released for that package.
+
+``` r
+# URL: http://127.0.0.1:3838/?package=shinysurveyjs
+
+dynamic_config = list(
+  list(
+    group_type = "param",                    # Type of configuration
+    table_name = "config_packages",          # Database table
+    group_col = "package"                    # Column for grouping/lookup
+  ),
+  list(
+    group_type = "choice",                   # Type of configuration
+    table_name = "config_packages_versions", # Database table
+    parent_table_name = "config_packages",   # Parent table for dependency
+    parent_id_col = "package_id",            # Parent id column for dependency
+    group_col = "version"                    # Column for grouping/lookup
+  )
+)
+```
+
 ## Complete Example
 
-Here's a full example using the R package feedback form to combine both configuration types. You can select the package and version loaded from a database table and display the referral source from a URL parameter:
+You can also combine both choice and parameter configuration types. For example, you can select the package and version loaded from a database table and display the referral source from a URL parameter:
+
+You will need to set up a PostgreSQL database with the following schema:
+
+``` sql
+-- Create the packages configuration table
+CREATE TABLE config_packages (
+    package_id SERIAL PRIMARY KEY,
+    package VARCHAR(255) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package)
+);
+
+-- Create the package versions table with proper foreign key
+CREATE TABLE config_packages_versions (
+    version_id SERIAL PRIMARY KEY,
+    package_id INTEGER NOT NULL,
+    version VARCHAR(50) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (package_id) REFERENCES config_packages(package_id),
+    UNIQUE(package_id, version)
+);
+
+-- Create the source configuration table
+CREATE TABLE config_source (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(50) NOT NULL UNIQUE,
+    display_text VARCHAR(255) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data for packages
+INSERT INTO config_packages (package) VALUES
+    ('batchLLM'),
+    ('shinysurveyjs');
+
+-- Insert sample data for package versions
+INSERT INTO config_packages_versions (package_id, version)
+SELECT p.package_id, v.version
+FROM config_packages p
+CROSS JOIN (
+    VALUES 
+        ('batchLLM', 'dev-github'),
+        ('batchLLM', 'CRAN-0.1.0'),
+        ('batchLLM', 'CRAN-0.2.0'),
+        ('shinysurveyjs', 'dev-github'),
+        ('shinysurveyjs', 'CRAN-0.1.0')
+) AS v(package_name, version)
+WHERE p.package = v.package_name;
+
+-- Insert sample data for source configuration
+INSERT INTO config_source (source, display_text) VALUES
+    ('github', 'GitHub'),
+    ('cran', 'CRAN'),
+    ('posit', 'the Posit Forum');
+```
+
+You can then run the following code to create the survey:
 
 ``` r
 library(shinysurveyjs)
