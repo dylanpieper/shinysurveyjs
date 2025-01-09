@@ -5,6 +5,8 @@
 \title{Get Display Text for Source Parameters}
 \usage{
 get_source_display_text(source_value, config_source_df)
+
+get_source_display_text(source_value, config_source_df)
 }
 \arguments{
 \item{source_value}{Character. The source identifier (e.g., "GITHUB", "CRAN")}
@@ -14,8 +16,14 @@ with columns 'source' and 'display_text'}
 }
 \value{
 Character. The display text corresponding to the source value
+
+Character. The display text corresponding to the source value
 }
 \description{
 Looks up the display text from the config source table based on the source value.
 If no match is found, returns the original value.
+
+Looks up the display text from the config source table based on the source value.
+If no match is found, returns the original value.
 }
+\keyword{internal}

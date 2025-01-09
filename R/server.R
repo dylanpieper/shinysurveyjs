@@ -111,7 +111,7 @@ survey_single <- function(json,
       config_list <- config_list_reactive()
 
       # Validate configuration
-      config_validation <- dynamic_config_validate(
+      config_validation <- validate_dynamic_config(
         dynamic_config = dynamic_config,
         config_list = config_list,
         survey_logger = logger
@@ -130,7 +130,7 @@ survey_single <- function(json,
       query_list <- parse_query(session)
 
       # Validate parameters
-      param_validation <- url_parameters_validate(
+      param_validation <- validate_url_parameters(
         dynamic_config = dynamic_config,
         config_list = config_list,
         query_list = query_list,
@@ -190,6 +190,7 @@ survey_single <- function(json,
 
           # Construct the data to send to JavaScript with validated parameters
           validated_params <- transform_validated_params(rv$validated_params, config_list_reactive())
+
           survey_data <- list(
             survey = survey_obj,
             params = validated_params
@@ -197,6 +198,19 @@ survey_single <- function(json,
 
           # Send survey and parameters to client
           session$sendCustomMessage("loadSurvey", survey_data)
+
+          # print("dynamic_config")
+          # print(dynamic_config)
+          # print("config_list_reactive")
+          # print(config_list_reactive())
+
+          # Configure dynamic fields
+          configure_dynamic_fields(
+            dynamic_config = dynamic_config,
+            config_list_reactive = config_list_reactive(),
+            session = session,
+            logger = logger
+            )
 
           hide_and_show("waitingMessage", "surveyContainer")
 

@@ -40,7 +40,15 @@ function initializeSurvey(data) {
 
        const savedData = getCookie(COOKIE_NAME);
        if (savedData) {
-           survey.data = savedData;
+           // First set the base survey data
+           const surveyData = { ...savedData };
+           delete surveyData._dynamicConfig; // Remove config before setting data
+           survey.data = surveyData;
+
+           // Then restore dynamic choices after a small delay to ensure parent handlers are set up
+           setTimeout(() => {
+               restoreDynamicChoices(survey, savedData);
+           }, DEBOUNCE_DELAY);
        }
 
        setHiddenFieldsFromShiny(survey, storedParams);

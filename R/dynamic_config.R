@@ -1,4 +1,4 @@
-#' Read and Cache Tables
+#' Read and Cache Tables for Dynamic Fields
 #'
 #' @description
 #' Creates a cache of database tables for efficient access.
@@ -14,19 +14,18 @@
 #'
 #' @examples
 #' \dontrun{
-#' # In server.R
+#' # Define dynamic fields configuration
 #' config <- list(
 #'   list(
-#'     table_name = "config_packages",
 #'     group_type = "choice",
-#'     group_col = "package",
-#'     choices_col = "version"
+#'     table_name = "config_packages",
+#'     group_col = "package"
 #'   ),
 #'   list(
-#'     table_name = "config_pid",
 #'     group_type = "param",
-#'     group_col = "pid",
-#'     display_col = "full_name"
+#'     table_name = "config_source",
+#'     group_col = "source",
+#'     display_col = "display_text"
 #'   )
 #' )
 #' tables <- read_and_cache(db_ops, config)
@@ -37,7 +36,7 @@
 #' })
 #' }
 #'
-#' @export
+#' @keywords internal
 read_and_cache <- function(db_ops, dynamic_config) {
   # Initialize empty list to store tables
   tables_cache <- list()
@@ -64,7 +63,8 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #'   - table_name: Name of the database table
 #'   - group_type: Must be either "choice" or "param"
 #'   - group_col: Column name for grouping
-#'   - choices_col: (Required for group_type="choice") Column name for choices
+#'   - parent_table_name: (Optional) Name of parent table for relationships
+#'   - parent_id_col: (Optional) Column name in parent table for relationship
 #'   - display_col: (Required for group_type="param") Column name for display
 #'
 #' @param config_list Optional list of cached tables to verify table/column existence
@@ -81,13 +81,16 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #'     table_name = "config_packages",
 #'     group_type = "choice",
 #'     group_col = "package",
-#'     choices_col = "version"
+#'     parent_table_name = "package_versions",
+#'     parent_id_col = "package_id"
 #'   ),
 #'   list(
 #'     table_name = "config_pid",
 #'     group_type = "param",
 #'     group_col = "pid",
-#'     display_col = "full_name"
+#'     display_col = "full_name",
+#'     parent_table_name = "projects",
+#'     parent_id_col = "project_id"
 #'   )
 #' )
 #'
@@ -101,8 +104,8 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #' }
 #' }
 #'
-#' @export
-dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_logger = NULL) {
+#' @keywords internal
+validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_logger = NULL) {
   errors <- character()
 
   # Log validation start
@@ -165,20 +168,22 @@ dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_l
         if (!is.null(survey_logger)) {
           survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
         }
-      } else {
-        if (config$group_type == "param" && !"display_col" %in% names(config)) {
-          error_msg <- paste0(prefix, "display_col is required for group_type='param'")
-          errors <- c(errors, error_msg)
-          if (!is.null(survey_logger)) {
-            survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
-          }
-        }
+      }
+    }
+
+    # Check parent table configuration if provided
+    if (("parent_table_name" %in% names(config) && !"parent_id_col" %in% names(config)) ||
+        (!"parent_table_name" %in% names(config) && "parent_id_col" %in% names(config))) {
+      error_msg <- paste0(prefix, "both parent_table_name and parent_id_col must be provided together")
+      errors <- c(errors, error_msg)
+      if (!is.null(survey_logger)) {
+        survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
       }
     }
 
     # If config_list is provided, verify table and column existence
     if (!is.null(config_list) && "table_name" %in% names(config)) {
-      # Check if table exists in cache
+      # Check if main table exists in cache
       if (!config$table_name %in% names(config_list)) {
         error_msg <- paste0(prefix, "table '", config$table_name, "' not found in cache")
         errors <- c(errors, error_msg)
@@ -188,10 +193,11 @@ dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_l
       } else {
         table_data <- config_list[[config$table_name]]
 
-        # Check if columns exist
+        # Check if columns exist in main table
         cols_to_check <- c(config$group_col)
-        if ("choices_col" %in% names(config)) cols_to_check <- c(cols_to_check, config$choices_col)
-        if ("display_col" %in% names(config)) cols_to_check <- c(cols_to_check, config$display_col)
+        if ("display_col" %in% names(config)) {
+          cols_to_check <- c(cols_to_check, config$display_col)
+        }
 
         missing_cols <- cols_to_check[!cols_to_check %in% names(table_data)]
         if (length(missing_cols) > 0) {
@@ -200,6 +206,27 @@ dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_l
           errors <- c(errors, error_msg)
           if (!is.null(survey_logger)) {
             survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+          }
+        }
+
+        # Check parent table configuration if provided
+        if ("parent_table_name" %in% names(config)) {
+          if (!config$parent_table_name %in% names(config_list)) {
+            error_msg <- paste0(prefix, "parent table '", config$parent_table_name, "' not found in cache")
+            errors <- c(errors, error_msg)
+            if (!is.null(survey_logger)) {
+              survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+            }
+          } else {
+            parent_table_data <- config_list[[config$parent_table_name]]
+            if (!config$parent_id_col %in% names(parent_table_data)) {
+              error_msg <- paste0(prefix, "parent_id_col '", config$parent_id_col,
+                                  "' not found in parent table '", config$parent_table_name, "'")
+              errors <- c(errors, error_msg)
+              if (!is.null(survey_logger)) {
+                survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+              }
+            }
           }
         }
       }
@@ -243,8 +270,8 @@ dynamic_config_validate <- function(dynamic_config, config_list = NULL, survey_l
 #'   - errors: Character vector of error messages
 #'   - values: List of validated parameter values
 #'
-#' @export
-url_parameters_validate <- function(dynamic_config, config_list, query_list, survey_logger = NULL) {
+#' @keywords internal
+validate_url_parameters <- function(dynamic_config, config_list, query_list, survey_logger = NULL) {
   # Initialize results
   errors <- character()
   validated_values <- list()
@@ -346,6 +373,8 @@ url_parameters_validate <- function(dynamic_config, config_list, query_list, sur
 #'   with columns 'source' and 'display_text'
 #'
 #' @return Character. The display text corresponding to the source value
+#'
+#' @keywords internal
 get_source_display_text <- function(source_value, config_source_df) {
   display_text <- config_source_df$display_text[config_source_df$source == source_value]
   if(length(display_text) == 0) return(source_value)  # fallback to value if not found
@@ -365,6 +394,8 @@ get_source_display_text <- function(source_value, config_source_df) {
 #'
 #' @return List. Transformed parameters in the format:
 #'   list(param_name = list(text = "display_text", value = "value"))
+#'
+#' @keywords internal
 transform_validated_params <- function(validated_params, config_list) {
   lapply(names(validated_params), function(param_name) {
     # Handle both atomic vectors and list values
@@ -385,4 +416,358 @@ transform_validated_params <- function(validated_params, config_list) {
       )
     }
   }) |> setNames(names(validated_params))
+}
+
+#' Get Display Text for Source Parameters
+#'
+#' Looks up the display text from the config source table based on the source value.
+#' If no match is found, returns the original value.
+#'
+#' @param source_value Character. The source identifier (e.g., "GITHUB", "CRAN")
+#' @param config_source_df Data frame. Configuration table containing source mappings
+#'   with columns 'source' and 'display_text'
+#'
+#' @return Character. The display text corresponding to the source value
+#'
+#' @keywords internal
+get_source_display_text <- function(source_value, config_source_df) {
+  display_text <- config_source_df$display_text[config_source_df$source == source_value]
+  if(length(display_text) == 0) return(source_value)  # fallback to value if not found
+  return(display_text)
+}
+
+#' Format Choices for JavaScript Survey Library
+#'
+#' @description
+#' Formats R choice data structures into a format compatible with JavaScript survey components.
+#' Handles both flat lists of choices and hierarchical choice structures, with support for
+#' parent-child relationships between fields.
+#'
+#' @param choices Either a vector of choices or a list of hierarchical choices
+#' @param is_parent Logical, whether this field is a parent field
+#' @param child_field Character, name of the field containing child choices
+#' @param is_child Logical, whether this field contains child choices
+#' @param parent_field Character, name of the field containing parent choices
+#' @param display_col Character, optional name of column containing display text
+#'
+#' @return A list formatted for JavaScript survey components with relationship metadata
+#'
+#' @examples
+#' \dontrun{
+#' # Parent choices
+#' choices <- c("parent1", "parent2")
+#' formatted <- format_choices_for_js(choices, is_parent = TRUE, child_field = "child_field")
+#'
+#' # Child choices
+#' child_choices <- list(
+#'   list(value = "child1", text = "Child 1", parentId = 1),
+#'   list(value = "child2", text = "Child 2", parentId = 1)
+#' )
+#' formatted_children <- format_choices_for_js(child_choices, is_child = TRUE, parent_field = "parent_field")
+#' }
+format_choices_for_js <- function(choices,
+                                  is_parent = FALSE,
+                                  child_field = NULL,
+                                  is_child = FALSE,
+                                  parent_field = NULL,
+                                  display_col = NULL) {
+  if (is.null(choices)) return(NULL)
+
+  # Create base structure based on relationship type
+  base_structure <- if (is_parent) {
+    list(
+      type = "parent",
+      choices = list()
+    )
+  } else if (is_child) {
+    list(
+      type = "child",
+      parentField = parent_field,
+      choices = list()
+    )
+  } else {
+    list(choices = list())
+  }
+
+  # Handle flat choices with optional display text
+  if (!is.list(choices) || (is.list(choices) && !is.null(names(choices)) &&
+                            !all(c("value", "text", "choices") %in% names(choices[[1]])))) {
+    # Convert choices to array of objects format
+    choices_list <- vector("list", length(choices))
+    for(i in seq_along(choices)) {
+      choice_struct <- list(
+        value = choices[i],
+        text = if (!is.null(display_col) && !is.null(display_col[i])) display_col[i] else choices[i]
+      )
+
+      if (is_parent && !is.null(child_field)) {
+        choice_struct$childField <- child_field
+      }
+
+      choices_list[[i]] <- choice_struct
+    }
+
+    base_structure$choices <- choices_list
+    return(base_structure)
+  }
+
+  # Handle hierarchical choices
+  choices_list <- vector("list", length(choices))
+  for(i in seq_along(choices)) {
+    item <- choices[[i]]
+
+    if (is_child && is.list(item$value)) {
+      # Handle array values for child choices
+      choice_struct <- list(
+        value = unlist(item$value),
+        text = unlist(item$value),  # or item$text if available
+        parentId = item$parentId
+      )
+    } else {
+      choice_struct <- list(
+        value = item$value,
+        text = if (!is.null(item$display_text)) item$display_text else item$text
+      )
+
+      if (is_parent && !is.null(child_field)) {
+        choice_struct$childField <- child_field
+      }
+
+      if (is_child && !is.null(item$parentId)) {
+        choice_struct$parentId <- item$parentId
+      }
+    }
+
+    choices_list[[i]] <- choice_struct
+  }
+
+  base_structure$choices <- choices_list
+  return(base_structure)
+}
+
+#' Configure Dynamic Fields for Survey
+#'
+#' @description
+#' Configures dynamic fields based on the provided configuration, handling both
+#' choices and parameters. Supports parent-child relationships between fields and
+#' optional display text for choices.
+#'
+#' @param dynamic_config List of configuration entries. Each entry must be a list containing:
+#'   - group_type: Character, either "choice" or "param"
+#'   - table_name: Character, name of the source table
+#'   - group_col: Character, name of the column containing choices
+#'   - parent_table_name: (Optional) Character, name of parent table
+#'   - parent_id_col: (Optional) Character, column name for parent-child relationship
+#'   - display_col: (Optional) Character, column name containing display text
+#'
+#' @param config_list_reactive Reactive expression containing cached database tables
+#' @param session Shiny session object
+#' @param logger Logger object
+#'
+#' @return Invisible NULL
+configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger) {
+  # Validate inputs
+  if (is.null(dynamic_config) || !is.list(dynamic_config)) {
+    logger$log_message("Invalid dynamic_config parameter", type = "ERROR", zone = "SURVEY")
+    return(invisible(NULL))
+  }
+
+  # Extract choice configurations
+  choice_configs <- Filter(function(x) {
+    !is.null(x$group_type) && x$group_type == "choice"
+  }, dynamic_config)
+
+  if (length(choice_configs) == 0) {
+    logger$log_message("No choice configurations found", type = "INFO", zone = "SURVEY")
+    return(invisible(NULL))
+  }
+
+  # Process each choice configuration
+  choices_data <- list()
+
+  for (config in choice_configs) {
+    tryCatch({
+      # Validate required fields
+      if (is.null(config$table_name) || is.null(config$group_col)) {
+        logger$log_message(
+          sprintf("Missing required fields in config: %s",
+                  jsonlite::toJSON(config)),
+          type = "ERROR",
+          zone = "SURVEY"
+        )
+        next
+      }
+
+      # Get the specific table and column
+      table_data <- config_list_reactive[[config$table_name]]
+      col_name <- config$group_col
+
+      if (is.null(table_data)) {
+        logger$log_message(
+          sprintf("Table '%s' not found in config_list", config$table_name),
+          type = "ERROR",
+          zone = "SURVEY"
+        )
+        next
+      }
+
+      if (!col_name %in% names(table_data)) {
+        logger$log_message(
+          sprintf("Column '%s' not found in table '%s'",
+                  col_name, config$table_name),
+          type = "ERROR",
+          zone = "SURVEY"
+        )
+        next
+      }
+
+      # Basic scenario: direct choices from column
+      if (is.null(config$parent_table_name)) {
+        choices <- unique(table_data[[col_name]])
+        choices <- choices[!is.na(choices)]
+
+        if (length(choices) > 0) {
+          # Check if this field is referenced as a parent in other configs
+          is_parent <- any(sapply(choice_configs, function(other_config) {
+            !is.null(other_config$parent_table_name) &&
+              other_config$parent_table_name == config$table_name
+          }))
+
+          child_field <- if (is_parent) {
+            # Find the child field name
+            child_config <- Find(function(other_config) {
+              !is.null(other_config$parent_table_name) &&
+                other_config$parent_table_name == config$table_name
+            }, choice_configs)
+            child_config$group_col
+          } else {
+            NULL
+          }
+
+          display_text <- if (!is.null(config$display_col)) {
+            table_data[[config$display_col]][!is.na(table_data[[col_name]])]
+          } else {
+            NULL
+          }
+
+          choices_data[[col_name]] <- format_choices_for_js(
+            choices,
+            is_parent = is_parent,
+            child_field = child_field,
+            display_col = display_text
+          )
+
+          logger$log_message(
+            sprintf("Added %d choices for field '%s'",
+                    length(choices), col_name),
+            type = "INFO",
+            zone = "SURVEY"
+          )
+        }
+      }
+
+      # Parent-child relationship scenario
+      if (!is.null(config$parent_table_name) && !is.null(config$parent_id_col)) {
+        parent_table <- config_list_reactive[[config$parent_table_name]]
+
+        if (is.null(parent_table)) {
+          logger$log_message(
+            sprintf("Parent table '%s' not found", config$parent_table_name),
+            type = "ERROR",
+            zone = "SURVEY"
+          )
+          next
+        }
+
+        if (!config$parent_id_col %in% names(parent_table)) {
+          logger$log_message(
+            sprintf("Parent ID column '%s' not found in table '%s'",
+                    config$parent_id_col, config$parent_table_name),
+            type = "ERROR",
+            zone = "SURVEY"
+          )
+          next
+        }
+
+        # Create choices with parent IDs
+        choices <- lapply(unique(table_data[[config$parent_id_col]]), function(parent_id) {
+          child_choices <- table_data[[col_name]][table_data[[config$parent_id_col]] == parent_id]
+          child_choices <- child_choices[!is.na(child_choices)]
+
+          if (length(child_choices) > 0) {
+            choice_struct <- list(
+              value = child_choices,
+              text = child_choices
+            )
+
+            if (!is.null(config$display_col)) {
+              display_text <- table_data[[config$display_col]][
+                table_data[[config$parent_id_col]] == parent_id &
+                  !is.na(table_data[[col_name]])
+              ]
+              choice_struct$display_text <- display_text
+            }
+
+            choice_struct$parentId <- parent_id
+            choice_struct
+          }
+        })
+
+        choices <- Filter(Negate(is.null), choices)
+
+        if (length(choices) > 0) {
+          choices_data[[col_name]] <- format_choices_for_js(
+            choices,
+            is_child = TRUE,
+            parent_field = config$parent_id_col
+          )
+
+          logger$log_message(
+            sprintf("Added child choices for field '%s'", col_name),
+            type = "INFO",
+            zone = "SURVEY"
+          )
+        }
+      }
+
+    }, error = function(e) {
+      logger$log_message(
+        sprintf("Error processing config: %s", e$message),
+        type = "ERROR",
+        zone = "SURVEY"
+      )
+    })
+  }
+
+  # Send choices to the client if we have any
+  if (length(choices_data) > 0) {
+    tryCatch({
+      json_data <- jsonlite::toJSON(choices_data, auto_unbox = TRUE)
+
+      # print(json_data)
+
+      session$sendCustomMessage("updateDynamicChoices", jsonlite::fromJSON(json_data))
+
+      logger$log_message(
+        sprintf("Sent %d dynamic choice configurations to client",
+                length(choices_data)),
+        type = "INFO",
+        zone = "SURVEY"
+      )
+    }, error = function(e) {
+      logger$log_message(
+        sprintf("Failed to send choices to client: %s", e$message),
+        type = "ERROR",
+        zone = "SURVEY"
+      )
+    })
+  } else {
+    logger$log_message(
+      "No valid choices data to send to client",
+      type = "WARN",
+      zone = "SURVEY"
+    )
+  }
+
+  invisible(NULL)
 }

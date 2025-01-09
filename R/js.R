@@ -12,19 +12,6 @@
 #' @return A character string containing the concatenated JavaScript code with all
 #'   necessary components for survey functionality.
 #'
-#' @details
-#' The function combines several JavaScript components in this order:
-#' 1. Document ready wrapper
-#' 2. Configuration settings (including cookie expiration)
-#' 3. Cookie management utilities
-#' 4. Survey progress persistence
-#' 5. Shiny hidden field synchronization
-#' 6. Survey initialization
-#' 7. Event handlers
-#'
-#' All JavaScript files are read from the package's installed location and combined
-#' with appropriate spacing and wrapping.
-#'
 #' @examples
 #' # Generate JavaScript with default 7-day cookie expiration
 #' js_code <- survey_single_js()
@@ -50,10 +37,11 @@ survey_single_js <- function(cookie_expiration_days = 7) {
     # Core files
     config = read_asset(file.path(pkg_dir, "survey/js/config.js")),
     cookies = read_asset(file.path(pkg_dir, "survey/js/cookies.js")),
-    saveSurveyProgress = read_asset(file.path(pkg_dir, "survey/js/saveSurveyProgress.js")),
-    setHiddenFieldsFromShiny = read_asset(file.path(pkg_dir, "survey/js/setHiddenFieldsFromShiny.js")),
+    save_survey_progress = read_asset(file.path(pkg_dir, "survey/js/save_survey_progress.js")),
+    set_hidden_fields_from_shiny = read_asset(file.path(pkg_dir, "survey/js/set_hidden_fields_from_shiny.js")),
+    dynamic_fields = read_asset(file.path(pkg_dir, "survey/js/dynamic_fields.js")),
     init = read_asset(file.path(pkg_dir, "survey/js/init.js")),
-    handlers = read_asset(file.path(pkg_dir, "survey/js/handlers.js")),
+    load_survey = read_asset(file.path(pkg_dir, "survey/js/load_survey.js")),
 
     # End wrapper
     wrapper_end = "});"
@@ -67,10 +55,11 @@ survey_single_js <- function(cookie_expiration_days = 7) {
     js_files$wrapper_start,
     js_files$config,
     js_files$cookies,
-    js_files$saveSurveyProgress,
-    js_files$setHiddenFieldsFromShiny,
+    js_files$save_survey_progress,
+    js_files$set_hidden_fields_from_shiny,
+    js_files$dynamic_fields,
     js_files$init,
-    js_files$handlers,
+    js_files$load_survey,
     js_files$wrapper_end,
     sep = "\n\n"
   )

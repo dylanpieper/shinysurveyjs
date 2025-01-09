@@ -20,21 +20,6 @@ Creates a consolidated JavaScript code bundle for handling single survey functio
 by combining multiple JS components including configuration, cookie management,
 progress saving, Shiny integration, initialization, and event handlers.
 }
-\details{
-The function combines several JavaScript components in this order:
-\enumerate{
-\item Document ready wrapper
-\item Configuration settings (including cookie expiration)
-\item Cookie management utilities
-\item Survey progress persistence
-\item Shiny hidden field synchronization
-\item Survey initialization
-\item Event handlers
-}
-
-All JavaScript files are read from the package's installed location and combined
-with appropriate spacing and wrapping.
-}
 \examples{
 # Generate JavaScript with default 7-day cookie expiration
 js_code <- survey_single_js()

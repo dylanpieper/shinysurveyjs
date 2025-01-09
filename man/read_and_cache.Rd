@@ -2,7 +2,7 @@
 % Please edit documentation in R/dynamic_config.R
 \name{read_and_cache}
 \alias{read_and_cache}
-\title{Read and Cache Tables}
+\title{Read and Cache Tables for Dynamic Fields}
 \usage{
 read_and_cache(db_ops, dynamic_config)
 }
@@ -23,19 +23,18 @@ Tables are read from the database and stored in a list.
 }
 \examples{
 \dontrun{
-# In server.R
+# Define dynamic fields configuration
 config <- list(
   list(
-    table_name = "config_packages",
     group_type = "choice",
-    group_col = "package",
-    choices_col = "version"
+    table_name = "config_packages",
+    group_col = "package"
   ),
   list(
-    table_name = "config_pid",
     group_type = "param",
-    group_col = "pid",
-    display_col = "full_name"
+    table_name = "config_source",
+    group_col = "source",
+    display_col = "display_text"
   )
 )
 tables <- read_and_cache(db_ops, config)
@@ -47,3 +46,4 @@ output$packageTable <- renderTable({
 }
 
 }
+\keyword{internal}

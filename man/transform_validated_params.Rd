@@ -24,3 +24,4 @@ list(param_name = list(text = "display_text", value = "value"))
 Transforms a list of validated parameters into a structured format with text/value pairs,
 looking up display text from configuration tables where applicable.
 }
+\keyword{internal}
