@@ -185,18 +185,19 @@ survey_single <- function(json,
           # Construct the data to send to JavaScript with validated parameters
           validated_params <- transform_validated_params(rv$validated_params, config_list_reactive())
 
-          # Log the parameters we're about to send
-          logger$log_message(
-            sprintf(
-              "Attaching JSON to survey data: %s",
-              jsonlite::toJSON(rv$validated_params)
-            ),
-            zone = "SURVEY"
-          )
-
+          # Attach validated parameters to survey data
           survey_data <- list(
             survey = survey_obj,
             params = validated_params
+          )
+
+          # Log the parameters we're about to send
+          logger$log_message(
+            sprintf(
+              "Attached JSON to survey data: %s",
+              jsonlite::toJSON(rv$validated_params)
+            ),
+            zone = "SURVEY"
           )
 
           # Send survey and parameters to client
@@ -281,11 +282,11 @@ survey_single <- function(json,
         }
 
         # Add only validated parameters to the data frame
-        if (!is.null(rv$validated_params) && length(rv$validated_params) > 0) {
-          for (param_name in names(rv$validated_params)) {
-            parsed_data[[param_name]] <- rv$validated_params[[param_name]]
-          }
-        }
+        # if (!is.null(rv$validated_params) && length(rv$validated_params) > 0) {
+        #   for (param_name in names(rv$validated_params)) {
+        #     parsed_data[[param_name]] <- rv$validated_params[[param_name]]
+        #   }
+        # }
 
         # Store in database with error handling
         tryCatch(

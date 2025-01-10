@@ -691,14 +691,13 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
   # Send choices to the client
   if (length(choices_data) > 0) {
     tryCatch({
+      session$sendCustomMessage("updateDynamicChoices", choices_data)
+
       logger$log_message(
-        sprintf("Sending JSON to front-end: %s", jsonlite::toJSON(choices_data)),
+        sprintf("Sent JSON to front-end: %s", jsonlite::toJSON(choices_data)),
         "INFO",
         "SURVEY"
       )
-
-      session$sendCustomMessage("updateDynamicChoices", choices_data)
-
     }, error = function(e) {
       logger$log_message(sprintf("Error sending choices: %s", e$message), "ERROR", "SURVEY")
     })

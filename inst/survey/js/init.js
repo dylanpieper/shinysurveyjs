@@ -21,6 +21,7 @@ function initializeSurvey(data) {
 
         let surveyJSON;
         let urlParams = {};
+
         if (typeof data === "object") {
             surveyJSON = data.survey || data;
             if (data.params) {
@@ -46,13 +47,29 @@ function initializeSurvey(data) {
         // Check if URL parameters differ from saved data
         let shouldResetCookie = false;
         if (savedData && Object.keys(urlParams).length > 0) {
-            Object.entries(urlParams).forEach(([key, value]) => {
-                if (value?.value !== undefined && savedData[key] !== value.value) {
-                    console.log(`URL param ${key} differs from saved data:`, {
-                        url: value.value,
-                        saved: savedData[key]
-                    });
-                    shouldResetCookie = true;
+            Object.entries(urlParams).forEach(([key, paramData]) => {
+                // Only compare if we have a value in the URL parameter
+                if (paramData?.value !== undefined) {
+                    const urlValue = paramData.value;
+                    const savedValue = savedData[key];
+
+                    // Get the saved value, checking both direct value and possible _internalValue
+                    const effectiveSavedValue = savedData[`${key}_internalValue`] !== undefined ?
+                        savedData[`${key}_internalValue`] : savedValue;
+
+                    if (urlValue !== effectiveSavedValue) {
+                        console.log(`URL param ${key} differs from saved data:`, {
+                            url: {
+                                value: urlValue,
+                                text: paramData.text
+                            },
+                            saved: {
+                                value: effectiveSavedValue,
+                                original: savedValue
+                            }
+                        });
+                        shouldResetCookie = true;
+                    }
                 }
             });
         }
@@ -64,9 +81,11 @@ function initializeSurvey(data) {
 
             // Set only URL parameters
             const initialData = {};
-            Object.entries(urlParams).forEach(([key, value]) => {
-                if (value?.value !== undefined) {
-                    initialData[key] = value.value;
+            Object.entries(urlParams).forEach(([key, paramData]) => {
+                if (paramData?.value !== undefined) {
+                    // Store both the display text and internal value
+                    initialData[key] = paramData.text;
+                    initialData[`${key}_internalValue`] = paramData.value;
                 }
             });
             survey.data = initialData;
@@ -84,9 +103,11 @@ function initializeSurvey(data) {
         } else {
             // No saved data, just set URL parameters if any
             const initialData = {};
-            Object.entries(urlParams).forEach(([key, value]) => {
-                if (value?.value !== undefined) {
-                    initialData[key] = value.value;
+            Object.entries(urlParams).forEach(([key, paramData]) => {
+                if (paramData?.value !== undefined) {
+                    // Store both the display text and internal value
+                    initialData[key] = paramData.text;
+                    initialData[`${key}_internalValue`] = paramData.value;
                 }
             });
             if (Object.keys(initialData).length > 0) {
@@ -123,6 +144,7 @@ function initializeSurvey(data) {
                         for (const [key, value] of Object.entries(result.data)) {
                             if (!["data", "currentPageNo", "timestamp"].includes(key)) {
                                 const question = survey.getQuestionByName(key);
+                                // Get the internal value if it exists, otherwise use the displayed value
                                 responses[key] = question?._internalValue ?? value;
                             }
                         }

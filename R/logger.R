@@ -21,7 +21,7 @@
 #'   \item{session_id}{character. Unique identifier for the current session}
 #'   \item{survey_name}{character. Name of the survey being logged}
 #'   \item{db_params}{list. Database connection parameters}
-#'   \item{suppress_logs}{logical. Whether to suppress console output}
+#'   \item{suppress_logs}{logical. Whether to suppress logs from console output}
 #' }
 #'
 #' @section Methods:
