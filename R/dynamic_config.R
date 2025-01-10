@@ -749,7 +749,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
       session$sendCustomMessage("updateDynamicChoices", jsonlite::fromJSON(json_data))
 
       logger$log_message(
-        sprintf("Sent %d dynamic choice configurations to client",
+        sprintf("Sent %d dynamic choice configurations",
                 length(choices_data)),
         type = "INFO",
         zone = "SURVEY"
