@@ -199,10 +199,12 @@ survey_single <- function(json,
           # Send survey and parameters to client
           session$sendCustomMessage("loadSurvey", survey_data)
 
-          # print("dynamic_config")
-          # print(dynamic_config)
-          # print("config_list_reactive")
-          # print(config_list_reactive())
+          print("dynamic_config")
+          print(dynamic_config)
+          print("config_list_reactive")
+          print(config_list_reactive())
+          print("validated_params")
+          print(validated_params)
 
           # Configure dynamic fields
           configure_dynamic_fields(
@@ -238,6 +240,9 @@ survey_single <- function(json,
       rv$loading <- TRUE
       rv$complete_time <- Sys.time()
       rv$duration_complete <- as.numeric(difftime(rv$complete_time, rv$start_time, units = "secs"))
+
+      # Log successful completion
+      logger$log_message("Completed survey", zone = "SURVEY")
     })
 
     # Handle survey responses with timing data
