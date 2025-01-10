@@ -133,7 +133,7 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
     # Log current entry validation
     if (!is.null(survey_logger)) {
       survey_logger$log_message(
-        sprintf("Checking configuration entry %d: '%s'", i, config$table_name),
+        sprintf("Checking configuration %d: '%s'", i, config$table_name),
         zone = "SURVEY"
       )
     }
@@ -470,13 +470,15 @@ format_choices_for_js <- function(choices,
                                   child_field = NULL,
                                   is_child = FALSE,
                                   parent_field = NULL,
-                                  display_col = NULL) {
+                                  display_col = NULL,
+                                  is_param_parent = FALSE,
+                                  choice_ids = NULL) {
   if (is.null(choices)) return(NULL)
 
   # Create base structure based on relationship type
   base_structure <- if (is_parent) {
     list(
-      type = "parent",
+      type = if(is_param_parent) "param_parent" else "parent",
       choices = list()
     )
   } else if (is_child) {
@@ -486,62 +488,44 @@ format_choices_for_js <- function(choices,
       choices = list()
     )
   } else {
-    list(choices = list())
+    list(
+      type = "standalone",
+      choices = list()
+    )
   }
 
-  # Handle flat choices with optional display text
-  if (!is.list(choices) || (is.list(choices) && !is.null(names(choices)) &&
-                            !all(c("value", "text", "choices") %in% names(choices[[1]])))) {
-    # Convert choices to array of objects format
-    choices_list <- vector("list", length(choices))
-    for(i in seq_along(choices)) {
-      choice_struct <- list(
-        value = choices[i],
-        text = if (!is.null(display_col) && !is.null(display_col[i])) display_col[i] else choices[i]
+  # For child fields, structure the choices differently
+  if (is_child) {
+    if (is.list(choices[[1]]) && !is.null(choices[[1]]$parentId)) {
+      # Extract parallel arrays for child choices
+      values <- sapply(choices, function(x) x$value)
+      texts <- sapply(choices, function(x) x$text)
+      parent_ids <- sapply(choices, function(x) x$parentId)
+      parent_values <- sapply(choices, function(x) x$parentValue)
+
+      base_structure$choices <- list(
+        value = unlist(values),
+        text = unlist(texts),
+        parentId = parent_ids,
+        parentValue = parent_values  # Include parent values for mapping
       )
-
-      if (is_parent && !is.null(child_field)) {
-        choice_struct$childField <- child_field
-      }
-
-      choices_list[[i]] <- choice_struct
     }
-
-    base_structure$choices <- choices_list
     return(base_structure)
   }
 
-  # Handle hierarchical choices
-  choices_list <- vector("list", length(choices))
-  for(i in seq_along(choices)) {
-    item <- choices[[i]]
-
-    if (is_child && is.list(item$value)) {
-      # Handle array values for child choices
-      choice_struct <- list(
-        value = unlist(item$value),
-        text = unlist(item$value),  # or item$text if available
-        parentId = item$parentId
-      )
-    } else {
-      choice_struct <- list(
-        value = item$value,
-        text = if (!is.null(item$display_text)) item$display_text else item$text
-      )
-
-      if (is_parent && !is.null(child_field)) {
-        choice_struct$childField <- child_field
-      }
-
-      if (is_child && !is.null(item$parentId)) {
-        choice_struct$parentId <- item$parentId
-      }
+  # For parent or standalone fields
+  if (is.character(choices) || is.factor(choices)) {
+    choices <- as.character(choices)
+    base_structure$choices <- list(
+      value = choices,
+      text = if (!is.null(display_col)) display_col else choices,
+      ids = if (!is.null(choice_ids)) choice_ids else seq_along(choices)
+    )
+    if (child_field) {
+      base_structure$childField <- child_field  # Move childField to top level
     }
-
-    choices_list[[i]] <- choice_struct
   }
 
-  base_structure$choices <- choices_list
   return(base_structure)
 }
 
@@ -572,201 +556,154 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
     return(invisible(NULL))
   }
 
-  # Extract choice configurations
-  choice_configs <- Filter(function(x) {
-    !is.null(x$group_type) && x$group_type == "choice"
-  }, dynamic_config)
-
-  if (length(choice_configs) == 0) {
-    logger$log_message("No choice configurations found", type = "INFO", zone = "SURVEY")
-    return(invisible(NULL))
-  }
-
   # Process each choice configuration
   choices_data <- list()
 
-  for (config in choice_configs) {
-    tryCatch({
-      # Validate required fields
-      if (is.null(config$table_name) || is.null(config$group_col)) {
-        logger$log_message(
-          sprintf("Missing required fields in config: %s",
-                  jsonlite::toJSON(config)),
-          type = "ERROR",
-          zone = "SURVEY"
-        )
-        next
-      }
+  # First pass: Process parent fields (both param and choice types)
+  for (config in dynamic_config) {
+    if (config$group_type %in% c("param", "choice")) {
+      # Check if this field is referenced as a parent
+      is_parent <- any(sapply(dynamic_config, function(other_config) {
+        !is.null(other_config$parent_table_name) &&
+          other_config$parent_table_name == config$table_name
+      }))
 
-      # Get the specific table and column
-      table_data <- config_list_reactive[[config$table_name]]
-      col_name <- config$group_col
+      if (is_parent) {
+        tryCatch({
+          # Get table data
+          table_data <- config_list_reactive[[config$table_name]]
+          if (is.null(table_data)) {
+            logger$log_message(sprintf("Table '%s' not found", config$table_name), "ERROR", "SURVEY")
+            next
+          }
 
-      if (is.null(table_data)) {
-        logger$log_message(
-          sprintf("Table '%s' not found in config_list", config$table_name),
-          type = "ERROR",
-          zone = "SURVEY"
-        )
-        next
-      }
-
-      if (!col_name %in% names(table_data)) {
-        logger$log_message(
-          sprintf("Column '%s' not found in table '%s'",
-                  col_name, config$table_name),
-          type = "ERROR",
-          zone = "SURVEY"
-        )
-        next
-      }
-
-      # Basic scenario: direct choices from column
-      if (is.null(config$parent_table_name)) {
-        choices <- unique(table_data[[col_name]])
-        choices <- choices[!is.na(choices)]
-
-        if (length(choices) > 0) {
-          # Check if this field is referenced as a parent in other configs
-          is_parent <- any(sapply(choice_configs, function(other_config) {
+          # Find child config
+          child_config <- Find(function(other_config) {
             !is.null(other_config$parent_table_name) &&
               other_config$parent_table_name == config$table_name
-          }))
+          }, dynamic_config)
 
-          child_field <- if (is_parent) {
-            # Find the child field name
-            child_config <- Find(function(other_config) {
-              !is.null(other_config$parent_table_name) &&
-                other_config$parent_table_name == config$table_name
-            }, choice_configs)
-            child_config$group_col
-          } else {
-            NULL
+          if (is.null(child_config)) {
+            logger$log_message("No child configuration found", "ERROR", "SURVEY")
+            next
           }
 
-          display_text <- if (!is.null(config$display_col)) {
-            table_data[[config$display_col]][!is.na(table_data[[col_name]])]
-          } else {
-            NULL
-          }
-
-          choices_data[[col_name]] <- format_choices_for_js(
-            choices,
-            is_parent = is_parent,
-            child_field = child_field,
-            display_col = display_text
-          )
-
-          logger$log_message(
-            sprintf("Added %d choices for field '%s'",
-                    length(choices), col_name),
-            type = "INFO",
-            zone = "SURVEY"
-          )
-        }
-      }
-
-      # Parent-child relationship scenario
-      if (!is.null(config$parent_table_name) && !is.null(config$parent_id_col)) {
-        parent_table <- config_list_reactive[[config$parent_table_name]]
-
-        if (is.null(parent_table)) {
-          logger$log_message(
-            sprintf("Parent table '%s' not found", config$parent_table_name),
-            type = "ERROR",
-            zone = "SURVEY"
-          )
-          next
-        }
-
-        if (!config$parent_id_col %in% names(parent_table)) {
-          logger$log_message(
-            sprintf("Parent ID column '%s' not found in table '%s'",
-                    config$parent_id_col, config$parent_table_name),
-            type = "ERROR",
-            zone = "SURVEY"
-          )
-          next
-        }
-
-        # Create choices with parent IDs
-        choices <- lapply(unique(table_data[[config$parent_id_col]]), function(parent_id) {
-          child_choices <- table_data[[col_name]][table_data[[config$parent_id_col]] == parent_id]
-          child_choices <- child_choices[!is.na(child_choices)]
-
-          if (length(child_choices) > 0) {
-            choice_struct <- list(
-              value = child_choices,
-              text = child_choices
+          # Create parent field data
+          parent_data <- list(
+            type = if(config$group_type == "param") "param_parent" else "choice_parent",
+            childField = child_config$group_col,
+            choices = list(
+              value = table_data[[config$group_col]],
+              text = if(!is.null(config$display_col)) {
+                table_data[[config$display_col]]
+              } else {
+                table_data[[config$group_col]]
+              },
+              ids = table_data$package_id
             )
-
-            if (!is.null(config$display_col)) {
-              display_text <- table_data[[config$display_col]][
-                table_data[[config$parent_id_col]] == parent_id &
-                  !is.na(table_data[[col_name]])
-              ]
-              choice_struct$display_text <- display_text
-            }
-
-            choice_struct$parentId <- parent_id
-            choice_struct
-          }
-        })
-
-        choices <- Filter(Negate(is.null), choices)
-
-        if (length(choices) > 0) {
-          choices_data[[col_name]] <- format_choices_for_js(
-            choices,
-            is_child = TRUE,
-            parent_field = config$parent_id_col
           )
+
+          choices_data[[config$group_col]] <- parent_data
 
           logger$log_message(
-            sprintf("Added child choices for field '%s'", col_name),
-            type = "INFO",
-            zone = "SURVEY"
+            sprintf("Created parent data for '%s'", config$group_col),
+            "INFO",
+            "SURVEY"
           )
-        }
-      }
 
-    }, error = function(e) {
-      logger$log_message(
-        sprintf("Error processing config: %s", e$message),
-        type = "ERROR",
-        zone = "SURVEY"
-      )
-    })
+        }, error = function(e) {
+          logger$log_message(sprintf("Error in parent processing: %s", e$message), "ERROR", "SURVEY")
+        })
+      } else if (config$group_type == "choice") {
+        # Handle standalone choice fields (no parent/child relationship)
+        tryCatch({
+          table_data <- config_list_reactive[[config$table_name]]
+          if (!is.null(table_data)) {
+            choices <- unique(table_data[[config$group_col]])
+            choices <- choices[!is.na(choices)]
+
+            if (length(choices) > 0) {
+              choices_data[[config$group_col]] <- list(
+                type = "standalone",
+                choices = list(
+                  value = choices,
+                  text = if(!is.null(config$display_col)) {
+                    table_data[[config$display_col]][!is.na(choices)]
+                  } else {
+                    choices
+                  }
+                )
+              )
+            }
+          }
+        }, error = function(e) {
+          logger$log_message(sprintf("Error in standalone choice processing: %s", e$message),
+                             "ERROR", "SURVEY")
+        })
+      }
+    }
   }
 
-  # Send choices to the client if we have any
+  # Second pass: Process child fields
+  for (config in dynamic_config) {
+    if (config$group_type == "choice" &&
+        !is.null(config$parent_table_name) &&
+        !is.null(config$parent_id_col)) {
+      tryCatch({
+        # Get tables
+        child_table <- config_list_reactive[[config$table_name]]
+        parent_table <- config_list_reactive[[config$parent_table_name]]
+
+        if (is.null(child_table) || is.null(parent_table)) {
+          logger$log_message("Missing required tables", "ERROR", "SURVEY")
+          next
+        }
+
+        # Create child field data
+        child_data <- list(
+          type = "child",
+          parentField = config$parent_id_col,  # Use the actual parent field
+          choices = list(
+            value = child_table[[config$group_col]],
+            text = child_table[[config$group_col]],
+            parentId = child_table[[config$parent_id_col]],
+            parentValue = parent_table[[config$group_col]][match(
+              child_table[[config$parent_id_col]],
+              parent_table[[config$parent_id_col]]
+            )]
+          )
+        )
+
+        choices_data[[config$group_col]] <- child_data
+
+        logger$log_message(
+          sprintf("Created child data for '%s'", config$group_col),
+          "INFO",
+          "SURVEY"
+        )
+
+      }, error = function(e) {
+        logger$log_message(sprintf("Error in child processing: %s", e$message), "ERROR", "SURVEY")
+      })
+    }
+  }
+
+  # Send choices to the client
   if (length(choices_data) > 0) {
     tryCatch({
-      json_data <- jsonlite::toJSON(choices_data, auto_unbox = TRUE)
-
-      # print(json_data)
-
-      session$sendCustomMessage("updateDynamicChoices", jsonlite::fromJSON(json_data))
-
       logger$log_message(
-        sprintf("Sent %d dynamic choice configurations",
-                length(choices_data)),
-        type = "INFO",
-        zone = "SURVEY"
+        sprintf("Sending JSON to front-end: %s", jsonlite::toJSON(choices_data)),
+        "INFO",
+        "SURVEY"
       )
+
+      session$sendCustomMessage("updateDynamicChoices", choices_data)
+
     }, error = function(e) {
-      logger$log_message(
-        sprintf("Failed to send choices to client: %s", e$message),
-        type = "ERROR",
-        zone = "SURVEY"
-      )
+      logger$log_message(sprintf("Error sending choices: %s", e$message), "ERROR", "SURVEY")
     })
   } else {
-    logger$log_message(
-      "No valid choices data to send to client",
-      type = "WARN",
-      zone = "SURVEY"
-    )
+    logger$log_message("No choices data to send", "WARN", "SURVEY")
   }
 
   invisible(NULL)

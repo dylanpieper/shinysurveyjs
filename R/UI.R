@@ -10,9 +10,7 @@
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
-survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
-                      primary = "#003594", mode = "light",
-                      cookie_expiration_days = 7) {
+survey_ui <- function(id, theme, primary, mode, cookie_expiration_days) {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -348,10 +346,10 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 #' @importFrom DT DTOutput
 #'
 #' @export
-survey_ui_wrapper <- function(theme = NULL, theme_color = "#000000", theme_mode = "light", cookie_expiration_days = 7) {
+survey_ui_wrapper <- function(id, theme, theme_color, theme_mode, cookie_expiration_days) {
   shiny::fluidPage(
     shinyjs::useShinyjs(),
-    survey_ui(theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days),
+    survey_ui(id = id, theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days),
     shiny::conditionalPanel(
       condition = "output.showResponseTable",
       shiny::div(

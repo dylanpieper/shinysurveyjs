@@ -1,141 +1,179 @@
 function initializeSurvey(data) {
-   try {
-       if (!data) {
-           throw new Error("No survey data provided");
-       }
+    try {
+        if (!data) {
+            throw new Error("No survey data provided");
+        }
 
-       console.log("Survey data received:", data);
+        console.log("Survey data received:", data);
 
-       // Clear existing survey if it exists
-       if (survey) {
-           try {
-               survey.dispose();
-           } catch (e) {
-               console.warn("Error disposing existing survey:", e);
-           }
-           survey = null;
-       }
+        // Clear existing survey if it exists
+        if (survey) {
+            try {
+                survey.dispose();
+            } catch (e) {
+                console.warn("Error disposing existing survey:", e);
+            }
+            survey = null;
+        }
 
-       // Clear survey container
-       $("#surveyContainer").empty();
+        // Clear survey container
+        $("#surveyContainer").empty();
 
-       let surveyJSON;
-       if (typeof data === "object") {
-           surveyJSON = data.survey || data;
-           if (data.params) {
-               storedParams = data.params;
-               console.log("Stored params:", storedParams);
-           }
-       } else if (typeof data === "string") {
-           try {
-               surveyJSON = JSON.parse(data);
-           } catch (error) {
-               throw new Error("Invalid survey JSON format: " + error.message);
-           }
-       } else {
-           throw new Error("Invalid survey data format");
-       }
+        let surveyJSON;
+        let urlParams = {};
+        if (typeof data === "object") {
+            surveyJSON = data.survey || data;
+            if (data.params) {
+                urlParams = data.params;
+                console.log("URL parameters:", urlParams);
+            }
+        } else if (typeof data === "string") {
+            try {
+                surveyJSON = JSON.parse(data);
+            } catch (error) {
+                throw new Error("Invalid survey JSON format: " + error.message);
+            }
+        } else {
+            throw new Error("Invalid survey data format");
+        }
 
-       survey = new Survey.Model(surveyJSON);
+        survey = new Survey.Model(surveyJSON);
 
-       const savedData = getCookie(COOKIE_NAME);
-       if (savedData) {
-           // First set the base survey data
-           const surveyData = { ...savedData };
-           delete surveyData._dynamicConfig; // Remove config before setting data
-           survey.data = surveyData;
+        // Get saved data
+        const savedData = getCookie(COOKIE_NAME);
+        console.log("Saved cookie data:", savedData);
 
-           // Then restore dynamic choices after a small delay to ensure parent handlers are set up
-           setTimeout(() => {
-               restoreDynamicChoices(survey, savedData);
-           }, DEBOUNCE_DELAY);
-       }
+        // Check if URL parameters differ from saved data
+        let shouldResetCookie = false;
+        if (savedData && Object.keys(urlParams).length > 0) {
+            Object.entries(urlParams).forEach(([key, value]) => {
+                if (value?.value !== undefined && savedData[key] !== value.value) {
+                    console.log(`URL param ${key} differs from saved data:`, {
+                        url: value.value,
+                        saved: savedData[key]
+                    });
+                    shouldResetCookie = true;
+                }
+            });
+        }
 
-       setHiddenFieldsFromShiny(survey, storedParams);
+        // If URL parameters differ, reset everything
+        if (shouldResetCookie) {
+            console.log("URL parameters differ from saved data: Resetting cookie");
+            deleteCookie(COOKIE_NAME);
 
-       let valueChangeTimeout;
-       survey.onValueChanged.add((sender, options) => {
-           console.log("Value changed:", options.name, options.value);
+            // Set only URL parameters
+            const initialData = {};
+            Object.entries(urlParams).forEach(([key, value]) => {
+                if (value?.value !== undefined) {
+                    initialData[key] = value.value;
+                }
+            });
+            survey.data = initialData;
 
-           clearTimeout(valueChangeTimeout);
-           valueChangeTimeout = setTimeout(() => {
-               saveSurveyProgress(survey);
-               if (typeof survey.runConditions === "function") {
-                   survey.runConditions();
-               }
-           }, DEBOUNCE_DELAY);
-       });
+            // Save new state
+            saveSurveyProgress(survey);
+        } else if (savedData) {
+            // No URL parameter changes, restore saved data
+            survey.data = savedData;
+            setTimeout(() => {
+                if (savedData._dynamicConfig) {
+                    restoreDynamicChoices(survey, savedData);
+                }
+            }, DEBOUNCE_DELAY);
+        } else {
+            // No saved data, just set URL parameters if any
+            const initialData = {};
+            Object.entries(urlParams).forEach(([key, value]) => {
+                if (value?.value !== undefined) {
+                    initialData[key] = value.value;
+                }
+            });
+            if (Object.keys(initialData).length > 0) {
+                survey.data = initialData;
+            }
+        }
 
-       // Add completion handler
-       survey.onComplete.add((result) => {
-           try {
-               // 1. Immediately show saving message and trigger completion state
-               document.getElementById("savingDataMessage").style.display = "block";
-               Shiny.setInputValue("surveyComplete", true);
+        // Set up hidden fields
+        setHiddenFieldsFromShiny(survey, urlParams);
 
-               // 2. Create a promise chain for the remaining operations
-               Promise.resolve()
-                   .then(() => {
-                       // Prepare the data
-                       const responses = {};
-                       for (const [key, value] of Object.entries(result.data)) {
-                           if (!["data", "currentPageNo", "timestamp"].includes(key)) {
-                               const question = survey.getQuestionByName(key);
-                               responses[key] = question?._internalValue ?? value;
-                           }
-                       }
-                       return responses;
-                   })
-                   .then((responses) => {
-                       // Send the data
-                       Shiny.setInputValue("surveyData", responses);
-                   })
-                   .then(() => {
-                       // Handle cookie cleanup
-                       deleteCookie(COOKIE_NAME);
-                       return new Promise(resolve => {
-                           setTimeout(() => {
-                               const remainingCookie = getCookie(COOKIE_NAME);
-                               if (remainingCookie) {
-                                   deleteCookie(COOKIE_NAME);
-                               }
-                               resolve();
-                           }, 100);
-                       });
-                   })
-                   .catch(error => {
-                       console.error("Error in completion handler:", error);
-                       Shiny.setInputValue("surveyError", {
-                           type: "CompletionError",
-                           message: "Error processing survey completion",
-                           details: error.message
-                       });
-                   });
-                   console.log("Processed data");
-           } catch (error) {
-               console.error("Error in completion handler:", error);
-               Shiny.setInputValue("surveyError", {
-                   type: "CompletionError",
-                   message: "Error processing survey completion",
-                   details: error.message
-               });
-           }
-       });
+        // Set up value change handler
+        let valueChangeTimeout;
+        survey.onValueChanged.add((sender, options) => {
+            console.log("Value changed:", options.name, options.value);
 
-       $("#surveyContainer").Survey({
-           model: survey,
-           onAfterRenderSurvey: () => {
-               console.log("Loaded survey");
-           }
-       });
+            clearTimeout(valueChangeTimeout);
+            valueChangeTimeout = setTimeout(() => {
+                saveSurveyProgress(survey);
+                if (typeof survey.runConditions === "function") {
+                    survey.runConditions();
+                }
+            }, DEBOUNCE_DELAY);
+        });
 
-   } catch (error) {
-       console.error("Survey initialization error:", error);
-       isInitializing = false;
-       Shiny.setInputValue("surveyError", {
-           type: "InitializationError",
-           message: "Failed to initialize survey",
-           details: error.message
-       });
-   }
+        // Set up completion handler
+        survey.onComplete.add((result) => {
+            try {
+                document.getElementById("savingDataMessage").style.display = "block";
+                Shiny.setInputValue("surveyComplete", true);
+
+                Promise.resolve()
+                    .then(() => {
+                        const responses = {};
+                        for (const [key, value] of Object.entries(result.data)) {
+                            if (!["data", "currentPageNo", "timestamp"].includes(key)) {
+                                const question = survey.getQuestionByName(key);
+                                responses[key] = question?._internalValue ?? value;
+                            }
+                        }
+                        return responses;
+                    })
+                    .then((responses) => {
+                        Shiny.setInputValue("surveyData", responses);
+                    })
+                    .then(() => {
+                        deleteCookie(COOKIE_NAME);
+                        return new Promise(resolve => {
+                            setTimeout(() => {
+                                const remainingCookie = getCookie(COOKIE_NAME);
+                                if (remainingCookie) {
+                                    deleteCookie(COOKIE_NAME);
+                                }
+                                resolve();
+                            }, 100);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error in completion handler:", error);
+                        Shiny.setInputValue("surveyError", {
+                            type: "CompletionError",
+                            message: "Error processing survey completion",
+                            details: error.message
+                        });
+                    });
+            } catch (error) {
+                console.error("Error in completion handler:", error);
+                Shiny.setInputValue("surveyError", {
+                    type: "CompletionError",
+                    message: "Error processing survey completion",
+                    details: error.message
+                });
+            }
+        });
+
+        $("#surveyContainer").Survey({
+            model: survey,
+            onAfterRenderSurvey: () => {
+                console.log("Loaded survey");
+            }
+        });
+
+    } catch (error) {
+        console.error("Survey initialization error:", error);
+        Shiny.setInputValue("surveyError", {
+            type: "InitializationError",
+            message: "Failed to initialize survey",
+            details: error.message
+        });
+    }
 }

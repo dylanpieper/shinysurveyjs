@@ -239,12 +239,13 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' }
 #'
 #' @export
-server_setup <- function(session, db_config, app_pool, survey_logger, db_ops) {
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
   # Initialize survey app logger
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
-    survey_name = db_config$write_table
+    survey_name = db_config$write_table,
+    suppress_logs = suppress_logs
   )
 
   logger$log_message("Started session", zone = "SURVEY")

@@ -49,7 +49,8 @@ survey_single <- function(json,
                             log_table = Sys.getenv("LOG_TABLE")
                           ),
                           dynamic_config = NULL,
-                          cookie_expiration_days = 7) {
+                          cookie_expiration_days = 7,
+                          suppress_logs = FALSE) {
   # Validate survey JSON
   if (missing(json) || is.null(json)) {
     stop("Survey JSON is required")
@@ -61,6 +62,7 @@ survey_single <- function(json,
   # Define UI
   ui <- fluidPage(
     survey_ui_wrapper(
+      id = "surveyContainer",
       theme = theme,
       theme_color = theme_color,
       theme_mode = theme_mode,
@@ -92,7 +94,8 @@ survey_single <- function(json,
       db_config = db_config,
       app_pool = app_pool,
       survey_logger = survey_logger,
-      db_ops = db_ops
+      db_ops = db_ops,
+      suppress_logs = suppress_logs
     )
 
     # Create reactive expressions for cached config and validation
@@ -170,15 +173,6 @@ survey_single <- function(json,
 
             # Store validated params in reactive values
             rv$validated_params <- validation_result$values
-
-            # Log the parameters we're about to send
-            logger$log_message(
-              sprintf(
-                "Sending parameters to survey: %s",
-                jsonlite::toJSON(rv$validated_params)
-              ),
-              zone = "SURVEY"
-            )
           }
 
           # Parse survey JSON if needed
@@ -191,6 +185,15 @@ survey_single <- function(json,
           # Construct the data to send to JavaScript with validated parameters
           validated_params <- transform_validated_params(rv$validated_params, config_list_reactive())
 
+          # Log the parameters we're about to send
+          logger$log_message(
+            sprintf(
+              "Attaching JSON to survey data: %s",
+              jsonlite::toJSON(rv$validated_params)
+            ),
+            zone = "SURVEY"
+          )
+
           survey_data <- list(
             survey = survey_obj,
             params = validated_params
@@ -199,12 +202,12 @@ survey_single <- function(json,
           # Send survey and parameters to client
           session$sendCustomMessage("loadSurvey", survey_data)
 
-          print("dynamic_config")
-          print(dynamic_config)
-          print("config_list_reactive")
-          print(config_list_reactive())
-          print("validated_params")
-          print(validated_params)
+          # print("dynamic_config")
+          # print(dynamic_config)
+          # print("config_list_reactive")
+          # print(config_list_reactive())
+          # print("validated_params")
+          # print(validated_params)
 
           # Configure dynamic fields
           configure_dynamic_fields(
