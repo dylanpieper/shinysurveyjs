@@ -13,12 +13,12 @@
 #'
 #' @param db_config A list containing database configuration parameters:
 #'   \itemize{
-#'     \item host: Database host address
-#'     \item port: Database port number
-#'     \item db_name: Name of the database
-#'     \item user: Database username
-#'     \item password: Database password
-#'     \item write_table: Name of the table for write operations
+#'     \item **host**: Database host address
+#'     \item **port**: Database port number
+#'     \item **db_name**: Name of the database
+#'     \item **user**: Database username
+#'     \item **password**: Database password
+#'     \item **write_table**: Name of the table for write operations
 #'   }
 #' @param shiny_config Optional list of Shiny configuration parameters to be passed
 #'   to configure_shiny function. If provided, these settings will be applied
@@ -33,7 +33,7 @@
 #' \itemize{
 #'   \item Validates the write_table parameter is a non-empty string
 #'   \item Checks for required database configuration fields
-#'   \item Sets environment variables (HOST, PORT, DB_NAME, USER, PASSWORD) if not present
+#'   \item Sets environment variables (**HOST**, **PORT**, **DB_NAME**, **USER**, **PASSWORD**) if not present
 #'   \item Applies optional Shiny configuration
 #'   \item Creates a global database connection pool if it doesn't exist
 #'   \item Initializes future package for asynchronous operations based on OS
@@ -43,22 +43,24 @@
 #' any existing configurations.
 #'
 #' @section Database Pool:
-#' The database pool is created using the db_pool_open function and stored in
+#' The database pool is created using the `db_pool_open` function and stored in
 #' the global environment as 'app_pool'. If a pool already exists, it is
 #' not recreated.
 #'
 #' @section Asynchronous Processing:
 #' The function detects the operating system and sets up the appropriate future plan:
 #' \itemize{
-#'   \item Windows: Uses multisession
-#'   \item macOS: Uses multicore if supported, falls back to multisession
-#'   \item Linux: Uses multicore if supported, falls back to multisession
+#'   \item **Windows**: Uses `multisession`
+#'   \item **macOS**: Uses `multicore` if supported, falls back to `multisession`
+#'   \item **Linux**: Uses `multicore` if supported, falls back to `multisession`
 #' }
 #'
 #' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info cli_alert_warning
 #' @importFrom future plan multisession multicore
 #'
 #' @return Invisibly returns the initialized database pool object
+#'
+#' @keywords internal
 survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
@@ -170,6 +172,8 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
 #'   autoreload = FALSE
 #' )
 #' }
+#'
+#' @keywords internal
 configure_shiny <- function(..., type_handlers = list()) {
   # Default type handlers
   default_handlers <- list(
@@ -238,13 +242,14 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' # After running, 'logger' and 'db_ops' are available in the parent environment
 #' }
 #'
-#' @export
-server_setup <- function(session, db_config, app_pool, survey_logger, db_ops) {
+#' @keywords internal
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
   # Initialize survey app logger
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
-    survey_name = db_config$write_table
+    survey_name = db_config$write_table,
+    suppress_logs = suppress_logs
   )
 
   logger$log_message("Started session", zone = "SURVEY")
@@ -317,7 +322,8 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops) {
 #'
 #' @importFrom shiny req validate need reactive outputOptions
 #' @importFrom DT renderDT datatable
-#' @export
+#'
+#' @keywords internal
 server_response <- function(output, rv, show_response = TRUE) {
   # Render the response table with error handling
   output$surveyResponseTable <- renderDT({
@@ -382,7 +388,8 @@ server_response <- function(output, rv, show_response = TRUE) {
 #' }
 #'
 #' @importFrom shiny onSessionEnded
-#' @export
+#'
+#' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
   # Register cleanup actions for session end
   session$onSessionEnded(function() {
@@ -392,4 +399,133 @@ server_clean <- function(session, logger, zone = "SURVEY") {
     # Close database connections
     db_pool_close(session)
   })
+}
+
+#' Parse URL Query Parameters
+#'
+#' Extracts query parameters from either a URL string or a Shiny session object
+#' and returns them as a named list. The function handles URL encoding, empty values,
+#' and multiple parameters with the same name.
+#'
+#' @param input Either a character string containing a URL with query parameters,
+#'              or a Shiny session object
+#' @return A named list where names are parameter names and values are parameter values
+#' @examples
+#' # From URL string
+#' parse_query("https://example.com/page?name=John&age=25")
+#'
+#' # From Shiny session (within Shiny server function)
+#' server <- function(input, output, session) {
+#'   params <- parse_query(session)
+#' }
+#'
+#' @keywords internal
+parse_query <- function(input) {
+  # Check if input is a Shiny session object
+  if (inherits(input, "ShinySession")) {
+    # Extract query string from Shiny session
+    query_string <- input$clientData$url_search
+    # Remove leading '?' if present
+    query_string <- sub("^\\?", "", query_string)
+  } else if (is.character(input)) {
+    # Extract query string after '?'
+    query_string <- sub(".*\\?", "", input)
+  } else {
+    stop("Input must be either a URL string or a Shiny session object")
+  }
+
+  # Return empty list if no query parameters
+  if (is.null(query_string) || query_string == "") {
+    return(list())
+  }
+
+  # Split parameters into key-value pairs
+  params <- strsplit(query_string, "&")[[1]]
+
+  # Initialize empty list for results
+  result <- list()
+
+  # Process each parameter
+  for (param in params) {
+    # Skip empty parameters
+    if (param == "") next
+
+    # Split into key and value
+    parts <- strsplit(param, "=")[[1]]
+    key <- parts[1]
+
+    # Handle cases where value might be missing
+    value <- if (length(parts) > 1) {
+      utils::URLdecode(parts[2])
+    } else {
+      NA
+    }
+
+    # If key already exists, convert to vector
+    if (key %in% names(result)) {
+      if (is.vector(result[[key]])) {
+        result[[key]] <- c(result[[key]], value)
+      } else {
+        result[[key]] <- c(result[[key]], value)
+      }
+    } else {
+      result[[key]] <- value
+    }
+  }
+
+  return(result)
+}
+
+#' Update Duration Save
+#'
+#' @description
+#' Updates the duration_save value for a specific survey response using the
+#' provided database connection pool.
+#'
+#' @param db_ops Database operations object instance
+#' @param db_config List containing database configuration including:
+#'   \itemize{
+#'     \item write_table: Table name for survey data
+#'   }
+#' @param session_id Character string containing the Shiny session token
+#' @param duration_save Numeric value of the duration to save
+#' @param logger Logger object for recording operations
+#'
+#' @return NULL invisibly
+#'
+#' @keywords internal
+update_duration_save <- function(db_ops, db_config, session_id, duration_save, logger) {
+  # Get the row ID using the existing connection
+  row_id <- db_ops$read_table(
+    db_config$write_table,
+    columns = "id",
+    filters = list(session_id = session_id),
+    order_by = "id",
+    desc = TRUE,
+    limit = 1
+  )$id
+
+  tryCatch({
+    # Perform the update using the existing db_ops instance
+    db_ops$update_by_id(
+      db_config$write_table,
+      row_id,
+      list(duration_save = duration_save)
+    )
+
+    logger$log_message(
+      sprintf("Updated duration_save for row %d", row_id),
+      "INFO",
+      "DATABASE"
+    )
+  },
+  error = function(e) {
+    logger$log_message(
+      sprintf("Failed to update duration_save: %s", e$message),
+      "ERROR",
+      "DATABASE"
+    )
+  })
+
+  invisible(NULL)
 }

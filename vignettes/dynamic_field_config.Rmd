@@ -1,0 +1,368 @@
+---
+title: "Dynamic Field Configuration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{dynamic_field_config}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This package provides dynamic field configuration capabilities with flexible types and dependency chain support. This vignette explains how to use these features.
+
+## Dynamic Configuration Types
+
+The package supports two main types of dynamic configurations:
+
+1.  **Choice Configuration**: Populate dropdown and radio button choices
+2.  **Parameter Configuration**: Validate and use data in URL query parameters
+
+Both features support:
+
+-   Dependent fields where choices dynamically update based on other selections
+
+-   Automatic saving of all data to the survey database
+
+-   Flexible handling of dropdown and radio button options
+
+### Basic Structure
+
+The dynamic configuration is specified through the `dynamic_config` parameter in `survey_single()`. It accepts a list of configuration objects.
+
+## Choice Configuration
+
+Imagine I want to develop an R package feedback survey that allows users to **select** one of my packages and a dependent version number populated from a database table:
+
+``` r
+dynamic_config = list(
+  list(
+    group_type = "choice",                   # Type of configuration
+    table_name = "config_packages",          # Database table to populate choices from
+    group_col = "package"                    # Column with the choices
+  ),
+  list(
+    group_type = "choice",                   # Type of configuration
+    table_name = "config_packages_versions", # Database table for dependent choices
+    parent_table_name = "config_packages",   # Parent table for dependency
+    parent_id_col = "package_id",            # Links to parent table
+    group_col = "version"                    # Column for dependent choices
+  )
+)
+```
+
+This configuration creates two dependent fields where the second field's choices update based on the selection in the first field.
+
+## Parameter Configuration
+
+Parameter configuration allows you to:
+
+-   Accept values from URL parameters
+-   Store values in hidden fields
+-   Look up display text from database tables
+
+### URL Parameter Example
+
+I want to publish the link to my R package feedback form on my *github* profile, but I also want post it on *bluesky* and possibly present it at *posit::conf(2025)*. I can use the URL query to track where I'm receiving feedback from.
+
+``` r
+# URL: http://127.0.0.1:3838/?source=github
+
+dynamic_config = list(
+  list(
+    group_type = "param",              # Type of configuration
+    table_name = "config_source",      # Database table with valid parameters 
+    group_col = "source",              # Matches URL parameter name
+    display_col = "display_text"       # Optional: Show display text
+  )
+)
+```
+
+This feature is useful for tracking individuals, groups, or referral sources. It also allows you to pipe data into the survey UI using a hidden text field with the same name.
+
+### Parameter Dependencies
+
+The dynamic field configuration can be combined to create complex field dependencies. For example, you can use a URL query parameter to **select** a package name and use that choice to populate a dropdown or radio button field with the versions released for that package.
+
+``` r
+# URL: http://127.0.0.1:3838/?package=shinysurveyjs
+
+dynamic_config = list(
+  list(
+    group_type = "param",                    # Type of configuration
+    table_name = "config_packages",          # Database table for parameter
+    group_col = "package"                    # Column to validate parameter
+  ),
+  list(
+    group_type = "choice",                   # Type of configuration
+    table_name = "config_packages_versions", # Database table for dependent choices
+    parent_table_name = "config_packages",   # Parent table for dependency
+    parent_id_col = "package_id",            # Links to parent table
+    group_col = "version"                    # Column for dependent choices
+  )
+)
+```
+
+## Examples: Package Feedback
+
+Imagine I want to develop an R package feedback survey to allow users to **select** one of my packages and a dependent version number, both populated from a database table, and **track** the referral source in the URL query.
+
+Consider this database structure:
+
+``` sql
+-- Create the packages configuration table
+CREATE TABLE config_packages (
+    package_id SERIAL PRIMARY KEY,
+    package VARCHAR(255) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package)
+);
+
+-- Create the package versions table with proper foreign key
+CREATE TABLE config_packages_versions (
+    version_id SERIAL PRIMARY KEY,
+    package_id INTEGER NOT NULL,
+    version VARCHAR(50) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (package_id) REFERENCES config_packages(package_id),
+    UNIQUE(package_id, version)
+);
+
+-- Create the source configuration table
+CREATE TABLE config_source (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(50) NOT NULL UNIQUE,
+    display_text VARCHAR(255) NOT NULL,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert sample data for packages
+INSERT INTO config_packages (package) VALUES
+    ('batchLLM'),
+    ('shinysurveyjs');
+
+-- Insert sample data for package versions
+INSERT INTO config_packages_versions (package_id, version)
+SELECT p.package_id, v.version
+FROM config_packages p
+CROSS JOIN (
+    VALUES 
+        ('batchLLM', 'dev-github'),
+        ('batchLLM', 'CRAN-0.1.0'),
+        ('batchLLM', 'CRAN-0.2.0'),
+        ('shinysurveyjs', 'dev-github'),
+        ('shinysurveyjs', 'CRAN-0.1.0')
+) AS v(package_name, version)
+WHERE p.package = v.package_name;
+
+-- Insert sample data for source configuration
+INSERT INTO config_source (source, display_text) VALUES
+    ('github', 'GitHub'),
+    ('bluesky', 'BlueSky'),
+    ('posit', 'posit::conf(2025)');
+```
+
+Run the following R code to define the JSON and deploy the example survey (e.g., `http://127.0.0.1:3838/?source=github`):
+
+``` r
+survey <- list(
+  title = "R Package Feedback",
+  pages = list(
+    list(
+      name = "feedback",
+      elements = list(
+        list(
+          type = "html",
+          visibleIf = "{source} notempty",
+          html = "Hi, thanks for visting this survey from <b>{source}</b>."
+        ),
+        list(
+          type = "radiogroup",
+          name = "package",
+          title = "Select an R package:",
+          isRequired = TRUE,
+          choices = list()
+        ),
+        list(
+          type = "radiogroup",
+          name = "version",
+          title = "Select a version:",
+          isRequired = TRUE,
+          visibleIf = "{package} notempty",
+          choices = list()
+        ),
+        list(
+          type = "rating",
+          name = "rating",
+          title = "Please rate the {package} 📦:",
+          visibleIf = "{version} notempty",
+          rateValues = list(
+            list(value = 1, text = "⭐"),
+            list(value = 2, text = "⭐⭐"),
+            list(value = 3, text = "⭐⭐⭐"),
+            list(value = 4, text = "⭐⭐⭐⭐"),
+            list(value = 5, text = "⭐⭐⭐⭐⭐")
+          ),
+          rateMax = 5,
+          isRequired = TRUE
+        ),
+        list(
+          type = "comment",
+          name = "feedback",
+          visibleIf = "{rating} notempty",
+          title = "Why did you rate it {rating} stars?",
+          rows = 2
+        ),
+        list(
+          type = "html",
+          name = "lowRatingMessage",
+          visibleIf = "{rating} <= 2",
+          html = "I am sorry you had a poor experience. Please reach me at <b>dylanpieper@gmail.com</b> so I can make it right."
+        ),
+        list(
+          type = "text",
+          name = "source",
+          visible = FALSE
+        )
+      )
+    )
+  )
+)
+
+survey_single(
+  list = survey,
+  show_response = TRUE,
+  theme_color = "#00AD6E",
+  theme_mode = "dark",
+  db_config = list(
+    host = Sys.getenv("HOST"),
+    port = as.numeric(Sys.getenv("PORT")),
+    db_name = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("USER"),
+    password = Sys.getenv("PASSWORD"),
+    write_table = Sys.getenv("WRITE_TABLE"),
+    log_table = Sys.getenv("LOG_TABLE")
+  ),
+  dynamic_config = list(
+    list(
+      group_type = "choice",
+      table_name = "config_packages",
+      group_col = "package"
+    ),
+    list(
+      group_type = "choice",
+      table_name = "config_packages_versions", 
+      parent_table_name = "config_packages",
+      parent_id_col = "package_id",
+      group_col = "version"
+    ),
+    list(
+      group_type = "param",
+      table_name = "config_source",
+      group_col = "source",
+      display_col = "display_text"
+    )
+  )
+)
+```
+
+However, upon further reflection, I would only present `shinysurveyjs` at *posit::conf(2025)* and the audience knows nothing about my other packages. To address this, I can set up a survey to **track** the R package and referral source using URL parameters and allow users to **select** a version of the package from a database table.
+
+Run the following R code to define the JSON and deploy the example survey (e.g., `http://127.0.0.1:3838/?package=shinysurveyjs&source=posit`):
+
+``` r
+survey <- list(
+  title = "R Package Feedback",
+  pages = list(
+    list(
+      name = "feedback",
+      elements = list(
+        list(
+          type = "html",
+          visibleIf = "{source} notempty",
+          html = "Hi, thanks for visting this survey from <b>{source}</b>."
+        ),
+        list(
+          type = "radiogroup", 
+          name = "version",
+          title = "Select a version of {package} to rate:",
+          isRequired = TRUE,
+          visibleIf = "{package} notempty",
+          choices = list()
+        ),
+        list(
+          type = "rating",
+          name = "rating", 
+          title = "Please rate the {package} 📦:",
+          rateValues = list(
+            list(value = 1, text = "⭐"),
+            list(value = 2, text = "⭐⭐"),
+            list(value = 3, text = "⭐⭐⭐"),
+            list(value = 4, text = "⭐⭐⭐⭐"), 
+            list(value = 5, text = "⭐⭐⭐⭐⭐")
+          ),
+          rateMax = 5,
+          isRequired = TRUE
+        ),
+        list(
+          type = "comment",
+          name = "feedback",
+          visibleIf = "{rating} notempty",
+          title = "Why did you rate it {rating} stars?",
+          rows = 2
+        ),
+        list(
+          type = "html",
+          name = "lowRatingMessage",
+          visibleIf = "{rating} <= 2",
+          html = "I am sorry you had a poor experience. Please reach me at <b>dylanpieper@gmail.com</b> so I can make it right."
+        ),
+        list(
+          type = "text",
+          name = "source",
+          visible = FALSE
+        ),
+        list(
+          type = "text",
+          name = "package",
+          visible = FALSE
+        )
+      )
+    )
+  )
+)
+
+survey_single(
+  list = survey,
+  show_response = TRUE,
+  theme_color = "#00AD6E",
+  theme_mode = "dark",
+  db_config = list(
+    host = Sys.getenv("HOST"),
+    port = as.numeric(Sys.getenv("PORT")),
+    db_name = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("USER"),
+    password = Sys.getenv("PASSWORD"),
+    write_table = Sys.getenv("WRITE_TABLE"),
+    log_table = Sys.getenv("LOG_TABLE")
+  ),
+  dynamic_config = list(
+     list(
+       group_type = "param",
+       table_name = "config_packages",
+       group_col = "package"
+     ),
+     list(
+       group_type = "choice", 
+       table_name = "config_packages_versions",
+       parent_table_name = "config_packages",
+       parent_id_col = "package_id",
+       group_col = "version"
+     ),
+     list(
+       group_type = "param",
+       table_name = "config_source",
+       group_col = "source", 
+       display_col = "display_text"
+     )
+  )
+)
+```

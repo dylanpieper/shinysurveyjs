@@ -31,18 +31,20 @@ The logger supports different message types that are displayed with distinct vis
 \item{session_id}{character. Unique identifier for the current session}
 \item{survey_name}{character. Name of the survey being logged}
 \item{db_params}{list. Database connection parameters}
+\item{suppress_logs}{logical. Whether to suppress logs from console output}
 }
 }
 
 \section{Methods}{
 
 \describe{
-\item{initialize(log_table, session_id, survey_name, db_config = NULL)}{
+\item{initialize(log_table, session_id, survey_name, suppress_logs = FALSE)}{
 Creates a new logger instance
 \describe{
 \item{log_table}{character. Name of the logging table}
 \item{session_id}{character. Unique session identifier}
 \item{survey_name}{character. Name of the survey}
+\item{suppress_logs}{logical. Whether to suppress console output}
 \item{db_config}{list. Optional database configuration parameters}
 }
 }
@@ -59,11 +61,19 @@ Logs a message asynchronously with appropriate visual styling
 
 \examples{
 \dontrun{
-# Initialize logger
+# Initialize logger with console output
 logger <- survey_logger$new(
-  log_table = "survey_logs",
+  log_table = "survey_app_logs",
   session_id = "user123",
   survey_name = "customer_feedback"
+)
+
+# Initialize logger without console output
+quiet_logger <- survey_logger$new(
+  log_table = "survey_app_logs",
+  session_id = "user123",
+  survey_name = "customer_feedback",
+  suppress_logs = TRUE
 )
 
 # Log different types of messages
@@ -82,6 +92,8 @@ logger$log_message("Required field empty", "ERROR", "validation")
 \item{\code{survey_name}}{Name of the survey being logged}
 
 \item{\code{db_params}}{List of database connection parameters}
+
+\item{\code{suppress_logs}}{Whether to suppress console output}
 }
 \if{html}{\out{</div>}}
 }
@@ -99,7 +111,7 @@ logger$log_message("Required field empty", "ERROR", "validation")
 \subsection{Method \code{new()}}{
 Initialize a new survey logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, suppress_logs = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -110,6 +122,8 @@ Initialize a new survey logger instance
 \item{\code{session_id}}{character. Unique session identifier}
 
 \item{\code{survey_name}}{character. Name of the survey}
+
+\item{\code{suppress_logs}}{logical. Whether to suppress console output}
 }
 \if{html}{\out{</div>}}
 }

@@ -1,5 +1,9 @@
 pandoc: '3.2'
 pkgdown: 2.1.1.9000
 pkgdown_sha: 5c03b7444923f7c797b8b283e175f8eed63797a7
-articles: {}
-last_built: 2025-01-06T15:37Z
+articles:
+  dynamic_field_config: dynamic_field_config.html
+last_built: 2025-01-12T22:53Z
+urls:
+  reference: https://dylanpieper.github.io/shinysurveyjs/reference
+  article: https://dylanpieper.github.io/shinysurveyjs/articles

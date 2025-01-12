@@ -3,9 +3,6 @@
 \name{db_pool_open}
 \alias{db_pool_open}
 \title{Open Database Pool}
-\format{
-An R6 class object
-}
 \usage{
 db_pool_open(
   host = NULL,
@@ -38,3 +35,4 @@ A database pool object
 \description{
 Creates and manages a global database pool connection using PostgreSQL.
 }
+\keyword{internal}

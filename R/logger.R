@@ -21,16 +21,18 @@
 #'   \item{session_id}{character. Unique identifier for the current session}
 #'   \item{survey_name}{character. Name of the survey being logged}
 #'   \item{db_params}{list. Database connection parameters}
+#'   \item{suppress_logs}{logical. Whether to suppress logs from console output}
 #' }
 #'
 #' @section Methods:
 #' \describe{
-#'   \item{initialize(log_table, session_id, survey_name, db_config = NULL)}{
+#'   \item{initialize(log_table, session_id, survey_name, suppress_logs = FALSE)}{
 #'     Creates a new logger instance
 #'     \describe{
 #'       \item{log_table}{character. Name of the logging table}
 #'       \item{session_id}{character. Unique session identifier}
 #'       \item{survey_name}{character. Name of the survey}
+#'       \item{suppress_logs}{logical. Whether to suppress console output}
 #'       \item{db_config}{list. Optional database configuration parameters}
 #'     }
 #'   }
@@ -54,11 +56,19 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Initialize logger
+#' # Initialize logger with console output
 #' logger <- survey_logger$new(
-#'   log_table = "survey_logs",
+#'   log_table = "survey_app_logs",
 #'   session_id = "user123",
 #'   survey_name = "customer_feedback"
+#' )
+#'
+#' # Initialize logger without console output
+#' quiet_logger <- survey_logger$new(
+#'   log_table = "survey_app_logs",
+#'   session_id = "user123",
+#'   survey_name = "customer_feedback",
+#'   suppress_logs = TRUE
 #' )
 #'
 #' # Log different types of messages
@@ -81,14 +91,19 @@ survey_logger <- R6::R6Class(
     #' @field db_params List of database connection parameters
     db_params = NULL,
 
+    #' @field suppress_logs Whether to suppress console output
+    suppress_logs = NULL,
+
     #' @description Initialize a new survey logger instance
     #' @param log_table character. Name of the logging table
     #' @param session_id character. Unique session identifier
     #' @param survey_name character. Name of the survey
-    initialize = function(log_table, session_id, survey_name) {
+    #' @param suppress_logs logical. Whether to suppress console output
+    initialize = function(log_table, session_id, survey_name, suppress_logs = FALSE) {
       self$log_table <- log_table
       self$session_id <- session_id
       self$survey_name <- survey_name
+      self$suppress_logs <- suppress_logs
       self$db_params <- list(
         host = Sys.getenv("HOST"),
         port = as.numeric(Sys.getenv("PORT")),
@@ -96,7 +111,10 @@ survey_logger <- R6::R6Class(
         user = Sys.getenv("USER"),
         password = Sys.getenv("PASSWORD")
       )
-      cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Started logger")
+
+      if (!self$suppress_logs) {
+        cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Started logger")
+      }
       private$ensure_table_exists()
     },
 
@@ -110,6 +128,7 @@ survey_logger <- R6::R6Class(
       log_table <- self$log_table
       session_id <- self$session_id
       survey_name <- self$survey_name
+      suppress_logs <- self$suppress_logs
 
       promises::future_promise({
         conn <- do.call(DBI::dbConnect, c(list(RPostgres::Postgres()), db_params))
@@ -137,29 +156,33 @@ survey_logger <- R6::R6Class(
       }) |>
         promises::then(
           onFulfilled = function(value) {
-            switch(type,
-                   "ERROR" = cli::cli_alert_danger(
-                     "[Session {.val {session_id}}] {.field {type}}: {message}",
-                     .envir = environment()
-                   ),
-                   "WARN" = cli::cli_alert_warning(
-                     "[Session {.val {session_id}}] {.field {type}}: {message}",
-                     .envir = environment()
-                   ),
-                   cli::cli_alert_success(
-                     "[Session {.val {session_id}}] {.field {type}}: {message}",
-                     .envir = environment()
-                   )
-            )
+            if (!suppress_logs) {
+              switch(type,
+                     "ERROR" = cli::cli_alert_danger(
+                       "[Session {.val {session_id}}] {.field {type}}: {message}",
+                       .envir = environment()
+                     ),
+                     "WARN" = cli::cli_alert_warning(
+                       "[Session {.val {session_id}}] {.field {type}}: {message}",
+                       .envir = environment()
+                     ),
+                     cli::cli_alert_success(
+                       "[Session {.val {session_id}}] {.field {type}}: {message}",
+                       .envir = environment()
+                     )
+              )
+            }
             invisible(value)
           }
         ) |>
         promises::catch(
           function(error) {
-            cli::cli_alert_danger(
-              "[Session {.val {session_id}}] Logging error: {.error {error$message}}",
-              .envir = environment()
-            )
+            if (!suppress_logs) {
+              cli::cli_alert_danger(
+                "[Session {.val {session_id}}] Logging error: {.error {error$message}}",
+                .envir = environment()
+              )
+            }
             NULL
           }
         )
@@ -185,7 +208,9 @@ survey_logger <- R6::R6Class(
           self$log_table
         )
         DBI::dbExecute(conn, query)
-        cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Created logger table")
+        if (!self$suppress_logs) {
+          cli::cli_alert_success("[Session {.val {self$session_id}}] {.field INFO}: Created logger table")
+        }
       }
     }
   )

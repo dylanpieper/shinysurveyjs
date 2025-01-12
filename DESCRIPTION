@@ -21,3 +21,8 @@ Imports:
     shinyjs,
     future,
     promises
+Suggests:
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: https://dylanpieper.github.io/shinysurveyjs

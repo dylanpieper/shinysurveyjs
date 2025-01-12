@@ -45,6 +45,8 @@ Tracking columns automatically added to each table:
 \item \href{#method-Database Operations-ensure_tracking_columns}{\code{db_ops$ensure_tracking_columns()}}
 \item \href{#method-Database Operations-create_survey_table}{\code{db_ops$create_survey_table()}}
 \item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
+\item \href{#method-Database Operations-read_table}{\code{db_ops$read_table()}}
+\item \href{#method-Database Operations-update_by_id}{\code{db_ops$update_by_id()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
@@ -153,6 +155,67 @@ Update existing survey table with new data
 }
 \subsection{Returns}{
 Character. The sanitized table name
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-read_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-read_table}{}}}
+\subsection{Method \code{read_table()}}{
+Read data from a survey table with optional filtering
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$read_table(
+  table_name,
+  columns = NULL,
+  filters = NULL,
+  order_by = NULL,
+  desc = FALSE,
+  limit = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{table_name}}{Character. Name of the table to read from}
+
+\item{\code{columns}}{Character vector. Specific columns to read (NULL for all columns)}
+
+\item{\code{filters}}{List. Named list of filter conditions (e.g., list(status = "active"))}
+
+\item{\code{order_by}}{Character vector. Columns to order by}
+
+\item{\code{desc}}{Logical. If TRUE, sort in descending order}
+
+\item{\code{limit}}{Numeric. Maximum number of rows to return (NULL for all rows)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+data.frame. The requested data
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-update_by_id"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-update_by_id}{}}}
+\subsection{Method \code{update_by_id()}}{
+Update specific columns in a table for a given row ID
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$update_by_id(table_name, id, values)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{table_name}}{Character. Name of the table to update}
+
+\item{\code{id}}{Numeric. Row ID to update}
+
+\item{\code{values}}{List. Named list of column-value pairs to update}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible(NULL)
 }
 }
 \if{html}{\out{<hr>}}

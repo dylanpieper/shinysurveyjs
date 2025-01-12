@@ -1,4 +1,7 @@
-url: ~
+url: https://dylanpieper.github.io/shinysurveyjs/
+repo:
+  url:
+    home: https://github.com/dylanpieper/shinysurveyjs
 template:
   bootstrap: 5
   bslib:
@@ -14,3 +17,7 @@ template:
     link-hover-color: "#003594"
 figures:
   dev: grfx
+articles:
+  - title: Getting Started
+    contents:
+      - 'dynamic_field_config'

@@ -2,7 +2,6 @@
 #'
 #' @description Creates and manages a global database pool connection using PostgreSQL.
 #'
-#' @format An R6 class object
 #' @param host Database host
 #' @param port Database port
 #' @param db_name Database name
@@ -12,8 +11,11 @@
 #' @param max_size Maximum pool size (default: Inf)
 #'
 #' @return A database pool object
+#'
 #' @importFrom pool dbPool poolClose
 #' @importFrom RPostgres Postgres
+#'
+#' @keywords internal
 db_pool_open <- function(host = NULL,
                          port = NULL,
                          db_name = NULL,
@@ -41,11 +43,37 @@ db_pool_open <- function(host = NULL,
 #' Close Database Pool
 #'
 #' Closes the database connection pool and performs cleanup operations
-#' when the application is shutting down.
+#' when the application is shutting down. This function ensures proper
+#' resource management by closing all open connections and removing the
+#' pool object from the global environment.
 #'
-#' @param session Shiny session object
+#' @param session A Shiny session object that represents the current user session.
+#'                This is used to register the cleanup operation.
+#'
+#' @details
+#' This function performs the following operations:
+#' 1. Registers a cleanup handler using shiny::onStop
+#' 2. Checks for the existence of 'app_pool' in the global environment
+#' 3. Calls cleanup_pool() on the existing pool if found
+#' 4. Removes the pool object from the global environment
+#'
+#' @note
+#' The function assumes the existence of a cleanup_pool() function and
+#' that the database pool is stored in the global environment as 'app_pool'.
+#'
+#' @examples
+#' \dontrun{
+#' # In your Shiny server function
+#' function(input, output, session) {
+#'   db_pool_close(session)
+#' }
+#' }
+#'
+#' @seealso
+#' \code{\link[shiny]{onStop}} for more information about Shiny's cleanup handlers
 #'
 #' @importFrom shiny onStop
+#' @keywords internal
 db_pool_close <- function(session) {
   shiny::onStop(function() {
     if (exists("app_pool", envir = .GlobalEnv)) {
@@ -332,7 +360,7 @@ db_ops <- R6::R6Class(
               )
               DBI::dbExecute(conn, alter_query)
               self$logger$log_message(
-                sprintf("Added column '%s' to existing table '%s'", col, table_name),
+                sprintf("Added column '%s' to table '%s'", col, table_name),
                 "INFO",
                 "DATABASE"
               )
@@ -426,6 +454,190 @@ db_ops <- R6::R6Class(
       }, sprintf("Failed to update table '%s'", table_name))
 
       invisible(table_name)
+    },
+
+    #' @description Read data from a survey table with optional filtering
+    #' @param table_name Character. Name of the table to read from
+    #' @param columns Character vector. Specific columns to read (NULL for all columns)
+    #' @param filters List. Named list of filter conditions (e.g., list(status = "active"))
+    #' @param order_by Character vector. Columns to order by
+    #' @param desc Logical. If TRUE, sort in descending order
+    #' @param limit Numeric. Maximum number of rows to return (NULL for all rows)
+    #' @return data.frame. The requested data
+    read_table = function(table_name, columns = NULL, filters = NULL,
+                          order_by = NULL, desc = FALSE, limit = NULL) {
+      if (is.null(table_name) || !is.character(table_name)) {
+        self$logger$log_message("Invalid table_name parameter", "ERROR", "DATABASE")
+        stop("Invalid table name")
+      }
+
+      sanitized_table <- private$sanitize_survey_table_name(table_name)
+
+      self$operate(function(conn) {
+        # Check if table exists
+        if (!DBI::dbExistsTable(conn, sanitized_table)) {
+          self$logger$log_message(
+            sprintf("Table '%s' does not exist", sanitized_table),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Table '%s' does not exist", sanitized_table))
+        }
+
+        # Build SELECT clause
+        select_cols <- "*"
+        if (!is.null(columns)) {
+          if (!is.character(columns)) {
+            self$logger$log_message("Columns must be a character vector", "ERROR", "DATABASE")
+            stop("Invalid columns parameter")
+          }
+          select_cols <- paste(
+            vapply(columns, function(col) {
+              DBI::dbQuoteIdentifier(conn, col)
+            }, character(1)),
+            collapse = ", "
+          )
+        }
+
+        # Build WHERE clause
+        where_clause <- ""
+        if (!is.null(filters)) {
+          if (!is.list(filters)) {
+            self$logger$log_message("Filters must be a named list", "ERROR", "DATABASE")
+            stop("Invalid filters parameter")
+          }
+
+          where_conditions <- vapply(names(filters), function(col) {
+            value <- filters[[col]]
+            if (is.null(value)) {
+              sprintf("%s IS NULL", DBI::dbQuoteIdentifier(conn, col))
+            } else if (is.character(value)) {
+              sprintf("%s = %s",
+                      DBI::dbQuoteIdentifier(conn, col),
+                      DBI::dbQuoteString(conn, value))
+            } else {
+              sprintf("%s = %s",
+                      DBI::dbQuoteIdentifier(conn, col),
+                      value)
+            }
+          }, character(1))
+
+          if (length(where_conditions) > 0) {
+            where_clause <- paste("WHERE", paste(where_conditions, collapse = " AND "))
+          }
+        }
+
+        # Build ORDER BY clause
+        order_clause <- ""
+        if (!is.null(order_by)) {
+          if (!is.character(order_by)) {
+            self$logger$log_message("order_by must be a character vector", "ERROR", "DATABASE")
+            stop("Invalid order_by parameter")
+          }
+          direction <- if (desc) "DESC" else "ASC"
+          order_cols <- paste(
+            vapply(order_by, function(col) {
+              paste(DBI::dbQuoteIdentifier(conn, col), direction)
+            }, character(1)),
+            collapse = ", "
+          )
+          order_clause <- paste("ORDER BY", order_cols)
+        }
+
+        # Build LIMIT clause
+        limit_clause <- ""
+        if (!is.null(limit)) {
+          if (!is.numeric(limit) || limit < 0) {
+            self$logger$log_message("limit must be a non-negative number", "ERROR", "DATABASE")
+            stop("Invalid limit parameter")
+          }
+          limit_clause <- sprintf("LIMIT %d", as.integer(limit))
+        }
+
+        # Construct and execute query
+        query <- sprintf(
+          "SELECT %s FROM %s %s %s %s",
+          select_cols,
+          DBI::dbQuoteIdentifier(conn, sanitized_table),
+          where_clause,
+          order_clause,
+          limit_clause
+        )
+
+        result <- DBI::dbGetQuery(conn, query)
+
+        self$logger$log_message(
+          sprintf("Read n = %d rows from '%s'", nrow(result), sanitized_table),
+          "INFO",
+          "DATABASE"
+        )
+
+        return(result)
+      }, sprintf("Failed to read from table '%s'", sanitized_table))
+    },
+
+    #' @description Update specific columns in a table for a given row ID
+    #' @param table_name Character. Name of the table to update
+    #' @param id Numeric. Row ID to update
+    #' @param values List. Named list of column-value pairs to update
+    #' @return Invisible(NULL)
+    update_by_id = function(table_name, id, values) {
+      if (is.null(table_name) || !is.character(table_name)) {
+        self$logger$log_message("Invalid table_name parameter", "ERROR", "DATABASE")
+        stop("Invalid table name")
+      }
+
+      if (is.null(id) || !is.numeric(id)) {
+        self$logger$log_message("Invalid id parameter", "ERROR", "DATABASE")
+        stop("Invalid id")
+      }
+
+      if (is.null(values) || !is.list(values) || length(values) == 0) {
+        self$logger$log_message("Invalid values parameter", "ERROR", "DATABASE")
+        stop("Invalid values")
+      }
+
+      sanitized_table <- private$sanitize_survey_table_name(table_name)
+
+      self$operate(function(conn) {
+        # Build SET clause
+        set_parts <- vapply(names(values), function(col) {
+          value <- values[[col]]
+          if (is.character(value)) {
+            sprintf("%s = %s",
+                    DBI::dbQuoteIdentifier(conn, col),
+                    DBI::dbQuoteString(conn, value))
+          } else {
+            sprintf("%s = %s",
+                    DBI::dbQuoteIdentifier(conn, col),
+                    value)
+          }
+        }, character(1))
+
+        set_clause <- paste(set_parts, collapse = ", ")
+
+        # Build and execute UPDATE query
+        query <- sprintf(
+          "UPDATE %s SET %s WHERE id = %d",
+          DBI::dbQuoteIdentifier(conn, sanitized_table),
+          set_clause,
+          id
+        )
+
+        rows_affected <- DBI::dbExecute(conn, query)
+
+        if (rows_affected == 0) {
+          warning(sprintf("No rows updated for id %d in table %s", id, sanitized_table))
+        }
+
+        self$logger$log_message(
+          sprintf("Updated %d rows in table '%s' for id %d", rows_affected, sanitized_table, id),
+          "INFO",
+          "DATABASE"
+        )
+
+        invisible(NULL)
+      }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
     }
   ),
 

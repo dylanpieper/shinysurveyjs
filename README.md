@@ -2,49 +2,52 @@
 
 The goal of this package is to integrate the flexible frontend of the [SurveyJS](https://surveyjs.io/) library with the reactive backend of [Shiny](https://shiny.posit.co/) to interface with a [PostgreSQL](https://www.postgresql.org/) database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.
 
+## SurveyJS
+
+SurveyJS is a JavaScript library that streamlines the creation of survey applications through a [jQuery](https://www.npmjs.com/package/survey-jquery) architecture. The library offers a [visual editor](https://surveyjs.io/create-free-survey) that allows developers to design complex surveys through an intuitive drag-and-drop interface, which automatically generates the JSON. The JSON structure defines all survey elements, including questions, validation rules, conditional logic, and field visibility.
+
+The library's strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping, skip logic, and real-time validation with minimal code.
+
+For R applications, developers can easily incorporate SurveyJS by parsing the JSON either as a raw text string or by converting an R list to JSON format.
+
 ## Basic Features
 
--   Host a single survey or multiple surveys in one app
+-   Host a single survey in one app (multiple surveys coming soon...)
 
--   Store and manage survey data in a [PostgreSQL](https://www.postgresql.org/) database, including metadata such as the duration to completion, date created and updated, Shiny session ID, and IP address
+-   Store data in a PostgreSQL database, including metadata such as the duration to load, complete, and save the survey; date created and updated; Shiny session ID; and IP address
 
--   Design surveys and create JSON objects with a user-friendly [visual editor](https://surveyjs.io/create-free-survey)
+-   Change the primary theme color and select from light to dark themes
 
--   Save survey progress as cookies and resume later
-
--   Change the primary theme color and select from dark and light themes
+-   Automatically save survey progress as cookies and resume later
 
 ## Advanced Features
 
--   Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)
+-   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source; see [vignette](articles/dynamic_field_config.html))
 
--   Dynamically stage JSON objects in the database to modify surveys using a staging table
-
--   URL query tokens and one-time access tokens for secure survey distribution
-
--   Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged JSON objects, and managing tokens
+-   Asynchronous worker to update database without interrupting the survey including the logging app messages, warnings, and errors
 
 ## Installation
 
 ``` r
-# Install from GitHub
 pak::pkg_install("dylanpieper/shinysurveyjs")
 ```
 
 ## Basic Usage
 
+Imagine I want to develop a survey for my `shinysurveyjs` package and allow users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically handles creating and updating the survey and app log tables.
+
 ### Single Survey
 
-Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table hosted on [Supabase](https://supabase.com/).
+Define the survey configuration from a **JSON** text string or **list** to host a single survey. Data is stored in a PostgreSQL database table hosted on [Supabase](https://supabase.com/).
+
+#### JSON
 
 ``` r
-library(shinysurveyjs)
-
 survey <- '{
   "title": "R Package Feedback",
   "pages": [
     {
-      "name": "userInfo",
+      "name": "feedback",
       "elements": [
         {
           "type": "rating",
@@ -71,33 +74,88 @@ survey <- '{
           "type": "html",
           "name": "lowRatingMessage",
           "visibleIf": "{rating} <= 2",
-          "html": "I am sorry you had a poor experience. Please reach me at <b>dylanpieper@gmail.com</b> so I can help improve your experience."
+          "html": "I am sorry you had a poor experience. Please reach me at <b>dylanpieper@gmail.com</b> so I can help make it right."
         }
       ]
     }
   ]
 }'
 
-survey_single(
+shinysurveyjs::survey_single(
   json = survey,
-  show_response = TRUE,
   theme_color = "#00AD6E",
   theme_mode = "dark",
-  shiny_config = list(
-    host = "0.0.0.0",
-    port = 3838
-  ),
   db_config = list(
-    host = Sys.getenv("HOST"), # aws-0-us-east-2.pooler.supabase.com
-    port = as.numeric(Sys.getenv("PORT")), # 5432
-    db_name = Sys.getenv("DB_NAME"), # postgres
-    user = Sys.getenv("USER"), # username
-    password = Sys.getenv("PASSWORD"), # password
-    write_table = Sys.getenv("WRITE_TABLE"), # survey_package_feedback
-    log_table = Sys.getenv("LOG_TABLE") # survey_app_logs
-  ),
-  cookie_expiration_days = 7
+    host = Sys.getenv("HOST"),                # aws-0-us-east-2.pooler.supabase.com
+    port = as.numeric(Sys.getenv("PORT")),    # 5432
+    db_name = Sys.getenv("DB_NAME"),          # postgres
+    user = Sys.getenv("USER"),                # username
+    password = Sys.getenv("PASSWORD"),        # password
+    write_table = Sys.getenv("WRITE_TABLE"),  # survey_package_feedback
+    log_table = Sys.getenv("LOG_TABLE")       # survey_app_logs
+  )
+)
+```
+
+#### List
+
+``` r
+survey <- list(
+  title = "R Package Feedback",
+  pages = list(
+    list(
+      name = "feedback",
+      elements = list(
+        list(
+          type = "rating",
+          name = "rating",
+          title = "Please rate the shinysurveyjs 📦:",
+          rateValues = list(
+            list(value = 1, text = "⭐"),
+            list(value = 2, text = "⭐⭐"),
+            list(value = 3, text = "⭐⭐⭐"),
+            list(value = 4, text = "⭐⭐⭐⭐"),
+            list(value = 5, text = "⭐⭐⭐⭐⭐")
+          ),
+          rateMax = 5,
+          isRequired = TRUE
+        ),
+        list(
+          type = "comment",
+          name = "feedback",
+          visibleIf = "{rating} notempty",
+          title = "Why did you rate it {rating} stars?",
+          rows = 2
+        ),
+        list(
+          type = "html",
+          name = "lowRatingMessage",
+          visibleIf = "{rating} <= 2",
+          html = "I am sorry you had a poor experience. Please reach me at <b>dylanpieper@gmail.com</b> so I can make it right."
+        )
+      )
+    )
+  )
+)
+
+shinysurveyjs::survey_single(
+  list = survey,
+  ...
 )
 ```
 
 By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from an `.env` or `.yaml` file or a secrets manager. Using encrypted secrets is recommended for production environments.
+
+## Roadmap
+
+-   Add survey start and end date controls to limit access to a survey
+
+-   Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to turn off access after completion)
+
+-   Dynamically stage JSON objects in the database to modify surveys using a staging table
+
+-   Add mode for URL parameter encryption
+
+-   Add to asynchronous worker: Update staged JSON objects and manage tokens
+
+-   Support multiple surveys with JSON loaded from database (`survey_multi()`)

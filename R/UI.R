@@ -1,18 +1,20 @@
 #' Create Survey UI with CSS and Message Components
 #'
-#' @param id Optional id for the survey div container (default is "surveyContainer")
+#' @param id ID for the survey div container (e.g., "surveyContainer")
 #' @param theme Theme name ("defaultV2" or "modern")
 #' @param primary Primary color hex code (optional)
 #' @param mode Color mode ("light" or "dark")
+#' @param cookie_expiration_days Number of days to keep cookies for URL parameters
 #' @return A tagList containing survey dependencies and container
+#'
 #' @importFrom shiny div conditionalPanel h4 tags
 #' @importFrom htmltools tagList HTML
 #' @importFrom sass sass
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
-survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
-                     primary = "#003594", mode = "light",
-                     cookie_expiration_days = 7) {
+#'
+#' @keywords internal
+survey_ui <- function(id, theme, primary, mode, cookie_expiration_days) {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -26,7 +28,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 
   # Get gradient colors based on mode
   gradient_color1 <- if (mode == "dark") primary else "#DBEEFF"
-  gradient_color2 <- if (mode == "dark") adjust_hex(primary, 15, lighten = TRUE) else "#00AD6E"
+  gradient_color2 <- if (mode == "dark") adjust_hex(primary, 15) else "#00AD6E"
 
   # Define dark mode CSS
   dark_mode_css <- sprintf(
@@ -104,26 +106,29 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
     "
     .message-container {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%%;
-      height: 100%%;
-      background: %s;
-      opacity: 0.90;
+      top: 50%%;
+      left: 50%%;
+      transform: translate(-50%%, -50%%);
+      width: auto;
+      max-width: min(600px, 90%%);
+      min-width: 280px;
+      height: auto;
+      max-height: 90vh;
+      background: transparent;
       z-index: 10000;
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      font-size: clamp(2rem, 2vw, 1.25rem);
+      font-size: clamp(2rem, 3vw + 0.5rem, 1.5rem);
       color: %s;
       text-align: center;
       letter-spacing: -0.01em;
       transition: opacity 0.3s ease;
-      padding: clamp(1rem, 5vw, 2rem);
+      padding: 1.5rem;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     .sv-root-modern {
@@ -176,7 +181,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 
     /* Error message containment */
     .error-message {
-      font-size: clamp(1rem, 4vw, 1.5rem);
+      font-size: clamp(2rem, 4vw, 1.5rem);
       font-weight: 600;
       color: %s;
       padding: clamp(0.5rem, 2vw, 1rem);
@@ -218,17 +223,16 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
       }
     }
     ",
-    dark_bg,                               # Background color for message container
-    dark_text,                             # Text color for message container
-    dark_container_bg,                     # Background color for sv-root-modern
-    dark_container_bg,                     # Background color for sv-body
-    dark_text,                             # Text color for sv-body
-    dark_text,                             # Text color for sv-container-modern
-    dark_container_bg,                     # Background color for surveyResponseContainer
-    primary,                               # Primary color for first spinner
-    adjust_hex(primary, 20, lighten = TRUE), # Lighter variant of primary for second spinner
-    dark_text,                             # Text color for error message
-    dark_container_bg                      # Background color for error message
+    dark_text, # Text color for message container
+    dark_container_bg, # Background color for sv-root-modern
+    dark_container_bg, # Background color for sv-body
+    dark_text, # Text color for sv-body
+    dark_text, # Text color for sv-container-modern
+    dark_container_bg, # Background color for surveyResponseContainer
+    primary, # Primary color for first spinner
+    adjust_hex(primary, 20), # Lighter variant of primary for second spinner
+    dark_text, # Text color for error message
+    dark_container_bg # Background color for error message
   )
 
   # Animation keyframes
@@ -335,6 +339,7 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 #' Creates a Shiny UI wrapper for displaying a survey with an optional response table.
 #' The UI includes a loading spinner and conditional panels based on survey state.
 #'
+#' @param id The ID for the survey div container
 #' @param theme The theme configuration for styling the survey
 #' @param theme_color Primary color used for UI elements like the loading spinner
 #' @param theme_mode The theme mode (e.g., 'light' or 'dark')
@@ -345,11 +350,11 @@ survey_ui <- function(id = "surveyContainer", theme = "defaultV2",
 #' @importFrom shinycssloaders withSpinner
 #' @importFrom DT DTOutput
 #'
-#' @export
-survey_ui_wrapper <- function(theme = NULL, theme_color = "#000000", theme_mode = "light", cookie_expiration_days = 7) {
+#' @keywords internal
+survey_ui_wrapper <- function(id, theme, theme_color, theme_mode, cookie_expiration_days) {
   shiny::fluidPage(
     shinyjs::useShinyjs(),
-    survey_ui(theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days),
+    survey_ui(id = id, theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days),
     shiny::conditionalPanel(
       condition = "output.showResponseTable",
       shiny::div(
