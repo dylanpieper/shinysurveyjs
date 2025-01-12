@@ -4,22 +4,18 @@
 \alias{survey_ui}
 \title{Create Survey UI with CSS and Message Components}
 \usage{
-survey_ui(
-  id = "surveyContainer",
-  theme = "defaultV2",
-  primary = "#003594",
-  mode = "light",
-  cookie_expiration_days = 7
-)
+survey_ui(id, theme, primary, mode, cookie_expiration_days)
 }
 \arguments{
-\item{id}{Optional id for the survey div container (default is "surveyContainer")}
+\item{id}{ID for the survey div container (e.g., "surveyContainer")}
 
 \item{theme}{Theme name ("defaultV2" or "modern")}
 
 \item{primary}{Primary color hex code (optional)}
 
 \item{mode}{Color mode ("light" or "dark")}
+
+\item{cookie_expiration_days}{Number of days to keep cookies for URL parameters}
 }
 \value{
 A tagList containing survey dependencies and container
@@ -27,3 +23,4 @@ A tagList containing survey dependencies and container
 \description{
 Create Survey UI with CSS and Message Components
 }
+\keyword{internal}

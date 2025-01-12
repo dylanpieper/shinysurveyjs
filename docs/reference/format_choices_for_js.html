@@ -20,6 +20,7 @@ parent-child relationships between fields."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/dylanpieper/shinysurveyjs" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -50,7 +51,9 @@ parent-child relationships between fields.</p>
 <span>  child_field <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  is_child <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parent_field <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  display_col <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  display_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  is_param_parent <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  choice_ids <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -81,11 +84,21 @@ parent-child relationships between fields.</p>
 <dt id="arg-display-col">display_col<a class="anchor" aria-label="anchor" href="#arg-display-col"></a></dt>
 <dd><p>Character, optional name of column containing display text</p></dd>
 
+
+<dt id="arg-is-param-parent">is_param_parent<a class="anchor" aria-label="anchor" href="#arg-is-param-parent"></a></dt>
+<dd><p>Logical, whether this is a parameter parent field</p></dd>
+
+
+<dt id="arg-choice-ids">choice_ids<a class="anchor" aria-label="anchor" href="#arg-choice-ids"></a></dt>
+<dd><p>Vector, optional IDs to associate with choices</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list formatted for JavaScript survey components with relationship metadata</p>
-    </div>
+    <p>A list formatted for JavaScript survey components containing:</p><ul><li><p><strong>type</strong>: Type of field ("parent", "param_parent", "child", or "standalone")</p></li>
+<li><p><strong>choices</strong>: List of formatted choices with value, text, and relationship data</p></li>
+<li><p>Additional metadata fields depending on relationship type</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -94,13 +107,18 @@ parent-child relationships between fields.</p>
 <span class="r-in"><span><span class="va">choices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"parent1"</span>, <span class="st">"parent2"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">formatted</span> <span class="op">&lt;-</span> <span class="fu">format_choices_for_js</span><span class="op">(</span><span class="va">choices</span>, is_parent <span class="op">=</span> <span class="cn">TRUE</span>, child_field <span class="op">=</span> <span class="st">"child_field"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Child choices</span></span></span>
+<span class="r-in"><span><span class="co"># Child choices with parent IDs</span></span></span>
 <span class="r-in"><span><span class="va">child_choices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"child1"</span>, text <span class="op">=</span> <span class="st">"Child 1"</span>, parentId <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"child2"</span>, text <span class="op">=</span> <span class="st">"Child 2"</span>, parentId <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"child1"</span>, text <span class="op">=</span> <span class="st">"Child 1"</span>, parentId <span class="op">=</span> <span class="fl">1</span>, parentValue <span class="op">=</span> <span class="st">"parent1"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"child2"</span>, text <span class="op">=</span> <span class="st">"Child 2"</span>, parentId <span class="op">=</span> <span class="fl">1</span>, parentValue <span class="op">=</span> <span class="st">"parent1"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">formatted_children</span> <span class="op">&lt;-</span> <span class="fu">format_choices_for_js</span><span class="op">(</span><span class="va">child_choices</span>, is_child <span class="op">=</span> <span class="cn">TRUE</span>, parent_field <span class="op">=</span> <span class="st">"parent_field"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">formatted_children</span> <span class="op">&lt;-</span> <span class="fu">format_choices_for_js</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">child_choices</span>,</span></span>
+<span class="r-in"><span>  is_child <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>  parent_field <span class="op">=</span> <span class="st">"parent_field"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

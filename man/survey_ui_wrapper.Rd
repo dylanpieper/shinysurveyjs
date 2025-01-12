@@ -4,14 +4,11 @@
 \alias{survey_ui_wrapper}
 \title{Create Survey UI Wrapper}
 \usage{
-survey_ui_wrapper(
-  theme = NULL,
-  theme_color = "#000000",
-  theme_mode = "light",
-  cookie_expiration_days = 7
-)
+survey_ui_wrapper(id, theme, theme_color, theme_mode, cookie_expiration_days)
 }
 \arguments{
+\item{id}{The ID for the survey div container}
+
 \item{theme}{The theme configuration for styling the survey}
 
 \item{theme_color}{Primary color used for UI elements like the loading spinner}
@@ -25,3 +22,4 @@ A Shiny UI definition
 Creates a Shiny UI wrapper for displaying a survey with an optional response table.
 The UI includes a loading spinner and conditional panels based on survey state.
 }
+\keyword{internal}

@@ -37,6 +37,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -55,44 +56,49 @@
 </h1></div>
 <p>The goal of this package is to integrate the flexible frontend of the <a href="https://surveyjs.io/" class="external-link">SurveyJS</a> library with the reactive backend of <a href="https://shiny.posit.co/" class="external-link">Shiny</a> to interface with a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.</p>
 <div class="section level2">
+<h2 id="surveyjs">SurveyJS<a class="anchor" aria-label="anchor" href="#surveyjs"></a>
+</h2>
+<p>SurveyJS is a JavaScript library that streamlines the creation of survey applications through a <a href="https://www.npmjs.com/package/survey-jquery" class="external-link">jQuery</a> architecture. The library offers a <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a> that allows developers to design complex surveys through an intuitive drag-and-drop interface, which automatically generates the JSON. The JSON structure defines all survey elements, including questions, validation rules, conditional logic, and field visibility.</p>
+<p>The library’s strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping, skip logic, and real-time validation with minimal code.</p>
+<p>For R applications, developers can easily incorporate SurveyJS by parsing the JSON either as a raw text string or by converting an R list to JSON format.</p>
+</div>
+<div class="section level2">
 <h2 id="basic-features">Basic Features<a class="anchor" aria-label="anchor" href="#basic-features"></a>
 </h2>
 <ul>
-<li><p>Host a single survey or multiple surveys in one app</p></li>
-<li><p>Store survey data in a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database, including metadata such as the duration to load and complete the survey, date created and updated, Shiny session ID, and IP address</p></li>
-<li><p>Design surveys and create JSON objects with a user-friendly <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a></p></li>
-<li><p>Save survey progress as cookies and automatically resume later</p></li>
+<li><p>Host a single survey in one app (multiple surveys coming soon…)</p></li>
+<li><p>Store data in a PostgreSQL database, including metadata such as the duration to load, complete, and save the survey; date created and updated; Shiny session ID; and IP address</p></li>
 <li><p>Change the primary theme color and select from light to dark themes</p></li>
+<li><p>Automatically save survey progress as cookies and resume later</p></li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="advanced-features">Advanced Features<a class="anchor" aria-label="anchor" href="#advanced-features"></a>
 </h2>
 <ul>
-<li><p>Dynamically populate choices (i.e., response options) from a database table and create dependent inputs (e.g., select a car brand and filter available models)</p></li>
-<li><p>Dynamically stage JSON objects in the database to modify surveys using a staging table</p></li>
-<li><p>URL query tokens and one-time access tokens for secure survey distribution</p></li>
-<li><p>Asynchronous worker to handle database updates without interrupting the survey, including app logging, updating staged JSON objects, and managing tokens</p></li>
+<li><p>Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source; see <a href="articles/dynamic_field_config.html">vignette</a>)</p></li>
+<li><p>Asynchronous worker to update database without interrupting the survey including the logging app messages, warnings, and errors</p></li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Install from GitHub</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pkg_install</a></span><span class="op">(</span><span class="st">"dylanpieper/shinysurveyjs"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pkg_install</a></span><span class="op">(</span><span class="st">"dylanpieper/shinysurveyjs"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h2>
+<p>Imagine I want to develop a survey for my <code>shinysurveyjs</code> package and allow users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically handles creating and updating the survey and app log tables.</p>
 <div class="section level3">
 <h3 id="single-survey">Single Survey<a class="anchor" aria-label="anchor" href="#single-survey"></a>
 </h3>
-<p>Read the survey from a json object to host a single survey. Data is stored in a PostgreSQL database table hosted on <a href="https://supabase.com/" class="external-link">Supabase</a>.</p>
+<p>Define the survey configuration from a <strong>JSON</strong> text string or <strong>list</strong> to host a single survey. Data is stored in a PostgreSQL database table hosted on <a href="https://supabase.com/" class="external-link">Supabase</a>.</p>
+<div class="section level4">
+<h4 id="json">JSON<a class="anchor" aria-label="anchor" href="#json"></a>
+</h4>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">shinysurveyjs</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="st">'{</span></span>
+<code class="sourceCode R"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="st">'{</span></span>
 <span><span class="st">  "title": "R Package Feedback",</span></span>
 <span><span class="st">  "pages": [</span></span>
 <span><span class="st">    {</span></span>
@@ -123,22 +129,17 @@
 <span><span class="st">          "type": "html",</span></span>
 <span><span class="st">          "name": "lowRatingMessage",</span></span>
 <span><span class="st">          "visibleIf": "{rating} &lt;= 2",</span></span>
-<span><span class="st">          "html": "I am sorry you had a poor experience. Please reach me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can help improve your experience."</span></span>
+<span><span class="st">          "html": "I am sorry you had a poor experience. Please reach me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can help make it right."</span></span>
 <span><span class="st">        }</span></span>
 <span><span class="st">      ]</span></span>
 <span><span class="st">    }</span></span>
 <span><span class="st">  ]</span></span>
 <span><span class="st">}'</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
+<span><span class="fu">shinysurveyjs</span><span class="fu">::</span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
 <span>  json <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
 <span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
-<span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,</span>
-<span>    port <span class="op">=</span> <span class="fl">3838</span></span>
-<span>  <span class="op">)</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"HOST"</span><span class="op">)</span>,                <span class="co"># aws-0-us-east-2.pooler.supabase.com</span></span>
 <span>    port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PORT"</span><span class="op">)</span><span class="op">)</span>,    <span class="co"># 5432</span></span>
@@ -149,8 +150,68 @@
 <span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span>       <span class="co"># survey_app_logs</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="list">List<a class="anchor" aria-label="anchor" href="#list"></a>
+</h4>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  title <span class="op">=</span> <span class="st">"R Package Feedback"</span>,</span>
+<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
+<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"rating"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"rating"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Please rate the shinysurveyjs 📦:"</span>,</span>
+<span>          rateValues <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">1</span>, text <span class="op">=</span> <span class="st">"⭐"</span><span class="op">)</span>,</span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">2</span>, text <span class="op">=</span> <span class="st">"⭐⭐"</span><span class="op">)</span>,</span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">3</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐"</span><span class="op">)</span>,</span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">4</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐⭐"</span><span class="op">)</span>,</span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">5</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐⭐⭐"</span><span class="op">)</span></span>
+<span>          <span class="op">)</span>,</span>
+<span>          rateMax <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
+<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} notempty"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Why did you rate it {rating} stars?"</span>,</span>
+<span>          rows <span class="op">=</span> <span class="fl">2</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"lowRatingMessage"</span>,</span>
+<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} &lt;= 2"</span>,</span>
+<span>          html <span class="op">=</span> <span class="st">"I am sorry you had a poor experience. Please reach me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can make it right."</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">shinysurveyjs</span><span class="fu">::</span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
+<span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>By default, the database configuration looks for environmental variables (e.g., <code>Sys.getenv("PASSWORD")</code>) that can be loaded from an <code>.env</code> or <code>.yaml</code> file or a secrets manager. Using encrypted secrets is recommended for production environments.</p>
 </div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="roadmap">Roadmap<a class="anchor" aria-label="anchor" href="#roadmap"></a>
+</h2>
+<ul>
+<li><p>Add survey start and end date controls to limit access to a survey</p></li>
+<li><p>Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to turn off access after completion)</p></li>
+<li><p>Dynamically stage JSON objects in the database to modify surveys using a staging table</p></li>
+<li><p>Add mode for URL parameter encryption</p></li>
+<li><p>Add to asynchronous worker: Update staged JSON objects and manage tokens</p></li>
+<li><p>Support multiple surveys with JSON loaded from database (<code>survey_multi()</code>)</p></li>
+</ul>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

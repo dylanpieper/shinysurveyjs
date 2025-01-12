@@ -27,4 +27,6 @@ configure_shiny(
   autoreload = FALSE
 )
 }
+
 }
+\keyword{internal}

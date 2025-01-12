@@ -60,15 +60,15 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #'
 #' @param dynamic_config List of configuration entries. Each entry must be a list
 #'   containing the following fields:
-#'   - table_name: Name of the database table
-#'   - group_type: Must be either "choice" or "param"
-#'   - group_col: Column name for grouping
-#'   - parent_table_name: (Optional) Name of parent table for relationships
-#'   - parent_id_col: (Optional) Column name in parent table for relationship
-#'   - display_col: (Required for group_type="param") Column name for display
+#'   - **table_name**: Name of the database table
+#'   - **group_type**: Must be either "choice" or "param"
+#'   - **group_col**: Column name for grouping
+#'   - **parent_table_name**: (Optional) Name of parent table for relationships
+#'   - **parent_id_col**: (Optional) Column name in parent table for relationship
+#'   - **display_col**: (Required for group_type="param") Column name for display
 #'
 #' @param config_list Optional list of cached tables to verify table/column existence
-#' @param survey_logger `survey_logger` object for recording validation results and errors
+#' @param survey_logger Logger object for logging validation results and errors
 #'
 #' @return List with two elements:
 #'   - valid: Logical indicating if the configuration is valid
@@ -80,17 +80,13 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #'   list(
 #'     table_name = "config_packages",
 #'     group_type = "choice",
-#'     group_col = "package",
-#'     parent_table_name = "package_versions",
-#'     parent_id_col = "package_id"
+#'     group_col = "package"
 #'   ),
 #'   list(
 #'     table_name = "config_pid",
 #'     group_type = "param",
 #'     group_col = "pid",
-#'     display_col = "full_name",
-#'     parent_table_name = "projects",
-#'     parent_id_col = "project_id"
+#'     display_col = "full_name"
 #'   )
 #' )
 #'
@@ -98,7 +94,7 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #' config_list <- read_and_cache(db_ops, config)
 #'
 #' # Then validate using the cache
-#' result <- dynamic_config_validate(config, config_list, survey_logger)
+#' result <- validate_dynamic_config(config, config_list, survey_logger)
 #' if (!result$valid) {
 #'   stop(paste(result$errors, collapse = "\n"))
 #' }
@@ -383,14 +379,15 @@ get_source_display_text <- function(source_value, config_source_df) {
 
 #' Transform Validated Parameters
 #'
+#' @description
 #' Transforms a list of validated parameters into a structured format with text/value pairs,
 #' looking up display text from configuration tables where applicable.
 #'
 #' @param validated_params List. Input parameters in the format:
 #'   list(param_name = "value") or list(param_name = list(value = "value"))
-#' @param config_list List. Configuration data containing:
-#'   - config_source: Data frame with columns 'source' and 'display_text'
-#'   - config_packages: Data frame with package configurations
+#' @param config_list List. Configuration data containing tables including:
+#'   - **config_source**: Data frame with columns 'source' and 'display_text'
+#'   - **config_packages**: Data frame with package configurations
 #'
 #' @return List. Transformed parameters in the format:
 #'   list(param_name = list(text = "display_text", value = "value"))
@@ -418,24 +415,6 @@ transform_validated_params <- function(validated_params, config_list) {
   }) |> setNames(names(validated_params))
 }
 
-#' Get Display Text for Source Parameters
-#'
-#' Looks up the display text from the config source table based on the source value.
-#' If no match is found, returns the original value.
-#'
-#' @param source_value Character. The source identifier (e.g., "GITHUB", "CRAN")
-#' @param config_source_df Data frame. Configuration table containing source mappings
-#'   with columns 'source' and 'display_text'
-#'
-#' @return Character. The display text corresponding to the source value
-#'
-#' @keywords internal
-get_source_display_text <- function(source_value, config_source_df) {
-  display_text <- config_source_df$display_text[config_source_df$source == source_value]
-  if(length(display_text) == 0) return(source_value)  # fallback to value if not found
-  return(display_text)
-}
-
 #' Format Choices for JavaScript Survey Library
 #'
 #' @description
@@ -449,8 +428,13 @@ get_source_display_text <- function(source_value, config_source_df) {
 #' @param is_child Logical, whether this field contains child choices
 #' @param parent_field Character, name of the field containing parent choices
 #' @param display_col Character, optional name of column containing display text
+#' @param is_param_parent Logical, whether this is a parameter parent field
+#' @param choice_ids Vector, optional IDs to associate with choices
 #'
-#' @return A list formatted for JavaScript survey components with relationship metadata
+#' @return A list formatted for JavaScript survey components containing:
+#'   - **type**: Type of field ("parent", "param_parent", "child", or "standalone")
+#'   - **choices**: List of formatted choices with value, text, and relationship data
+#'   - Additional metadata fields depending on relationship type
 #'
 #' @examples
 #' \dontrun{
@@ -458,13 +442,19 @@ get_source_display_text <- function(source_value, config_source_df) {
 #' choices <- c("parent1", "parent2")
 #' formatted <- format_choices_for_js(choices, is_parent = TRUE, child_field = "child_field")
 #'
-#' # Child choices
+#' # Child choices with parent IDs
 #' child_choices <- list(
-#'   list(value = "child1", text = "Child 1", parentId = 1),
-#'   list(value = "child2", text = "Child 2", parentId = 1)
+#'   list(value = "child1", text = "Child 1", parentId = 1, parentValue = "parent1"),
+#'   list(value = "child2", text = "Child 2", parentId = 1, parentValue = "parent1")
 #' )
-#' formatted_children <- format_choices_for_js(child_choices, is_child = TRUE, parent_field = "parent_field")
+#' formatted_children <- format_choices_for_js(
+#'   child_choices,
+#'   is_child = TRUE,
+#'   parent_field = "parent_field"
+#' )
 #' }
+#'
+#' @keywords internal
 format_choices_for_js <- function(choices,
                                   is_parent = FALSE,
                                   child_field = NULL,
@@ -507,7 +497,7 @@ format_choices_for_js <- function(choices,
         value = unlist(values),
         text = unlist(texts),
         parentId = parent_ids,
-        parentValue = parent_values  # Include parent values for mapping
+        parentValue = parent_values
       )
     }
     return(base_structure)
@@ -534,21 +524,24 @@ format_choices_for_js <- function(choices,
 #' @description
 #' Configures dynamic fields based on the provided configuration, handling both
 #' choices and parameters. Supports parent-child relationships between fields and
-#' optional display text for choices.
+#' optional display text for choices. Sends the formatted field configurations
+#' to the client via a custom message.
 #'
 #' @param dynamic_config List of configuration entries. Each entry must be a list containing:
-#'   - group_type: Character, either "choice" or "param"
-#'   - table_name: Character, name of the source table
-#'   - group_col: Character, name of the column containing choices
-#'   - parent_table_name: (Optional) Character, name of parent table
-#'   - parent_id_col: (Optional) Character, column name for parent-child relationship
+#'   - **group_type**: Character, either "choice" or "param"
+#'   - **table_name**: Character, name of the source table
+#'   - **group_col**: Character, name of the column containing choices
+#'   - **parent_table_name**: (Optional) Character, name of parent table
+#'   - **parent_id_col**: (Optional) Character, column name for parent-child relationship
 #'   - display_col: (Optional) Character, column name containing display text
-#'
 #' @param config_list_reactive Reactive expression containing cached database tables
-#' @param session Shiny session object
-#' @param logger Logger object
+#' @param session Shiny session object for sending messages to the client
+#' @param logger Logger object for recording operation results
 #'
-#' @return Invisible NULL
+#' @return Invisible NULL. The function operates via side effects, sending formatted
+#'   field configurations to the client via `session$sendCustomMessage`.
+#'
+#' @keywords internal
 configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger) {
   # Validate inputs
   if (is.null(dynamic_config) || !is.list(dynamic_config)) {
@@ -694,7 +687,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
       session$sendCustomMessage("updateDynamicChoices", choices_data)
 
       logger$log_message(
-        sprintf("Sent JSON to front-end: %s", jsonlite::toJSON(choices_data)),
+        sprintf("Sent JSON to frontend: %s", jsonlite::toJSON(choices_data)),
         "INFO",
         "SURVEY"
       )

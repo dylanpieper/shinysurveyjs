@@ -10,7 +10,9 @@ format_choices_for_js(
   child_field = NULL,
   is_child = FALSE,
   parent_field = NULL,
-  display_col = NULL
+  display_col = NULL,
+  is_param_parent = FALSE,
+  choice_ids = NULL
 )
 }
 \arguments{
@@ -25,9 +27,18 @@ format_choices_for_js(
 \item{parent_field}{Character, name of the field containing parent choices}
 
 \item{display_col}{Character, optional name of column containing display text}
+
+\item{is_param_parent}{Logical, whether this is a parameter parent field}
+
+\item{choice_ids}{Vector, optional IDs to associate with choices}
 }
 \value{
-A list formatted for JavaScript survey components with relationship metadata
+A list formatted for JavaScript survey components containing:
+\itemize{
+\item \strong{type}: Type of field ("parent", "param_parent", "child", or "standalone")
+\item \strong{choices}: List of formatted choices with value, text, and relationship data
+\item Additional metadata fields depending on relationship type
+}
 }
 \description{
 Formats R choice data structures into a format compatible with JavaScript survey components.
@@ -40,11 +51,17 @@ parent-child relationships between fields.
 choices <- c("parent1", "parent2")
 formatted <- format_choices_for_js(choices, is_parent = TRUE, child_field = "child_field")
 
-# Child choices
+# Child choices with parent IDs
 child_choices <- list(
-  list(value = "child1", text = "Child 1", parentId = 1),
-  list(value = "child2", text = "Child 2", parentId = 1)
+  list(value = "child1", text = "Child 1", parentId = 1, parentValue = "parent1"),
+  list(value = "child2", text = "Child 2", parentId = 1, parentValue = "parent1")
 )
-formatted_children <- format_choices_for_js(child_choices, is_child = TRUE, parent_field = "parent_field")
+formatted_children <- format_choices_for_js(
+  child_choices,
+  is_child = TRUE,
+  parent_field = "parent_field"
+)
 }
+
 }
+\keyword{internal}

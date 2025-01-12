@@ -20,6 +20,7 @@ update date, session ID, and IP address."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/dylanpieper/shinysurveyjs" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -83,6 +84,7 @@ update date, session ID, and IP address.</p>
 <li><p><a href="#method-Database%20Operations-create_survey_table"><code>db_ops$create_survey_table()</code></a></p></li>
 <li><p><a href="#method-Database%20Operations-update_survey_table"><code>db_ops$update_survey_table()</code></a></p></li>
 <li><p><a href="#method-Database%20Operations-read_table"><code>db_ops$read_table()</code></a></p></li>
+<li><p><a href="#method-Database%20Operations-update_by_id"><code>db_ops$update_by_id()</code></a></p></li>
 <li><p><a href="#method-Database%20Operations-clone"><code>db_ops$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Database Operations-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
@@ -249,15 +251,43 @@ Update existing survey table with new data</p>
 <p>data.frame. The requested data</p>
 </div>
 
-</div><p></p><hr><a id="method-Database Operations-clone"></a><div class="section">
-<h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
-<p>The objects of this class are cloneable with this method.</p><div class="section">
+</div><p></p><hr><a id="method-Database Operations-update_by_id"></a><div class="section">
+<h3 id="method-update-by-id-">Method <code>update_by_id()</code><a class="anchor" aria-label="anchor" href="#method-update-by-id-"></a></h3>
+<p>Update specific columns in a table for a given row ID</p><div class="section">
 <h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">update_by_id</span><span class="op">(</span><span class="va">table_name</span>, <span class="va">id</span>, <span class="va">values</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>table_name</code></dt>
+<dd><p>Character. Name of the table to update</p></dd>
+
+
+<dt><code>id</code></dt>
+<dd><p>Numeric. Row ID to update</p></dd>
+
+
+<dt><code>values</code></dt>
+<dd><p>List. Named list of column-value pairs to update</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<p>Invisible(NULL)</p>
+</div>
+
+</div><p></p><hr><a id="method-Database Operations-clone"></a><div class="section">
+<h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
+<p>The objects of this class are cloneable with this method.</p><div class="section">
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-7">Arguments<a class="anchor" aria-label="anchor" href="#arguments-7"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 

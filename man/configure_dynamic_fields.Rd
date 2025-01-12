@@ -9,25 +9,28 @@ configure_dynamic_fields(dynamic_config, config_list_reactive, session, logger)
 \arguments{
 \item{dynamic_config}{List of configuration entries. Each entry must be a list containing:
 \itemize{
-\item group_type: Character, either "choice" or "param"
-\item table_name: Character, name of the source table
-\item group_col: Character, name of the column containing choices
-\item parent_table_name: (Optional) Character, name of parent table
-\item parent_id_col: (Optional) Character, column name for parent-child relationship
+\item \strong{group_type}: Character, either "choice" or "param"
+\item \strong{table_name}: Character, name of the source table
+\item \strong{group_col}: Character, name of the column containing choices
+\item \strong{parent_table_name}: (Optional) Character, name of parent table
+\item \strong{parent_id_col}: (Optional) Character, column name for parent-child relationship
 \item display_col: (Optional) Character, column name containing display text
 }}
 
 \item{config_list_reactive}{Reactive expression containing cached database tables}
 
-\item{session}{Shiny session object}
+\item{session}{Shiny session object for sending messages to the client}
 
-\item{logger}{Logger object}
+\item{logger}{Logger object for recording operation results}
 }
 \value{
-Invisible NULL
+Invisible NULL. The function operates via side effects, sending formatted
+field configurations to the client via \code{session$sendCustomMessage}.
 }
 \description{
 Configures dynamic fields based on the provided configuration, handling both
 choices and parameters. Supports parent-child relationships between fields and
-optional display text for choices.
+optional display text for choices. Sends the formatted field configurations
+to the client via a custom message.
 }
+\keyword{internal}

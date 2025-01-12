@@ -14,17 +14,17 @@ validate_dynamic_config(
 \item{dynamic_config}{List of configuration entries. Each entry must be a list
 containing the following fields:
 \itemize{
-\item table_name: Name of the database table
-\item group_type: Must be either "choice" or "param"
-\item group_col: Column name for grouping
-\item parent_table_name: (Optional) Name of parent table for relationships
-\item parent_id_col: (Optional) Column name in parent table for relationship
-\item display_col: (Required for group_type="param") Column name for display
+\item \strong{table_name}: Name of the database table
+\item \strong{group_type}: Must be either "choice" or "param"
+\item \strong{group_col}: Column name for grouping
+\item \strong{parent_table_name}: (Optional) Name of parent table for relationships
+\item \strong{parent_id_col}: (Optional) Column name in parent table for relationship
+\item \strong{display_col}: (Required for group_type="param") Column name for display
 }}
 
 \item{config_list}{Optional list of cached tables to verify table/column existence}
 
-\item{survey_logger}{\code{survey_logger} object for recording validation results and errors}
+\item{survey_logger}{Logger object for logging validation results and errors}
 }
 \value{
 List with two elements:
@@ -44,17 +44,13 @@ config <- list(
   list(
     table_name = "config_packages",
     group_type = "choice",
-    group_col = "package",
-    parent_table_name = "package_versions",
-    parent_id_col = "package_id"
+    group_col = "package"
   ),
   list(
     table_name = "config_pid",
     group_type = "param",
     group_col = "pid",
-    display_col = "full_name",
-    parent_table_name = "projects",
-    parent_id_col = "project_id"
+    display_col = "full_name"
   )
 )
 
@@ -62,7 +58,7 @@ config <- list(
 config_list <- read_and_cache(db_ops, config)
 
 # Then validate using the cache
-result <- dynamic_config_validate(config, config_list, survey_logger)
+result <- validate_dynamic_config(config, config_list, survey_logger)
 if (!result$valid) {
   stop(paste(result$errors, collapse = "\n"))
 }

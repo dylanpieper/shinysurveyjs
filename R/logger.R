@@ -189,7 +189,6 @@ survey_logger <- R6::R6Class(
     }
   ),
   private = list(
-    #' @description Ensures the logging table exists in the database
     ensure_table_exists = function() {
       pool <- get("app_pool", envir = .GlobalEnv)
       conn <- pool::poolCheckout(pool)

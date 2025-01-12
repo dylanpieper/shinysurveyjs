@@ -2,7 +2,6 @@
 #'
 #' @description Creates and manages a global database pool connection using PostgreSQL.
 #'
-#' @format An R6 class object
 #' @param host Database host
 #' @param port Database port
 #' @param db_name Database name
@@ -12,8 +11,11 @@
 #' @param max_size Maximum pool size (default: Inf)
 #'
 #' @return A database pool object
+#'
 #' @importFrom pool dbPool poolClose
 #' @importFrom RPostgres Postgres
+#'
+#' @keywords internal
 db_pool_open <- function(host = NULL,
                          port = NULL,
                          db_name = NULL,
@@ -41,11 +43,37 @@ db_pool_open <- function(host = NULL,
 #' Close Database Pool
 #'
 #' Closes the database connection pool and performs cleanup operations
-#' when the application is shutting down.
+#' when the application is shutting down. This function ensures proper
+#' resource management by closing all open connections and removing the
+#' pool object from the global environment.
 #'
-#' @param session Shiny session object
+#' @param session A Shiny session object that represents the current user session.
+#'                This is used to register the cleanup operation.
+#'
+#' @details
+#' This function performs the following operations:
+#' 1. Registers a cleanup handler using shiny::onStop
+#' 2. Checks for the existence of 'app_pool' in the global environment
+#' 3. Calls cleanup_pool() on the existing pool if found
+#' 4. Removes the pool object from the global environment
+#'
+#' @note
+#' The function assumes the existence of a cleanup_pool() function and
+#' that the database pool is stored in the global environment as 'app_pool'.
+#'
+#' @examples
+#' \dontrun{
+#' # In your Shiny server function
+#' function(input, output, session) {
+#'   db_pool_close(session)
+#' }
+#' }
+#'
+#' @seealso
+#' \code{\link[shiny]{onStop}} for more information about Shiny's cleanup handlers
 #'
 #' @importFrom shiny onStop
+#' @keywords internal
 db_pool_close <- function(session) {
   shiny::onStop(function() {
     if (exists("app_pool", envir = .GlobalEnv)) {
@@ -546,6 +574,70 @@ db_ops <- R6::R6Class(
 
         return(result)
       }, sprintf("Failed to read from table '%s'", sanitized_table))
+    },
+
+    #' @description Update specific columns in a table for a given row ID
+    #' @param table_name Character. Name of the table to update
+    #' @param id Numeric. Row ID to update
+    #' @param values List. Named list of column-value pairs to update
+    #' @return Invisible(NULL)
+    update_by_id = function(table_name, id, values) {
+      if (is.null(table_name) || !is.character(table_name)) {
+        self$logger$log_message("Invalid table_name parameter", "ERROR", "DATABASE")
+        stop("Invalid table name")
+      }
+
+      if (is.null(id) || !is.numeric(id)) {
+        self$logger$log_message("Invalid id parameter", "ERROR", "DATABASE")
+        stop("Invalid id")
+      }
+
+      if (is.null(values) || !is.list(values) || length(values) == 0) {
+        self$logger$log_message("Invalid values parameter", "ERROR", "DATABASE")
+        stop("Invalid values")
+      }
+
+      sanitized_table <- private$sanitize_survey_table_name(table_name)
+
+      self$operate(function(conn) {
+        # Build SET clause
+        set_parts <- vapply(names(values), function(col) {
+          value <- values[[col]]
+          if (is.character(value)) {
+            sprintf("%s = %s",
+                    DBI::dbQuoteIdentifier(conn, col),
+                    DBI::dbQuoteString(conn, value))
+          } else {
+            sprintf("%s = %s",
+                    DBI::dbQuoteIdentifier(conn, col),
+                    value)
+          }
+        }, character(1))
+
+        set_clause <- paste(set_parts, collapse = ", ")
+
+        # Build and execute UPDATE query
+        query <- sprintf(
+          "UPDATE %s SET %s WHERE id = %d",
+          DBI::dbQuoteIdentifier(conn, sanitized_table),
+          set_clause,
+          id
+        )
+
+        rows_affected <- DBI::dbExecute(conn, query)
+
+        if (rows_affected == 0) {
+          warning(sprintf("No rows updated for id %d in table %s", id, sanitized_table))
+        }
+
+        self$logger$log_message(
+          sprintf("Updated %d rows in table '%s' for id %d", rows_affected, sanitized_table, id),
+          "INFO",
+          "DATABASE"
+        )
+
+        invisible(NULL)
+      }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
     }
   ),
 

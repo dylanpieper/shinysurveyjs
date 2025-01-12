@@ -53,9 +53,9 @@ function initializeSurvey(data) {
                     const urlValue = paramData.value;
                     const savedValue = savedData[key];
 
-                    // Get the saved value, checking both direct value and possible _internalValue
-                    const effectiveSavedValue = savedData[`${key}_internalValue`] !== undefined ?
-                        savedData[`${key}_internalValue`] : savedValue;
+                    // Get the saved value, checking both direct value and possible _param
+                    const effectiveSavedValue = savedData[`${key}_param`] !== undefined ?
+                        savedData[`${key}_param`] : savedValue;
 
                     if (urlValue !== effectiveSavedValue) {
                         console.log(`URL param ${key} differs from saved data:`, {
@@ -85,7 +85,7 @@ function initializeSurvey(data) {
                 if (paramData?.value !== undefined) {
                     // Store both the display text and internal value
                     initialData[key] = paramData.text;
-                    initialData[`${key}_internalValue`] = paramData.value;
+                    initialData[`${key}_param`] = paramData.value;
                 }
             });
             survey.data = initialData;
@@ -107,7 +107,7 @@ function initializeSurvey(data) {
                 if (paramData?.value !== undefined) {
                     // Store both the display text and internal value
                     initialData[key] = paramData.text;
-                    initialData[`${key}_internalValue`] = paramData.value;
+                    initialData[`${key}_param`] = paramData.value;
                 }
             });
             if (Object.keys(initialData).length > 0) {
@@ -145,7 +145,7 @@ function initializeSurvey(data) {
                             if (!["data", "currentPageNo", "timestamp"].includes(key)) {
                                 const question = survey.getQuestionByName(key);
                                 // Get the internal value if it exists, otherwise use the displayed value
-                                responses[key] = question?._internalValue ?? value;
+                                responses[key] = question?._param ?? value;
                             }
                         }
                         return responses;

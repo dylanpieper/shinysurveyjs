@@ -10,10 +10,10 @@ transform_validated_params(validated_params, config_list)
 \item{validated_params}{List. Input parameters in the format:
 list(param_name = "value") or list(param_name = list(value = "value"))}
 
-\item{config_list}{List. Configuration data containing:
+\item{config_list}{List. Configuration data containing tables including:
 \itemize{
-\item config_source: Data frame with columns 'source' and 'display_text'
-\item config_packages: Data frame with package configurations
+\item \strong{config_source}: Data frame with columns 'source' and 'display_text'
+\item \strong{config_packages}: Data frame with package configurations
 }}
 }
 \value{

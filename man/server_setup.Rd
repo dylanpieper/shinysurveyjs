@@ -4,7 +4,14 @@
 \alias{server_setup}
 \title{Setup Server Components for Survey Application}
 \usage{
-server_setup(session, db_config, app_pool, survey_logger, db_ops)
+server_setup(
+  session,
+  db_config,
+  app_pool,
+  survey_logger,
+  db_ops,
+  suppress_logs
+)
 }
 \arguments{
 \item{session}{A Shiny session object containing the session token}
@@ -47,3 +54,4 @@ server_setup(
 }
 
 }
+\keyword{internal}

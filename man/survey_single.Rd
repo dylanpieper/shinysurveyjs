@@ -2,10 +2,11 @@
 % Please edit documentation in R/server.R
 \name{survey_single}
 \alias{survey_single}
-\title{Create Single Survey}
+\title{Single Survey Shiny Application}
 \usage{
 survey_single(
-  json,
+  json = NULL,
+  list = NULL,
   show_response = FALSE,
   theme = "defaultV2",
   theme_color = "#003594",
@@ -16,13 +17,16 @@ survey_single(
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
   dynamic_config = NULL,
-  cookie_expiration_days = 7
+  cookie_expiration_days = 7,
+  suppress_logs = FALSE
 )
 }
 \arguments{
 \item{json}{Survey JSON string or object defining the survey structure}
 
-\item{show_response}{Logical. Whether to show responses after submission (default: TRUE)}
+\item{list}{List with survey structure to convert to JSON}
+
+\item{show_response}{Logical. Show responses in a \code{data.table()} after submission (default: TRUE)}
 
 \item{theme}{Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")}
 
@@ -30,7 +34,7 @@ survey_single(
 
 \item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
 
-\item{shiny_config}{Optional list. Shiny configuration parameters passed to configure_shiny()}
+\item{shiny_config}{Optional list. Shiny configuration parameters}
 
 \item{db_config}{List. Database connection parameters (defaults to environment variables):
 \itemize{
@@ -43,12 +47,15 @@ survey_single(
 \item \strong{log_table}: Table name to write log messages (default: LOG_TABLE environment variable)
 }}
 
-\item{cookie_expiration_days}{Number of days to keep cookies for URL parameters (default: 7)}
+\item{cookie_expiration_days}{Number of days to keep cookies for survey data (default: 7)}
+
+\item{suppress_logs}{Logical. Suppress log messages in the console (default: FALSE)}
 }
 \value{
 A Shiny application object
 }
 \description{
-Creates a Shiny application for a single survey with database integration.
-Responses are stored in a PostgreSQL database with configurable table name.
+Deploys a Shiny application for a single survey with database integration.
+Survey data and app logs are stored in a PostgreSQL database with configurable table names.
+App logs are stored asynchronously using a future plan.
 }

@@ -13,12 +13,12 @@
 #'
 #' @param db_config A list containing database configuration parameters:
 #'   \itemize{
-#'     \item host: Database host address
-#'     \item port: Database port number
-#'     \item db_name: Name of the database
-#'     \item user: Database username
-#'     \item password: Database password
-#'     \item write_table: Name of the table for write operations
+#'     \item **host**: Database host address
+#'     \item **port**: Database port number
+#'     \item **db_name**: Name of the database
+#'     \item **user**: Database username
+#'     \item **password**: Database password
+#'     \item **write_table**: Name of the table for write operations
 #'   }
 #' @param shiny_config Optional list of Shiny configuration parameters to be passed
 #'   to configure_shiny function. If provided, these settings will be applied
@@ -33,7 +33,7 @@
 #' \itemize{
 #'   \item Validates the write_table parameter is a non-empty string
 #'   \item Checks for required database configuration fields
-#'   \item Sets environment variables (HOST, PORT, DB_NAME, USER, PASSWORD) if not present
+#'   \item Sets environment variables (**HOST**, **PORT**, **DB_NAME**, **USER**, **PASSWORD**) if not present
 #'   \item Applies optional Shiny configuration
 #'   \item Creates a global database connection pool if it doesn't exist
 #'   \item Initializes future package for asynchronous operations based on OS
@@ -43,22 +43,24 @@
 #' any existing configurations.
 #'
 #' @section Database Pool:
-#' The database pool is created using the db_pool_open function and stored in
+#' The database pool is created using the `db_pool_open` function and stored in
 #' the global environment as 'app_pool'. If a pool already exists, it is
 #' not recreated.
 #'
 #' @section Asynchronous Processing:
 #' The function detects the operating system and sets up the appropriate future plan:
 #' \itemize{
-#'   \item Windows: Uses multisession
-#'   \item macOS: Uses multicore if supported, falls back to multisession
-#'   \item Linux: Uses multicore if supported, falls back to multisession
+#'   \item **Windows**: Uses `multisession`
+#'   \item **macOS**: Uses `multicore` if supported, falls back to `multisession`
+#'   \item **Linux**: Uses `multicore` if supported, falls back to `multisession`
 #' }
 #'
 #' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info cli_alert_warning
 #' @importFrom future plan multisession multicore
 #'
 #' @return Invisibly returns the initialized database pool object
+#'
+#' @keywords internal
 survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
@@ -170,6 +172,8 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
 #'   autoreload = FALSE
 #' )
 #' }
+#'
+#' @keywords internal
 configure_shiny <- function(..., type_handlers = list()) {
   # Default type handlers
   default_handlers <- list(
@@ -238,7 +242,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' # After running, 'logger' and 'db_ops' are available in the parent environment
 #' }
 #'
-#' @export
+#' @keywords internal
 server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
   # Initialize survey app logger
   logger <- survey_logger$new(
@@ -318,7 +322,8 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #'
 #' @importFrom shiny req validate need reactive outputOptions
 #' @importFrom DT renderDT datatable
-#' @export
+#'
+#' @keywords internal
 server_response <- function(output, rv, show_response = TRUE) {
   # Render the response table with error handling
   output$surveyResponseTable <- renderDT({
@@ -383,7 +388,8 @@ server_response <- function(output, rv, show_response = TRUE) {
 #' }
 #'
 #' @importFrom shiny onSessionEnded
-#' @export
+#'
+#' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
   # Register cleanup actions for session end
   session$onSessionEnded(function() {
@@ -413,7 +419,7 @@ server_clean <- function(session, logger, zone = "SURVEY") {
 #'   params <- parse_query(session)
 #' }
 #'
-#' @export
+#' @keywords internal
 parse_query <- function(input) {
   # Check if input is a Shiny session object
   if (inherits(input, "ShinySession")) {
@@ -468,4 +474,58 @@ parse_query <- function(input) {
   }
 
   return(result)
+}
+
+#' Update Duration Save
+#'
+#' @description
+#' Updates the duration_save value for a specific survey response using the
+#' provided database connection pool.
+#'
+#' @param db_ops Database operations object instance
+#' @param db_config List containing database configuration including:
+#'   \itemize{
+#'     \item write_table: Table name for survey data
+#'   }
+#' @param session_id Character string containing the Shiny session token
+#' @param duration_save Numeric value of the duration to save
+#' @param logger Logger object for recording operations
+#'
+#' @return NULL invisibly
+#'
+#' @keywords internal
+update_duration_save <- function(db_ops, db_config, session_id, duration_save, logger) {
+  # Get the row ID using the existing connection
+  row_id <- db_ops$read_table(
+    db_config$write_table,
+    columns = "id",
+    filters = list(session_id = session_id),
+    order_by = "id",
+    desc = TRUE,
+    limit = 1
+  )$id
+
+  tryCatch({
+    # Perform the update using the existing db_ops instance
+    db_ops$update_by_id(
+      db_config$write_table,
+      row_id,
+      list(duration_save = duration_save)
+    )
+
+    logger$log_message(
+      sprintf("Updated duration_save for row %d", row_id),
+      "INFO",
+      "DATABASE"
+    )
+  },
+  error = function(e) {
+    logger$log_message(
+      sprintf("Failed to update duration_save: %s", e$message),
+      "ERROR",
+      "DATABASE"
+    )
+  })
+
+  invisible(NULL)
 }
