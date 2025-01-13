@@ -4,7 +4,13 @@
 \alias{server_response}
 \title{Create Survey Response Table Output}
 \usage{
-server_response(output, rv, show_response = TRUE)
+server_response(
+  output,
+  rv,
+  show_response = TRUE,
+  theme_mode = "light",
+  theme_color = "#003594"
+)
 }
 \arguments{
 \item{output}{The Shiny output object}
@@ -18,6 +24,10 @@ server_response(output, rv, show_response = TRUE)
 }}
 
 \item{show_response}{Boolean indicating whether to show the response table}
+
+\item{theme_mode}{Character string specifying the theme mode ("light" or "dark")}
+
+\item{theme_color}{Character string specifying the primary theme color (hex code)}
 }
 \value{
 None (called for side effects)
@@ -25,12 +35,12 @@ None (called for side effects)
 \description{
 This function sets up the server-side logic for displaying a survey response
 data table in a Shiny application. It handles the rendering of the response
-table and controls its visibility based on various reactive values.
+table, controls its visibility, and applies theming based on light/dark mode.
 }
 \details{
 The function creates two reactive outputs:
 \itemize{
-\item surveyResponseTable - A DataTable showing survey responses
+\item surveyResponseTable - A DataTable showing survey responses with themed styling
 \item showResponseTable - Controls visibility of the response table
 }
 
@@ -40,6 +50,12 @@ The table will only be shown when:
 \item Data is not loading
 \item There are no error messages
 \item show_response parameter is TRUE
+}
+
+The function applies different color schemes based on the theme_mode:
+\itemize{
+\item Light mode: White background with dark text and subtle borders
+\item Dark mode: Dark background with light text and contrasting borders
 }
 }
 \examples{
@@ -52,7 +68,13 @@ server <- function(input, output, session) {
     error_message = NULL
   )
 
-  server_response(output, rv, show_response = TRUE)
+  server_response(
+    output,
+    rv,
+    show_response = TRUE,
+    theme_mode = "light",
+    theme_color = "#003594"
+  )
 }
 }
 

@@ -1,50 +1,20 @@
-#' Generate Survey CSS with Theme Support
+#' Generate Complete Survey Theme
 #'
-#' Creates CSS code for styling survey components with support for light and dark themes.
-#' The function generates CSS variables and styles for various survey components including
-#' buttons, inputs, questions, and navigation elements.
+#' Creates a comprehensive theme including both CSS variables and complete styling for survey components.
 #'
-#' @param primary Character string specifying the primary color in hex format. This color
-#'   is used for buttons, selected states, and interactive elements. Default is "#003594".
-#' @param primary_foreground Character string specifying the text color for primary elements
-#'   in hex format. This should provide sufficient contrast against the primary color.
-#'   Default is "#ffffff".
-#' @param mode Character string specifying the color theme. Must be either "light" or "dark".
-#'   Default is "light".
-#' @param css_string Optional character string containing custom CSS. If provided, the function
-#'   returns this string instead of generating new CSS. Default is NULL.
+#' @param theme Character string specifying "defaultV2" or "modern" theme
+#' @param primary Character string specifying the primary color in hex format
+#' @param primary_foreground Character string specifying text color for primary elements (optional)
+#' @param mode Character string specifying "light" or "dark" mode
+#' @param css_string Optional custom CSS string
 #'
-#' @return A character string containing the complete CSS code for survey styling.
-#'
-#' @details
-#' The function generates CSS that includes:
-#' * Root CSS variables for colors and themes
-#' * Component-specific styles for questions, inputs, and buttons
-#' * Theme-specific color variables for light and dark modes
-#' * Interactive states (hover, focus, disabled)
-#' * Special styling for navigation and completion buttons
-#'
-#' The CSS is structured using CSS variables (custom properties) to maintain
-#' consistency and enable dynamic theme switching.
-#'
-#' @examples
-#' # Generate default light theme CSS
-#' css <- survey_css()
-#'
-#' # Generate dark theme CSS
-#' dark_css <- survey_css(mode = "dark")
-#'
-#' # Custom primary color with dark theme
-#' custom_css <- survey_css(
-#'   primary = "#FF0000",
-#'   primary_foreground = "#FFFFFF",
-#'   mode = "dark"
-#' )
+#' @return A character string containing complete CSS for survey styling
 #'
 #' @keywords internal
-survey_css <- function(
+generate_survey_theme <- function(
+    theme = "defaultV2",
     primary = "#003594",
-    primary_foreground = "#ffffff",
+    primary_foreground = NULL,
     mode = "light",
     css_string = NULL) {
   if (!is.null(css_string)) {
@@ -54,33 +24,96 @@ survey_css <- function(
   # Validate inputs
   stopifnot(
     is.character(primary),
-    is.character(primary_foreground),
-    mode %in% c("light", "dark")
+    mode %in% c("light", "dark"),
+    theme %in% c("defaultV2", "modern")
   )
 
   # Calculate variant colors
   primary_light <- adjust_hex(primary, 25)
   primary_dark <- adjust_hex(primary, -25)
+  button_text_color <- get_button_text_color(primary, primary_foreground)
+  button_text_color_light <- get_button_text_color(primary_light)
 
   # Set mode-specific colors
   if (mode == "dark") {
-    background <- "#1a1a1a"
+    background <- "#404040"
     foreground <- "#e0e0e0"
-    input_background <- "#2d2d2d"
-    border_color <- "#404040"
+    input_background <- "#404040"
+    border_color <- "#888888"
     hover_background <- "#2a2a2a"
+    header_background <- "#2d2d2d"
+    disabled_color <- "#808080"
+    text_border <- "#404040"
+    container_background <- "#2d2d2d"
   } else {
     background <- "#ffffff"
     foreground <- "#404040"
     input_background <- "#ffffff"
     border_color <- "#e0e0e0"
     hover_background <- "#f5f5f5"
+    header_background <- "#e7e7e7"
+    disabled_color <- "#dbdbdb"
+    text_border <- "#d4d4d4"
+    container_background <- "#f5f5f5"
   }
 
-  # Create the CSS string
-  sprintf(
-    '
-/* Root variables */
+  # Base theme CSS
+  base_css <- if (theme == "modern") {
+    sprintf(
+      "
+.sv-root-modern {
+    /* Primary colors */
+    --main-color: %s;
+    --main-hover-color: %s;
+
+    /* Text colors */
+    --text-color: %s;
+    --light-text-color: %s;
+    --disabled-text-color: rgba(64, 64, 64, 0.5);
+    --foreground-light: #909090;
+
+    /* Background colors */
+    --body-background-color: %s;
+    --body-container-background-color: %s;
+    --header-background-color: %s;
+    --answer-background-color: %s;
+
+    /* Input colors */
+    --inputs-background-color: transparent;
+    --text-border-color: %s;
+    --border-color: %s;
+
+    /* Button colors */
+    --add-button-color: %s;
+    --remove-button-color: #ff1800;
+    --clean-button-color: %s;
+
+    /* Progress colors */
+    --progress-text-color: #9d9d9d;
+    --progress-buttons-color: %s;
+
+    /* State colors */
+    --disable-color: %s;
+    --disabled-label-color: rgba(64, 64, 64, 0.5);
+    --error-color: #d52901;
+    --error-background-color: rgba(213, 41, 1, 0.2);
+
+    /* Component colors */
+    --slider-color: white;
+    --disabled-slider-color: #cfcfcf;
+    --checkmark-color: %s;
+    --radio-checked-color: %s;
+}",
+      primary, primary_light, foreground, button_text_color,
+      background, hover_background, header_background,
+      sprintf("rgba(%s, 0.2)", paste(hex_to_rgb(primary), collapse = ", ")),
+      text_border, border_color, primary, primary,
+      adjust_hex(primary, 40), disabled_color,
+      button_text_color, foreground
+    )
+  } else {
+    sprintf(
+      "
 :root {
     --primary: %s;
     --primary-light: %s;
@@ -91,64 +124,153 @@ survey_css <- function(
     --input-background: %s;
     --border-color: %s;
     --hover-background: %s;
-}
 
-/* Base Survey Styles */
-.sd-root-modern {
-    /* Theme application */
-    background-color: var(--background);
-    color: var(--foreground);
-
-    /* Component mappings */
+    /* Component mappings for default theme */
     --sd-button-primary-background: var(--primary);
-    --sd-button-primary-text-color: var(--primary-foreground);
+    --sd-button-primary-text-color: %s;
     --sd-navigation-button-background: var(--primary);
-    --sd-navigation-button-text-color: var(--primary-foreground);
+    --sd-navigation-button-text-color: %s;
     --sd-navigation-button-hover: var(--primary-light);
-    --sd-checkbox-checked-background: var(--primary);
-    --sd-radio-checked-background: var(--primary);
-    --sd-rating-background: var(--primary);
-    --sd-progress-bar-background: var(--primary);
-    --sd-progress-bar-text: var(--primary-foreground);
-    --sd-matrix-background: var(--primary-light);
-    --sd-matrix-selected-background: var(--primary);
+}",
+      primary, primary_light, primary_dark, button_text_color,
+      background, foreground, input_background, border_color, hover_background,
+      button_text_color, button_text_color
+    )
+  }
+
+  # Base styles
+  base_styles <- sprintf(
+    "
+/* Base styles */
+body {
+    background-color: %s !important;
+    color: %s !important;
+    font-size: 16px !important;
 }
 
-/* Question Styles */
-.sd-question {
-    background-color: var(--input-background);
-    border: 1px solid var(--border-color);
+/* Headers */
+.sv-root-modern h1,
+.sv-root-modern h2,
+.sv-root-modern h3,
+.sv-root-modern h4,
+.sv-root-modern h5,
+.sv-root-modern h6,
+.sv-root-modern .sv-title,
+.sv-root-modern .sv-header__text,
+.sv-root-modern .sd-header__text .sd-title,
+.sv-root-modern .sv-header__text h3,
+.sv-root-modern .sv-container-modern .sv-title,
+.sv-container-modern .sv-title,
+#surveyResponseContainer h3 {
+    color: var(--foreground) !important;
 }
 
-.sd-question:hover {
-    background-color: var(--hover-background);
+/* Component column background */
+.sv-components-column {
+    background-color: %s;
 }
 
-.sd-question.sd-question--selected {
-    border-color: var(--primary);
-    background-color: var(--hover-background);
+/* Dark mode specific styles */
+body[data-theme=\"dark\"] .sv-components-column {
+    background-color: %s !important;
 }
 
-/* Input Styles */
-.sd-input {
-    background-color: var(--input-background);
-    border: 1px solid var(--border-color);
-    color: var(--foreground);
+.sv-body {
+    background-color: %s;
+    color: %s;
+}",
+    background, foreground,
+    container_background,
+    container_background,
+    container_background, foreground
+  )
+
+  # Container styles
+  container_styles <- sprintf(
+    "
+/* Completed page and container styles */
+.sd-body.sd-completedpage,
+.sv-body.sv-completedpage {
+    background-color: %s;
+    width: 100%% !important;
+    margin: 0 auto !important;
+    padding: 2rem !important;
+    box-sizing: border-box !important;
+    height: auto !important;
 }
 
-.sd-input:focus {
-    border-color: var(--primary);
-    background-color: var(--input-background);
+.sv-root-modern .sv-body.sv-completedpage {
+    height: auto !important;
 }
 
-/* Button Styles */
+.sd-completedpage__text {
+    text-align: center !important;
+}
+
+.sv-root-modern,
+.sd-root-modern {
+    width: 100%% !important;
+    overflow-x: hidden !important;
+}
+
+.sv-container-modern,
+.sv-body {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    color: %s;
+}
+
+.sv-question {
+    background-color: %s;
+    border: 1px solid %s;
+    border-radius: 4px;
+    padding: 16px;
+}
+
+.sv-question:hover {
+    background-color: %s;
+}
+
+.sv-question.sv-question--selected {
+    border-color: %s;
+    background-color: %s;
+}
+
+.sv-checkbox-material {
+    border-color: %s;
+}
+
+.sv-footer.sv-action-bar {
+    background-color: %s;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+}",
+    container_background,
+    foreground,
+    container_background, border_color,
+    hover_background,
+    primary, hover_background,
+    border_color,
+    container_background
+  )
+
+  # Button styles
+  button_styles <- if (theme == "defaultV2") {
+    sprintf(
+      "
+/* Default theme button styles */
 .sd-btn {
     background-color: var(--primary) !important;
-    color: var(--primary-foreground) !important;
+    color: %s !important;
     border: none !important;
+    transition: background-color 0.2s ease-in-out !important;
 }
 
 .sd-btn:hover {
+    background-color: var(--primary-light) !important;
+    color: %s !important;
     opacity: 0.9;
 }
 
@@ -157,61 +279,229 @@ survey_css <- function(
     opacity: 0.6;
 }
 
-/* Navigation Buttons */
+/* Navigation buttons */
 .sd-navigation__next-btn,
 .sd-navigation__prev-btn {
-    background-color: var(--primary-dark) !important;
-    color: var(--primary-foreground) !important;
+    background-color: var(--primary) !important;
+    color: %s !important;
     border: none !important;
+    transition: background-color 0.2s ease-in-out !important;
 }
 
-.sd-btn:hover,
 .sd-navigation__next-btn:hover,
 .sd-navigation__prev-btn:hover {
+    background-color: var(--primary-light) !important;
+    color: %s !important;
+}
+
+/* Complete button */
+.sd-btn--action[value=\"Complete\"] {
     background-color: var(--primary) !important;
+    color: %s !important;
+    border: none !important;
+    transition: background-color 0.2s ease-in-out !important;
+}
+
+.sd-btn--action[value=\"Complete\"]:hover {
+    background-color: var(--primary-light) !important;
+    color: %s !important;
+}
+
+/* Rating items */
+.sd-rating-item--selected {
+    background-color: var(--primary) !important;
+    color: %s !important;
+}",
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color
+    )
+  } else {
+    sprintf(
+      "
+/* Modern theme button styles */
+.sv-btn.sv-action-bar-item--secondary {
+    color: %s !important;
+}
+
+.sv-btn.sv-action-bar-item--secondary:hover {
+    background-color: %s !important;
+    color: %s !important;
     opacity: 0.9;
 }
 
-.sd-btn:disabled,
-.sd-navigation__next-btn:disabled,
-.sd-navigation__prev-btn:disabled {
-    background-color: var(--border-color) !important;
-    opacity: 0.6;
+.sv-footer__complete-btn,
+.sv-btn--navigation {
+    color: %s !important;
 }
 
-/* Complete Button */
-.sd-btn--action[value="Complete"] {
-    background: var(--primary) !important;
-    color: var(--primary-foreground) !important;
-    border: none !important;
+.sv-footer__complete-btn:hover,
+.sv-btn--navigation:hover {
+    background-color: %s !important;
+    color: %s !important;
+    opacity: 0.9;
 }
 
-.sd-btn--action[value="Complete"]:hover {
-    background: var(--primary-light) !important;
+/* Modern theme button sizes */
+.sv-root-modern .sv-btn,
+.sv-root-modern .sv-footer__complete-btn,
+.sv-root-modern .sv-nav-btn {
+    padding: 10px 25px !important;
+    font-size: 2rem !important;
+    min-height: 48px !important;
+    line-height: 1.4 !important;
 }
 
-/* Rating Items */
-.sd-rating-item--selected {
-    background-color: var(--primary) !important;
-    color: var(--primary-foreground) !important;
+.sv-root-modern .sv-footer__complete-btn {
+    font-weight: 600 !important;
 }
 
-/* Headers */
-.sd-header__text .sd-title {
-    color: var(--foreground);
+.sv-root-modern .sv-btn--navigation {
+    min-width: 120px !important;
+}",
+      button_text_color,
+      primary_light,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      primary_light,
+      button_text_color # Use same color for hover
+    )
+  }
+
+  # Message container CSS
+  message_css <- sprintf(
+    '
+/* Message containers */
+.message-container {
+    position: fixed;
+    top: 50%%;
+    left: 50%%;
+    transform: translate(-50%%, -50%%);
+    width: 90%%;
+    max-width: 600px;
+    min-width: 280px;
+    height: auto;
+    max-height: 90vh;
+    background: transparent;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-size: 20px;
+    color: %s;
+    text-align: center;
+    letter-spacing: -0.01em;
+    transition: opacity 0.3s ease;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
-/* Action Buttons */
-.sd-btn--action:hover {
-    background-color: var(--primary-light);
+@keyframes pulse {
+    0%% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    50%% {
+        transform: scale(1.2);
+        opacity: 0.2;
+    }
+    100%% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
 }
 
-/* HTML Container */
-.sd-html {
-    padding: 20px;
+.loading-spinner {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    margin: 16px auto;
+}
+
+.loading-spinner::before,
+.loading-spinner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 4px solid transparent;
+    border-radius: 50%%;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loading-spinner::before {
+    border-color: %s;
+}
+
+.loading-spinner::after {
+    border-color: %s;
+    animation-delay: -1s;
+}
+
+.loading-text {
+    position: relative;
+    display: inline-block;
+    font-size: 24px;
+}
+
+.error-message {
+    font-size: 24px;
+    font-weight: 600;
+    color: %s;
+    padding: 16px;
+    border-radius: 8px;
+    background: %s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    width: 100%%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+@media screen and (max-width: 480px) {
+    .message-container {
+        padding: 12px;
+        width: 95%%;
+        font-size: 16px;
+    }
+
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+    }
+
+    .loading-spinner::before,
+    .loading-spinner::after {
+        border-width: 3px;
+    }
+
+    .loading-text {
+        font-size: 18px;
+    }
+
+    .error-message {
+        font-size: 18px;
+        padding: 12px;
+    }
 }',
-    # Insert the variables
-    primary, primary_light, primary_dark, primary_foreground,
-    background, foreground, input_background, border_color, hover_background
+    foreground,
+    primary,
+    adjust_hex(primary, 20),
+    foreground, container_background
+  )
+
+  # Combine all CSS sections
+  paste(
+    base_css,
+    base_styles,
+    button_styles,
+    container_styles,
+    message_css,
+    sep = "\n\n"
   )
 }

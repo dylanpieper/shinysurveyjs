@@ -405,7 +405,7 @@ db_ops <- R6::R6Class(
 
         # Add tracking data
         data$session_id <- self$session_id
-        data$ip_address <- private$get_client_ip()
+        data$ip_address <- self$get_client_ip()
 
         # Check for new columns
         cols_query <- sprintf(
@@ -638,6 +638,48 @@ db_ops <- R6::R6Class(
 
         invisible(NULL)
       }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
+    },
+
+    #' Get Client IP Address
+    #'
+    #' @description
+    #' Retrieves the client IP address from HTTP request headers in order of preference.
+    #' This method checks multiple headers to handle scenarios involving proxies and load balancers.
+    #'
+    #' @details
+    #' The method checks the following headers in order:
+    #' 1. X-Real-IP
+    #' 2. X-Forwarded-For (takes first IP if multiple are present)
+    #' 3. REMOTE_ADDR
+    #'
+    #' If no IP address is found in any header, returns "0.0.0.0" as a fallback.
+    #'
+    #' @return Character string containing the client IP address. Returns "0.0.0.0" if no IP address can be determined.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Inside a Shiny server function
+    #' server <- function(input, output, session) {
+    #'   db_ops <- DatabaseOperations$new(pool, session$token, logger)
+    #'   client_ip <- db_ops$get_client_ip()
+    #' }
+    #' }
+    #'
+    #' @importFrom shiny parseQueryString getDefaultReactiveDomain
+    get_client_ip = function() {
+      headers <- as.list(shiny::parseQueryString(shiny::getDefaultReactiveDomain()$REQUEST))
+
+      ip <- headers$`X-Real-IP` %||%
+        headers$`X-Forwarded-For` %||%
+        headers$REMOTE_ADDR %||%
+        "0.0.0.0"
+
+      # If X-Forwarded-For contains multiple IPs, get the first one
+      if (grepl(",", ip)) {
+        ip <- trimws(strsplit(ip, ",")[[1]][1])
+      }
+
+      return(ip)
     }
   ),
 
@@ -692,22 +734,6 @@ db_ops <- R6::R6Class(
         return("JSONB")
       }
       return("TEXT")
-    },
-
-    get_client_ip = function() {
-      headers <- as.list(shiny::parseQueryString(shiny::getDefaultReactiveDomain()$REQUEST))
-
-      ip <- headers$`X-Real-IP` %||%
-        headers$`X-Forwarded-For` %||%
-        headers$REMOTE_ADDR %||%
-        "0.0.0.0"
-
-      # If X-Forwarded-For contains multiple IPs, get the first one
-      if (grepl(",", ip)) {
-        ip <- trimws(strsplit(ip, ",")[[1]][1])
-      }
-
-      return(ip)
     }
   )
 )

@@ -225,11 +225,18 @@ survey_single <- function(json = NULL,
     }) |> bindEvent(session$clientData$url_search, ignoreInit = FALSE)
 
     observeEvent(input$surveyComplete, {
+      shinyjs::hide(id = "surveyContainer",
+                    anim = TRUE,
+                    animType = "fade",
+                    time = 1)
+
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
       rv$complete_time <- Sys.time()
-      rv$duration_complete <- as.numeric(difftime(rv$complete_time, rv$start_time, units = "secs"))
-
+      rv$duration_complete <- as.numeric(difftime(
+        rv$complete_time,
+        rv$start_time,
+        units = "secs"))
       logger$log_message("Completed survey", zone = "SURVEY")
     })
 
@@ -285,9 +292,19 @@ survey_single <- function(json = NULL,
             parsed_data$duration_load <- rv$duration_load |> round(2)
             parsed_data$duration_complete <- rv$duration_complete |> round(2)
             parsed_data$duration_save <- rv$duration_save |> round(2)
+            parsed_data$session_id <- session$token
+            parsed_data$ip_address <- db_ops$get_client_ip()
+            parsed_data$date_created <- Sys.Date()
 
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
+
+            shinyjs::show(id = "surveyContainer",
+                          anim = TRUE,
+                          animType = "fade",
+                          time = 1)
+
+            invalidateLater(1000)
 
             hide_and_show("savingDataMessage", "surveyResponseContainer")
 
@@ -310,7 +327,13 @@ survey_single <- function(json = NULL,
       rv$loading <- FALSE
     })
 
-    server_response(output, rv, show_response = show_response)
+    server_response(
+      output,
+      rv,
+      show_response = show_response,
+      theme_mode = theme_mode,
+      theme_color = theme_color
+    )
 
     server_clean(session, logger)
   }
