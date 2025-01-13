@@ -54,7 +54,7 @@ generate_survey_theme <- function(
     header_background <- "#e7e7e7"
     disabled_color <- "#dbdbdb"
     text_border <- "#d4d4d4"
-    container_background <- "#f5f5f5"
+    container_background <- "#f9f9f9"
   }
 
   # Base theme CSS

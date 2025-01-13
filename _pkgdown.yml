@@ -18,6 +18,6 @@ template:
 figures:
   dev: grfx
 articles:
-  - title: Getting Started
+  - title: Advanced Features
     contents:
       - 'dynamic_field_config'

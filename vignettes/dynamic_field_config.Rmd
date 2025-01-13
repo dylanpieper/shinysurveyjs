@@ -103,7 +103,7 @@ dynamic_config = list(
 
 ## Examples: Package Feedback
 
-Imagine I want to develop an R package feedback survey to allow users to **select** one of my packages and a dependent version number, both populated from a database table, and **track** the referral source in the URL query.
+Imagine I want to develop an R package feedback survey to allow users to **select** one of my packages (parent) and a version number (dependent), both populated from a database table, and **track** the referral source in the URL query.
 
 Consider this database structure:
 
@@ -222,7 +222,7 @@ survey <- list(
 
 survey_single(
   list = survey,
-  show_response = TRUE,
+  theme = "modern",
   theme_color = "#00AD6E",
   theme_mode = "dark",
   db_config = list(
@@ -319,7 +319,7 @@ survey <- list(
 
 survey_single(
   list = survey,
-  show_response = TRUE,
+  theme = "modern",
   theme_color = "#00AD6E",
   theme_mode = "dark",
   db_config = list(

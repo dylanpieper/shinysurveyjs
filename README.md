@@ -26,7 +26,9 @@ For R applications, developers can easily incorporate SurveyJS by parsing the JS
 
 -   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source; see [vignette](articles/dynamic_field_config.html))
 
--   Asynchronous worker to update database without interrupting the survey including the logging app messages, warnings, and errors
+-   Log app messages, warnings, and errors
+
+-   Setup asynchronous future plan to update database without interrupting the survey
 
 ## Installation
 
