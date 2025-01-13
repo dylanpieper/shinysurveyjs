@@ -181,9 +181,9 @@ package.</p>
 <h2 id="examples-package-feedback">Examples: Package Feedback<a class="anchor" aria-label="anchor" href="#examples-package-feedback"></a>
 </h2>
 <p>Imagine I want to develop an R package feedback survey to allow users
-to <strong>select</strong> one of my packages and a dependent version
-number, both populated from a database table, and <strong>track</strong>
-the referral source in the URL query.</p>
+to <strong>select</strong> one of my packages (parent) and a version
+number (dependent), both populated from a database table, and
+<strong>track</strong> the referral source in the URL query.</p>
 <p>Consider this database structure:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co">-- Create the packages configuration table</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_packages (</span>
@@ -297,7 +297,7 @@ survey (e.g., <code>http://127.0.0.1:3838/?source=github</code>):</p>
 <span></span>
 <span><span class="fu"><a href="../reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
 <span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
 <span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
 <span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -397,7 +397,7 @@ survey (e.g.,
 <span></span>
 <span><span class="fu"><a href="../reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
 <span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
 <span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
 <span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
