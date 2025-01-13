@@ -35,3 +35,4 @@ DT::datatable(data, options = get_datatable_theme()$options)
 DT::datatable(data, options = get_datatable_theme("dark", "#003594")$options)
 
 }
+\keyword{internal}

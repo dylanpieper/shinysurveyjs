@@ -193,6 +193,7 @@ get_button_text_color <- function(primary_hex, primary_foreground = NULL) {
 #' # Dark mode table
 #' DT::datatable(data, options = get_datatable_theme("dark", "#003594")$options)
 #'
+#' @keywords internal
 get_datatable_theme <- function(mode = "light",
                                 theme_color = "#003594",
                                 container_bg = NULL,
