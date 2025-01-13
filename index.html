@@ -59,8 +59,9 @@
 <div class="section level2">
 <h2 id="surveyjs">SurveyJS<a class="anchor" aria-label="anchor" href="#surveyjs"></a>
 </h2>
-<p>SurveyJS is a JavaScript library that streamlines the creation of survey applications through a <a href="https://www.npmjs.com/package/survey-jquery" class="external-link">jQuery</a> architecture. The library offers a <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a> that allows developers to design complex surveys through an intuitive drag-and-drop interface, which automatically generates the JSON. The JSON structure defines all survey elements, including questions, validation rules, conditional logic, and field visibility.</p>
-<p>The library’s strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping, skip logic, and real-time validation with minimal code.</p>
+<p>SurveyJS is a JavaScript library that streamlines the creation of survey applications through a <a href="https://www.npmjs.com/package/survey-jquery" class="external-link">jQuery</a> architecture. The library offers a <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a> that allows developers to design complex surveys through a drag-and-drop interface and generate a JSON object.</p>
+<p>The JSON defines every survey element, including survey titles, descriptions, multi-page layouts, progress indicators, over 20 different question types, input validation rules, conditional logic flows, and field visibility controls.</p>
+<p>The library’s strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping with minimal code.</p>
 <p>For R applications, developers can easily incorporate SurveyJS by parsing the JSON either as a raw text string or by converting an R list to JSON format.</p>
 </div>
 <div class="section level2">
@@ -90,7 +91,7 @@
 <div class="section level2">
 <h2 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h2>
-<p>Imagine I want to develop a survey for my <code>shinysurveyjs</code> package and allow users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically handles creating and updating the survey and app log tables.</p>
+<p>Imagine I want to develop a survey for my <code>shinysurveyjs</code> package for users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically creates and updates the survey and app log tables.</p>
 <div class="section level3">
 <h3 id="single-survey">Single Survey<a class="anchor" aria-label="anchor" href="#single-survey"></a>
 </h3>
@@ -105,20 +106,14 @@
 <span><span class="st">    {</span></span>
 <span><span class="st">      "name": "feedback",</span></span>
 <span><span class="st">      "elements": [</span></span>
-<span><span class="st">        {</span></span>
-<span><span class="st">          "type": "rating",</span></span>
-<span><span class="st">          "name": "rating",</span></span>
-<span><span class="st">          "title": "Please rate the shinysurveyjs 📦:",</span></span>
-<span><span class="st">          "rateValues": [</span></span>
-<span><span class="st">            {"value": 1, "text": "⭐"},</span></span>
-<span><span class="st">            {"value": 2, "text": "⭐⭐"},</span></span>
-<span><span class="st">            {"value": 3, "text": "⭐⭐⭐"},</span></span>
-<span><span class="st">            {"value": 4, "text": "⭐⭐⭐⭐"},</span></span>
-<span><span class="st">            {"value": 5, "text": "⭐⭐⭐⭐⭐"}</span></span>
-<span><span class="st">          ],</span></span>
-<span><span class="st">          "rateMax": 5,</span></span>
-<span><span class="st">          "isRequired": true</span></span>
-<span><span class="st">        },</span></span>
+<span><span class="st">        list(</span></span>
+<span><span class="st">          type = "rating",</span></span>
+<span><span class="st">          name = "rating",</span></span>
+<span><span class="st">          title = "Please rate the shinysurveyjs 📦:",</span></span>
+<span><span class="st">          rateType = "stars",</span></span>
+<span><span class="st">          rateMax = 5,</span></span>
+<span><span class="st">          isRequired = TRUE</span></span>
+<span><span class="st">        ),</span></span>
 <span><span class="st">        {</span></span>
 <span><span class="st">          "type": "comment",</span></span>
 <span><span class="st">          "name": "feedback",</span></span>
@@ -139,6 +134,7 @@
 <span></span>
 <span><span class="fu">shinysurveyjs</span><span class="fu">::</span><span class="fu"><a href="reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
 <span>  json <span class="op">=</span> <span class="va">survey</span>,</span>
+<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
 <span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
 <span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
 <span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -166,13 +162,7 @@
 <span>          type <span class="op">=</span> <span class="st">"rating"</span>,</span>
 <span>          name <span class="op">=</span> <span class="st">"rating"</span>,</span>
 <span>          title <span class="op">=</span> <span class="st">"Please rate the shinysurveyjs 📦:"</span>,</span>
-<span>          rateValues <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">1</span>, text <span class="op">=</span> <span class="st">"⭐"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">2</span>, text <span class="op">=</span> <span class="st">"⭐⭐"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">3</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">4</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐⭐"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="fl">5</span>, text <span class="op">=</span> <span class="st">"⭐⭐⭐⭐⭐"</span><span class="op">)</span></span>
-<span>          <span class="op">)</span>,</span>
+<span>          rateType <span class="op">=</span> <span class="st">"stars"</span>,</span>
 <span>          rateMax <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>        <span class="op">)</span>,</span>
