@@ -50,7 +50,7 @@ survey_single_js <- function(cookie_expiration_days = 7) {
   # Replace configuration parameters
   js_files$config <- sprintf(js_files$config, cookie_expiration_days)
 
-  # Combine all JavaScript files in the correct order
+  # Combine JS files in the correct order
   js_code <- paste(
     js_files$wrapper_start,
     js_files$config,

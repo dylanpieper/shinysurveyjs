@@ -192,15 +192,8 @@ survey <- list(
         list(
           type = "rating",
           name = "rating",
-          title = "Please rate the {package} 📦:",
-          visibleIf = "{version} notempty",
-          rateValues = list(
-            list(value = 1, text = "⭐"),
-            list(value = 2, text = "⭐⭐"),
-            list(value = 3, text = "⭐⭐⭐"),
-            list(value = 4, text = "⭐⭐⭐⭐"),
-            list(value = 5, text = "⭐⭐⭐⭐⭐")
-          ),
+          title = "Please rate the shinysurveyjs 📦:",
+          rateType = "stars",
           rateMax = 5,
           isRequired = TRUE
         ),
@@ -290,15 +283,9 @@ survey <- list(
         ),
         list(
           type = "rating",
-          name = "rating", 
-          title = "Please rate the {package} 📦:",
-          rateValues = list(
-            list(value = 1, text = "⭐"),
-            list(value = 2, text = "⭐⭐"),
-            list(value = 3, text = "⭐⭐⭐"),
-            list(value = 4, text = "⭐⭐⭐⭐"), 
-            list(value = 5, text = "⭐⭐⭐⭐⭐")
-          ),
+          name = "rating",
+          title = "Please rate the shinysurveyjs 📦:",
+          rateType = "stars",
           rateMax = 5,
           isRequired = TRUE
         ),

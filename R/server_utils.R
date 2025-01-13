@@ -277,7 +277,7 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #'
 #' This function sets up the server-side logic for displaying a survey response
 #' data table in a Shiny application. It handles the rendering of the response
-#' table and controls its visibility based on various reactive values.
+#' table, controls its visibility, and applies theming based on light/dark mode.
 #'
 #' @param output The Shiny output object
 #' @param rv A reactive values object containing:
@@ -288,13 +288,15 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #'     \item error_message - String containing error message if any
 #'   }
 #' @param show_response Boolean indicating whether to show the response table
+#' @param theme_mode Character string specifying the theme mode ("light" or "dark")
+#' @param theme_color Character string specifying the primary theme color (hex code)
 #'
 #' @return None (called for side effects)
 #'
 #' @details
 #' The function creates two reactive outputs:
 #' \itemize{
-#'   \item surveyResponseTable - A DataTable showing survey responses
+#'   \item surveyResponseTable - A DataTable showing survey responses with themed styling
 #'   \item showResponseTable - Controls visibility of the response table
 #' }
 #'
@@ -304,6 +306,12 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #'   \item Data is not loading
 #'   \item There are no error messages
 #'   \item show_response parameter is TRUE
+#' }
+#'
+#' The function applies different color schemes based on the theme_mode:
+#' \itemize{
+#'   \item Light mode: White background with dark text and subtle borders
+#'   \item Dark mode: Dark background with light text and contrasting borders
 #' }
 #'
 #' @examples
@@ -316,34 +324,81 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #'     error_message = NULL
 #'   )
 #'
-#'   server_response(output, rv, show_response = TRUE)
+#'   server_response(
+#'     output,
+#'     rv,
+#'     show_response = TRUE,
+#'     theme_mode = "light",
+#'     theme_color = "#003594"
+#'   )
 #' }
 #' }
 #'
 #' @importFrom shiny req validate need reactive outputOptions
-#' @importFrom DT renderDT datatable
+#' @importFrom DT renderDT datatable formatStyle
 #'
 #' @keywords internal
-server_response <- function(output, rv, show_response = TRUE) {
-  # Render the response table with error handling
-  output$surveyResponseTable <- renderDT({
+server_response <- function(output, rv, show_response = TRUE, theme_mode = "light", theme_color = "#003594") {
+  # Get theme colors based on mode
+  colors <- if (theme_mode == "dark") {
+    list(
+      background = "#2d2d2d",
+      text = "#e0e0e0",
+      border = "#404040",
+      header_bg = "#1a1a1a"
+    )
+  } else {
+    list(
+      background = "#ffffff",
+      text = "#404040",
+      border = "#e0e0e0",
+      header_bg = "#f5f5f5"
+    )
+  }
+
+  # Render the response table
+  output$surveyResponseTable <- DT::renderDT({
     req(rv$survey_completed)
-    validate(need(!rv$loading, "Loading data..."))
     req(rv$survey_responses)
 
     if (!is.null(rv$error_message)) {
       return(NULL)
     }
 
-    datatable(
+    # Create a simple DataTable with just horizontal scrolling
+    DT::datatable(
       rv$survey_responses,
       options = list(
-        pageLength = 5,
         scrollX = TRUE,
-        dom = "tp"
+        dom = "t",  # Show only the table, no controls
+        ordering = FALSE,  # Disable sorting
+        initComplete = DT::JS(sprintf(
+          "function(settings, json) {
+            $(this.api().table().container()).css({
+              'background-color': '%s',
+              'color': '%s'
+            });
+            $('table.dataTable thead th').css({
+              'background-color': '%s',
+              'border-bottom': '1px solid %s',
+              'font-weight': 'bold'
+            });
+          }",
+          colors$background,
+          colors$text,
+          colors$header_bg,
+          colors$border
+        ))
       ),
-      rownames = FALSE
-    )
+      rownames = FALSE,
+      selection = "none",
+      class = "display"
+    ) |>
+      DT::formatStyle(
+        columns = names(rv$survey_responses),
+        backgroundColor = colors$background,
+        color = colors$text
+      )
   })
 
   # Control response table visibility

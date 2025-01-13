@@ -4,9 +4,11 @@ The goal of this package is to integrate the flexible frontend of the [SurveyJS]
 
 ## SurveyJS
 
-SurveyJS is a JavaScript library that streamlines the creation of survey applications through a [jQuery](https://www.npmjs.com/package/survey-jquery) architecture. The library offers a [visual editor](https://surveyjs.io/create-free-survey) that allows developers to design complex surveys through an intuitive drag-and-drop interface, which automatically generates the JSON. The JSON structure defines all survey elements, including questions, validation rules, conditional logic, and field visibility.
+SurveyJS is a JavaScript library that streamlines the creation of survey applications through a [jQuery](https://www.npmjs.com/package/survey-jquery) architecture. The library offers a [visual editor](https://surveyjs.io/create-free-survey) that allows developers to design complex surveys through a drag-and-drop interface and generate a JSON object.
 
-The library's strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping, skip logic, and real-time validation with minimal code.
+The JSON defines every survey element, including survey titles, descriptions, multi-page layouts, progress indicators, over 20 different question types, input validation rules, conditional logic flows, and field visibility controls.
+
+The library's strength lies in its backend-agnostic approach, supporting seamless integration with various server technologies, while its client-side implementation handles advanced features like text piping with minimal code.
 
 For R applications, developers can easily incorporate SurveyJS by parsing the JSON either as a raw text string or by converting an R list to JSON format.
 
@@ -34,7 +36,7 @@ pak::pkg_install("dylanpieper/shinysurveyjs")
 
 ## Basic Usage
 
-Imagine I want to develop a survey for my `shinysurveyjs` package and allow users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically handles creating and updating the survey and app log tables.
+Imagine I want to develop a survey for my `shinysurveyjs` package for users to rate it let me know how they feel about my work. I can use the following code to design and deploy this idea. I only need to have a PostgreSQL database and a Shiny server to run the app. The package automatically creates and updates the survey and app log tables.
 
 ### Single Survey
 
@@ -49,20 +51,14 @@ survey <- '{
     {
       "name": "feedback",
       "elements": [
-        {
-          "type": "rating",
-          "name": "rating",
-          "title": "Please rate the shinysurveyjs 📦:",
-          "rateValues": [
-            {"value": 1, "text": "⭐"},
-            {"value": 2, "text": "⭐⭐"},
-            {"value": 3, "text": "⭐⭐⭐"},
-            {"value": 4, "text": "⭐⭐⭐⭐"},
-            {"value": 5, "text": "⭐⭐⭐⭐⭐"}
-          ],
-          "rateMax": 5,
-          "isRequired": true
-        },
+        list(
+          type = "rating",
+          name = "rating",
+          title = "Please rate the shinysurveyjs 📦:",
+          rateType = "stars",
+          rateMax = 5,
+          isRequired = TRUE
+        ),
         {
           "type": "comment",
           "name": "feedback",
@@ -83,6 +79,7 @@ survey <- '{
 
 shinysurveyjs::survey_single(
   json = survey,
+  theme = "modern",
   theme_color = "#00AD6E",
   theme_mode = "dark",
   db_config = list(
@@ -110,13 +107,7 @@ survey <- list(
           type = "rating",
           name = "rating",
           title = "Please rate the shinysurveyjs 📦:",
-          rateValues = list(
-            list(value = 1, text = "⭐"),
-            list(value = 2, text = "⭐⭐"),
-            list(value = 3, text = "⭐⭐⭐"),
-            list(value = 4, text = "⭐⭐⭐⭐"),
-            list(value = 5, text = "⭐⭐⭐⭐⭐")
-          ),
+          rateType = "stars",
           rateMax = 5,
           isRequired = TRUE
         ),

@@ -26,6 +26,21 @@ Tracking columns automatically added to each table:
 \item ip_address: Client IP address
 }
 }
+\examples{
+
+## ------------------------------------------------
+## Method `db_ops$get_client_ip`
+## ------------------------------------------------
+
+\dontrun{
+# Inside a Shiny server function
+server <- function(input, output, session) {
+  db_ops <- DatabaseOperations$new(pool, session$token, logger)
+  client_ip <- db_ops$get_client_ip()
+}
+}
+
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
@@ -47,6 +62,7 @@ Tracking columns automatically added to each table:
 \item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
 \item \href{#method-Database Operations-read_table}{\code{db_ops$read_table()}}
 \item \href{#method-Database Operations-update_by_id}{\code{db_ops$update_by_id()}}
+\item \href{#method-Database Operations-get_client_ip}{\code{db_ops$get_client_ip()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
@@ -216,7 +232,48 @@ Update specific columns in a table for a given row ID
 }
 \subsection{Returns}{
 Invisible(NULL)
+Get Client IP Address
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-get_client_ip"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-get_client_ip}{}}}
+\subsection{Method \code{get_client_ip()}}{
+Retrieves the client IP address from HTTP request headers in order of preference.
+This method checks multiple headers to handle scenarios involving proxies and load balancers.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$get_client_ip()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+The method checks the following headers in order:
+\enumerate{
+\item X-Real-IP
+\item X-Forwarded-For (takes first IP if multiple are present)
+\item REMOTE_ADDR
+}
+
+If no IP address is found in any header, returns "0.0.0.0" as a fallback.
+}
+
+\subsection{Returns}{
+Character string containing the client IP address. Returns "0.0.0.0" if no IP address can be determined.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Inside a Shiny server function
+server <- function(input, output, session) {
+  db_ops <- DatabaseOperations$new(pool, session$token, logger)
+  client_ip <- db_ops$get_client_ip()
+}
+}
+
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-clone"></a>}}
