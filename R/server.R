@@ -227,8 +227,7 @@ survey_single <- function(json = NULL,
     observeEvent(input$surveyComplete, {
       shinyjs::hide(id = "surveyContainer",
                     anim = TRUE,
-                    animType = "fade",
-                    time = 1)
+                    animType = "fade")
 
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
@@ -289,24 +288,25 @@ survey_single <- function(json = NULL,
               difftime(rv$save_time, rv$complete_time, units = "secs")
               )
 
-            parsed_data$duration_load <- rv$duration_load |> round(2)
-            parsed_data$duration_complete <- rv$duration_complete |> round(2)
-            parsed_data$duration_save <- rv$duration_save |> round(2)
-            parsed_data$session_id <- session$token
-            parsed_data$ip_address <- db_ops$get_client_ip()
-            parsed_data$date_created <- Sys.Date()
+            if(show_response){
+              parsed_data$duration_load <- rv$duration_load |> round(2)
+              parsed_data$duration_complete <- rv$duration_complete |> round(2)
+              parsed_data$duration_save <- rv$duration_save |> round(2)
+              parsed_data$session_id <- session$token
+              parsed_data$ip_address <- db_ops$get_client_ip()
+              parsed_data$date_created <- Sys.Date()
+            }
 
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
 
             shinyjs::show(id = "surveyContainer",
                           anim = TRUE,
-                          animType = "fade",
-                          time = 1)
+                          animType = "fade")
 
-            invalidateLater(1000)
-
-            hide_and_show("savingDataMessage", "surveyResponseContainer")
+            if(show_response){
+              hide_and_show("savingDataMessage", "surveyResponseContainer")
+            }
 
             update_duration_save(
               db_ops = db_ops,
