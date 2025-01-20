@@ -6,7 +6,7 @@
 #' @param primary Character string specifying the primary color in hex format
 #' @param primary_foreground Character string specifying text color for primary elements (optional)
 #' @param mode Character string specifying "light" or "dark" mode
-#' @param css_string Optional custom CSS string
+#' @param custom_css Optional custom CSS to append to the theme
 #'
 #' @return A character string containing complete CSS for survey styling
 #'
@@ -16,10 +16,7 @@ generate_survey_theme <- function(
     primary = "#003594",
     primary_foreground = NULL,
     mode = "light",
-    css_string = NULL) {
-  if (!is.null(css_string)) {
-    return(css_string)
-  }
+    custom_css = NULL) {
 
   # Validate inputs
   stopifnot(
@@ -502,6 +499,9 @@ body[data-theme=\"dark\"] .sv-components-column {
     button_styles,
     container_styles,
     message_css,
+    if (!is.null(custom_css)) {
+      custom_css
+    },
     sep = "\n\n"
   )
 }

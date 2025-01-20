@@ -22,6 +22,7 @@
 #'     \item **log_table**: Table name to write log messages (default: LOG_TABLE environment variable)
 #'   }
 #' @param cookie_expiration_days Number of days to keep cookies for survey data (default: 7)
+#' @param custom_css Optional custom CSS to append to the theme
 #' @param suppress_logs Logical. Suppress log messages in the console (default: FALSE)
 #'
 #' @return A Shiny application object
@@ -54,6 +55,7 @@ survey_single <- function(json = NULL,
                           ),
                           dynamic_config = NULL,
                           cookie_expiration_days = 7,
+                          custom_css = NULL,
                           suppress_logs = FALSE) {
 
   if (missing(json) && missing(list)) {
@@ -74,7 +76,8 @@ survey_single <- function(json = NULL,
       theme = theme,
       theme_color = theme_color,
       theme_mode = theme_mode,
-      cookie_expiration_days = cookie_expiration_days
+      cookie_expiration_days = cookie_expiration_days,
+      custom_css = custom_css
     )
   )
 
