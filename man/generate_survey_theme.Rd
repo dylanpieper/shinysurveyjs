@@ -9,7 +9,7 @@ generate_survey_theme(
   primary = "#003594",
   primary_foreground = NULL,
   mode = "light",
-  css_string = NULL
+  custom_css = NULL
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ generate_survey_theme(
 
 \item{mode}{Character string specifying "light" or "dark" mode}
 
-\item{css_string}{Optional custom CSS string}
+\item{custom_css}{Optional custom CSS to append to the theme}
 }
 \value{
 A character string containing complete CSS for survey styling

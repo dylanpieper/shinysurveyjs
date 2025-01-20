@@ -309,6 +309,8 @@ survey_single <- function(json = NULL,
 
             if(show_response){
               hide_and_show("savingDataMessage", "surveyResponseContainer")
+            } else {
+              shinyjs::hide(id = "savingDataMessage")
             }
 
             update_duration_save(

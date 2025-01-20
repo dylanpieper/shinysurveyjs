@@ -4,7 +4,14 @@
 \alias{survey_ui_wrapper}
 \title{Create Survey UI Wrapper}
 \usage{
-survey_ui_wrapper(id, theme, theme_color, theme_mode, cookie_expiration_days)
+survey_ui_wrapper(
+  id,
+  theme,
+  theme_color,
+  theme_mode,
+  cookie_expiration_days,
+  custom_css
+)
 }
 \arguments{
 \item{id}{The ID for the survey div container}
@@ -14,6 +21,10 @@ survey_ui_wrapper(id, theme, theme_color, theme_mode, cookie_expiration_days)
 \item{theme_color}{Primary color used for UI elements like the loading spinner}
 
 \item{theme_mode}{The theme mode (e.g., 'light' or 'dark')}
+
+\item{cookie_expiration_days}{Number of days to keep cookies for survey data}
+
+\item{custom_css}{Optional custom CSS to append to the theme}
 }
 \value{
 A Shiny UI definition

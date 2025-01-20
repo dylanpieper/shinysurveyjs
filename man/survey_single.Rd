@@ -18,6 +18,7 @@ survey_single(
     Sys.getenv("LOG_TABLE")),
   dynamic_config = NULL,
   cookie_expiration_days = 7,
+  custom_css = NULL,
   suppress_logs = FALSE
 )
 }
@@ -48,6 +49,8 @@ survey_single(
 }}
 
 \item{cookie_expiration_days}{Number of days to keep cookies for survey data (default: 7)}
+
+\item{custom_css}{Optional custom CSS to append to the theme}
 
 \item{suppress_logs}{Logical. Suppress log messages in the console (default: FALSE)}
 }

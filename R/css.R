@@ -188,12 +188,15 @@ body[data-theme=\"dark\"] .sv-components-column {
 /* Completed page and container styles */
 .sd-body.sd-completedpage,
 .sv-body.sv-completedpage {
-    background-color: %s;
-    width: 100%% !important;
+    width: 75%% !important;
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
     height: auto !important;
+    display: flex !important;
+    place-items: center !important;
+    min-height: 32vh !important;
+    flex-direction: column-reverse;
 }
 
 .sv-root-modern .sv-body.sv-completedpage {
@@ -244,7 +247,6 @@ body[data-theme=\"dark\"] .sv-components-column {
     max-width: 1200px !important;
     margin: 0 auto !important;
 }",
-    container_background,
     foreground,
     container_background, border_color,
     hover_background,
