@@ -6,7 +6,7 @@
 #'
 #' @param json Survey JSON string or object defining the survey structure
 #' @param list List with survey structure to convert to JSON
-#' @param show_response Logical. Show responses in a `data.table()` after submission (default: TRUE)
+#' @param show_response Logical. Show responses in a `data.table()` after submission (default: FALSE)
 #' @param theme Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")
 #' @param theme_color Primary color hex code for theme customization
 #' @param theme_mode Color mode selection: "light" or "dark" (default: "light")
