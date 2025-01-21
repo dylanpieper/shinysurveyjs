@@ -142,10 +142,27 @@ function initializeSurvey(data) {
                     .then(() => {
                         const responses = {};
                         for (const [key, value] of Object.entries(result.data)) {
-                            if (!["data", "currentPageNo", "timestamp"].includes(key)) {
-                                const question = survey.getQuestionByName(key);
-                                // Get the internal value if it exists, otherwise use the displayed value
-                                responses[key] = question?._param ?? value;
+                            if (["data", "currentPageNo", "timestamp"].includes(key)) continue;
+
+                            const question = survey.getQuestionByName(key);
+                            if (!question) continue;
+
+                            // Handle checkbox/multi-select questions consistently
+                            if (question.getType() === "checkbox") {
+                                // Get the base name (remove any existing prefixes)
+                                const baseName = question.name;
+
+                                // For checkbox questions, value will be an array or single value
+                                const selectedValues = Array.isArray(value) ? value : [value];
+
+                                // Create consistent column names for each selected option
+                                selectedValues.forEach(selectedValue => {
+                                    const normalizedKey = `${baseName}..${selectedValue}`;
+                                    responses[normalizedKey] = true;
+                                });
+                            } else {
+                                // For other question types, use the standard handling
+                                responses[key] = question._param ?? value;
                             }
                         }
                         return responses;
