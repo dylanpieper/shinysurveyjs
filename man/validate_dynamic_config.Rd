@@ -9,22 +9,19 @@ validate_dynamic_config(
   config_list = NULL,
   survey_logger = NULL
 )
+
+validate_dynamic_config(
+  dynamic_config,
+  config_list = NULL,
+  survey_logger = NULL
+)
 }
 \arguments{
-\item{dynamic_config}{List of configuration entries. Each entry must be a list
-containing the following fields:
-\itemize{
-\item \strong{table_name}: Name of the database table
-\item \strong{group_type}: Must be either "choice" or "param"
-\item \strong{group_col}: Column name for grouping
-\item \strong{parent_table_name}: (Optional) Name of parent table for relationships
-\item \strong{parent_id_col}: (Optional) Column name in parent table for relationship
-\item \strong{display_col}: (Required for group_type="param") Column name for display
-}}
+\item{dynamic_config}{List of configuration entries}
 
-\item{config_list}{Optional list of cached tables to verify table/column existence}
+\item{config_list}{Optional cached tables}
 
-\item{survey_logger}{Logger object for logging validation results and errors}
+\item{survey_logger}{Logger object}
 }
 \value{
 List with two elements:
@@ -32,11 +29,15 @@ List with two elements:
 \item valid: Logical indicating if the configuration is valid
 \item errors: Character vector of error messages (empty if valid)
 }
+
+List with validation results
 }
 \description{
 Validates the structure and content of the dynamic configuration list.
 Checks that all required fields are present and valid for each configuration entry.
 Logs validation results using the provided survey logger.
+
+Validates the structure and content of the dynamic configuration list.
 }
 \examples{
 \dontrun{

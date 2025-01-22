@@ -35,7 +35,7 @@ Tracking columns automatically added to each table:
 \dontrun{
 # Inside a Shiny server function
 server <- function(input, output, session) {
-  db_ops <- DatabaseOperations$new(pool, session$token, logger)
+  db_ops <- db_ops$new(pool, session$token, logger)
   client_ip <- db_ops$get_client_ip()
 }
 }
@@ -264,7 +264,7 @@ Character string containing the client IP address. Returns "0.0.0.0" if no IP ad
 \preformatted{\dontrun{
 # Inside a Shiny server function
 server <- function(input, output, session) {
-  db_ops <- DatabaseOperations$new(pool, session$token, logger)
+  db_ops <- db_ops$new(pool, session$token, logger)
   client_ip <- db_ops$get_client_ip()
 }
 }

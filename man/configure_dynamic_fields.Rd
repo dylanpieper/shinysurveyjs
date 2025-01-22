@@ -4,17 +4,26 @@
 \alias{configure_dynamic_fields}
 \title{Configure Dynamic Fields for Survey}
 \usage{
-configure_dynamic_fields(dynamic_config, config_list_reactive, session, logger)
+configure_dynamic_fields(
+  dynamic_config,
+  config_list_reactive,
+  session,
+  logger,
+  write_table,
+  db_ops
+)
 }
 \arguments{
 \item{dynamic_config}{List of configuration entries. Each entry must be a list containing:
 \itemize{
-\item \strong{group_type}: Character, either "choice" or "param"
-\item \strong{table_name}: Character, name of the source table
+\item \strong{group_type}: Character, either "choice", "param", or "unique"
 \item \strong{group_col}: Character, name of the column containing choices
 \item \strong{parent_table_name}: (Optional) Character, name of parent table
 \item \strong{parent_id_col}: (Optional) Character, column name for parent-child relationship
-\item display_col: (Optional) Character, column name containing display text
+\item \strong{display_col}: (Optional) Character, column name containing display text
+For unique validation:
+\item \strong{result}: Character, either "warn" or "stop"
+\item \strong{result_field}: (Required for warn) Character, field to show warning
 }}
 
 \item{config_list_reactive}{Reactive expression containing cached database tables}
@@ -22,15 +31,17 @@ configure_dynamic_fields(dynamic_config, config_list_reactive, session, logger)
 \item{session}{Shiny session object for sending messages to the client}
 
 \item{logger}{Logger object for recording operation results}
+
+\item{write_table}{Character, name of the table to check for unique values}
+
+\item{db_ops}{Database operations object that contains methods for reading tables.}
 }
 \value{
-Invisible NULL. The function operates via side effects, sending formatted
-field configurations to the client via \code{session$sendCustomMessage}.
+Invisible NULL. The function operates via side effects.
 }
 \description{
 Configures dynamic fields based on the provided configuration, handling both
-choices and parameters. Supports parent-child relationships between fields and
-optional display text for choices. Sends the formatted field configurations
-to the client via a custom message.
+choices and parameters. Supports parent-child relationships between fields,
+optional display text for choices, and unique field validation. Sends the
+formatted field configurations to the client via a custom message.
 }
-\keyword{internal}

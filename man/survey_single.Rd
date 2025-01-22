@@ -2,7 +2,7 @@
 % Please edit documentation in R/server.R
 \name{survey_single}
 \alias{survey_single}
-\title{Single Survey Shiny Application}
+\title{Deploy a Single Survey Shiny Application}
 \usage{
 survey_single(
   json = NULL,
@@ -23,42 +23,109 @@ survey_single(
 )
 }
 \arguments{
-\item{json}{Survey JSON string or object defining the survey structure}
+\item{json}{String. JSON survey definition or object.}
 
-\item{list}{List with survey structure to convert to JSON}
+\item{list}{List. Survey structure to convert to JSON.}
 
-\item{show_response}{Logical. Show responses in a \code{data.table()} after submission (default: TRUE)}
+\item{show_response}{Logical. Display responses in a data.table after submission.
+Default: \code{FALSE}.}
 
-\item{theme}{Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")}
+\item{theme}{String. SurveyJS theme, either "defaultV2" or "modern".
+Default: "defaultV2".}
 
-\item{theme_color}{Primary color hex code for theme customization}
+\item{theme_color}{String. Hex color code for primary theme customization.}
 
-\item{theme_mode}{Color mode selection: "light" or "dark" (default: "light")}
+\item{theme_mode}{String. Color mode, either "light" or "dark".
+Default: "light".}
 
-\item{shiny_config}{Optional list. Shiny configuration parameters}
+\item{shiny_config}{List. Optional Shiny configuration parameters.}
 
-\item{db_config}{List. Database connection parameters (defaults to environment variables):
+\item{db_config}{List. Database connection parameters. If not specified,
+values are read from environment variables:
 \itemize{
-\item \strong{host}: Database host (default: HOST environment variable)
-\item \strong{port}: Database port (default: PORT environment variable)
-\item \strong{db_name}: Database name (default: DB_NAME environment variable)
-\item \strong{user}: Database username (default: USER environment variable)
-\item \strong{password}: Database password (default: PASSWORD environment variable)
-\item \strong{write_table}: Table name to write survey data (default: WRITE_TABLE environment variable)
-\item \strong{log_table}: Table name to write log messages (default: LOG_TABLE environment variable)
+\item \code{host}: Database host (env: HOST)
+\item \code{port}: Database port (env: PORT)
+\item \code{db_name}: Database name (env: DB_NAME)
+\item \code{user}: Database username (env: USER)
+\item \code{password}: Database password (env: PASSWORD)
+\item \code{write_table}: Survey data table name (env: WRITE_TABLE)
+\item \code{log_table}: Log messages table name (env: LOG_TABLE)
 }}
 
-\item{cookie_expiration_days}{Number of days to keep cookies for survey data (default: 7)}
+\item{dynamic_config}{List. Configuration for dynamic fields. Supports three types:
+\subsection{Choice Configuration}{
+Populates dropdown or radio button choices from database tables:
+* \code{group_type}: Set to "choice"
+* \code{table_name}: Database table to populate choices from
+* \code{group_col}: Column containing choice text
+* \code{display_col}: Optional column for display text
 
-\item{custom_css}{Optional custom CSS to append to the theme}
+\if{html}{\out{<div class="sourceCode">}}\preformatted{For dependent fields:
+* `parent_table_name`: Parent table for dependency chain
+* `parent_id_col`: Column linking to parent table
+}\if{html}{\out{</div>}}
 
-\item{suppress_logs}{Logical. Suppress log messages in the console (default: FALSE)}
+}
+\subsection{Parameter Configuration}{
+Handles URL query parameters and hidden fields:
+* \code{group_type}: Set to "param"
+* \code{table_name}: Database table with valid parameters
+* \code{group_col}: Column matching URL parameter name
+* \code{display_col}: Optional column for display text
+}
+\subsection{Unique Value Configuration}{
+Validates unique entries against existing database records:
+* \code{group_type}: Set to "unique"
+* \code{group_col}: Column to check for uniqueness
+* \code{result}: Action on duplicate ("warn" or "stop")
+* \code{result_field}: Survey field for warning message (should be hidden)
+}}
+
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
+Default: 7.}
+
+\item{custom_css}{String. Custom CSS rules to append to the theme.}
+
+\item{suppress_logs}{Logical. Suppress console log messages. Default: \code{FALSE}.}
 }
 \value{
 A Shiny application object
 }
 \description{
-Deploys a Shiny application for a single survey with database integration.
-Survey data and app logs are stored in a PostgreSQL database with configurable table names.
-App logs are stored asynchronously using a future plan.
+Creates and deploys a Shiny application for conducting a single survey using SurveyJS
+(\url{https://surveyjs.io}) with PostgreSQL database integration. The application handles both
+survey data collection and asynchronous logging through a future plan.
+}
+\examples{
+\dontrun{
+# Choice configuration example
+dynamic_config <- list(
+  list(
+    group_type = "choice",
+    table_name = "packages",
+    group_col = "name"
+  )
+)
+
+# Parameter configuration example
+dynamic_config <- list(
+  list(
+    group_type = "param",
+    table_name = "sources",
+    group_col = "source",
+    display_col = "display_text"
+  )
+)
+
+# Unique value configuration example
+dynamic_config <- list(
+  list(
+    group_type = "unique",
+    group_col = "title",
+    result = "warn",
+    result_field = "warning_message"
+  )
+)
+}
+
 }

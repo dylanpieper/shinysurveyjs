@@ -10,8 +10,7 @@ read_and_cache(db_ops, dynamic_config)
 \item{db_ops}{Database operations object that contains methods for reading tables.
 Must have a \code{read_table} method that accepts a table name as parameter.}
 
-\item{dynamic_config}{List of table configurations. Each configuration must be a list
-containing at least a \code{table_name} field specifying which table to read.}
+\item{dynamic_config}{List of table configurations. Each configuration must be a list containing at least a \code{table_name} field specifying which table to read.}
 }
 \value{
 A named list of cached tables.
