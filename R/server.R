@@ -205,7 +205,7 @@ survey_single <- function(json = NULL,
 
             session$sendCustomMessage("loadSurvey", survey_data)
 
-            # Wait for survey to be ready before configuring dynamic fields
+            # Keep loading spinner visible until dynamic config is complete
             observeEvent(input$surveyReady,
               {
                 req(session)
@@ -226,14 +226,21 @@ survey_single <- function(json = NULL,
               once = TRUE
             )
 
-            hide_and_show("waitingMessage", "surveyContainer")
+            # Only hide loading spinner after dynamic config is complete
+            observeEvent(input$dynamicConfigComplete,
+              {
+                hide_and_show("waitingMessage", "surveyContainer")
 
-            rv$start_time <- Sys.time()
-            rv$duration_load <- as.numeric(
-              difftime(rv$start_time, rv$load_start_time, units = "secs")
+                rv$start_time <- Sys.time()
+                rv$duration_load <- as.numeric(
+                  difftime(rv$start_time, rv$load_start_time, units = "secs")
+                )
+
+                logger$log_message("Loaded survey with dynamic configuration",
+                                   zone = "SURVEY")
+              },
+              once = TRUE
             )
-
-            logger$log_message("Loaded survey", zone = "SURVEY")
           })
         },
         error = function(e) {

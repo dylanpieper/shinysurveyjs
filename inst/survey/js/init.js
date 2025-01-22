@@ -16,8 +16,8 @@ function initializeSurvey(data) {
             survey = null;
         }
 
-        // Clear survey container
-        $("#surveyContainer").empty();
+        // Clear survey container and ensure it's hidden initially
+        $("#surveyContainer").empty().hide();
 
         let surveyJSON;
         let urlParams = {};
@@ -48,25 +48,16 @@ function initializeSurvey(data) {
         let shouldResetCookie = false;
         if (savedData && Object.keys(urlParams).length > 0) {
             Object.entries(urlParams).forEach(([key, paramData]) => {
-                // Only compare if we have a value in the URL parameter
                 if (paramData?.value !== undefined) {
                     const urlValue = paramData.value;
                     const savedValue = savedData[key];
-
-                    // Get the saved value, checking both direct value and possible _param
                     const effectiveSavedValue = savedData[`${key}_param`] !== undefined ?
                         savedData[`${key}_param`] : savedValue;
 
                     if (urlValue !== effectiveSavedValue) {
                         console.log(`URL param ${key} differs from saved data:`, {
-                            url: {
-                                value: urlValue,
-                                text: paramData.text
-                            },
-                            saved: {
-                                value: effectiveSavedValue,
-                                original: savedValue
-                            }
+                            url: { value: urlValue, text: paramData.text },
+                            saved: { value: effectiveSavedValue, original: savedValue }
                         });
                         shouldResetCookie = true;
                     }
@@ -74,26 +65,20 @@ function initializeSurvey(data) {
             });
         }
 
-        // If URL parameters differ, reset everything
+        // Handle data restoration based on URL parameters and saved data
         if (shouldResetCookie) {
             console.log("URL parameters differ from saved data: Resetting cookie");
             deleteCookie(COOKIE_NAME);
-
-            // Set only URL parameters
             const initialData = {};
             Object.entries(urlParams).forEach(([key, paramData]) => {
                 if (paramData?.value !== undefined) {
-                    // Store both the display text and internal value
                     initialData[key] = paramData.text;
                     initialData[`${key}_param`] = paramData.value;
                 }
             });
             survey.data = initialData;
-
-            // Save new state
             saveSurveyProgress(survey);
         } else if (savedData) {
-            // No URL parameter changes, restore saved data
             survey.data = savedData;
             setTimeout(() => {
                 if (savedData._dynamicConfig) {
@@ -101,11 +86,9 @@ function initializeSurvey(data) {
                 }
             }, DEBOUNCE_DELAY);
         } else {
-            // No saved data, just set URL parameters if any
             const initialData = {};
             Object.entries(urlParams).forEach(([key, paramData]) => {
                 if (paramData?.value !== undefined) {
-                    // Store both the display text and internal value
                     initialData[key] = paramData.text;
                     initialData[`${key}_param`] = paramData.value;
                 }
@@ -122,7 +105,6 @@ function initializeSurvey(data) {
         let valueChangeTimeout;
         survey.onValueChanged.add((sender, options) => {
             console.log("Value changed:", options.name, options.value);
-
             clearTimeout(valueChangeTimeout);
             valueChangeTimeout = setTimeout(() => {
                 saveSurveyProgress(survey);
@@ -143,25 +125,17 @@ function initializeSurvey(data) {
                         const responses = {};
                         for (const [key, value] of Object.entries(result.data)) {
                             if (["data", "currentPageNo", "timestamp"].includes(key)) continue;
-
                             const question = survey.getQuestionByName(key);
                             if (!question) continue;
 
-                            // Handle checkbox/multi-select questions consistently
                             if (question.getType() === "checkbox") {
-                                // Get the base name (remove any existing prefixes)
                                 const baseName = question.name;
-
-                                // For checkbox questions, value will be an array or single value
                                 const selectedValues = Array.isArray(value) ? value : [value];
-
-                                // Create consistent column names for each selected option
                                 selectedValues.forEach(selectedValue => {
                                     const normalizedKey = `${baseName}..${selectedValue}`;
                                     responses[normalizedKey] = true;
                                 });
                             } else {
-                                // For other question types, use the standard handling
                                 responses[key] = question._param ?? value;
                             }
                         }
@@ -200,11 +174,11 @@ function initializeSurvey(data) {
             }
         });
 
-        // Initialize survey and signal when ready
+        // Initialize survey but don't show it yet
         $("#surveyContainer").Survey({
             model: survey,
             onAfterRenderSurvey: () => {
-                console.log("Loaded survey");
+                console.log("Survey rendered, waiting for dynamic config");
                 // Signal that survey is ready for dynamic updates
                 Shiny.setInputValue("surveyReady", true);
             }

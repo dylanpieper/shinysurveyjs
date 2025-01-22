@@ -107,9 +107,126 @@ function setupUniqueValidation(data) {
     attemptSetup();
 }
 
+// Helper functions for dynamic configuration
+function setChoices(question, choicesData) {
+    if (!choicesData || !Array.isArray(choicesData.value)) {
+        console.warn(`Invalid choices data for ${question.name}`);
+        return;
+    }
+
+    const surveyChoices = choicesData.value.map((value, index) => ({
+        value: value,
+        text: choicesData.text[index]
+    }));
+
+    question.choices = surveyChoices;
+}
+
+function processChildField(fieldName, fieldData) {
+    survey.childConfig = survey.childConfig || {};
+    survey.childConfig[fieldName] = fieldData;
+}
+
+function setupParentHandler(fieldName, fieldData) {
+    survey.parentConfig = survey.parentConfig || {};
+    survey.parentConfig[fieldName] = {
+        data: data,
+        childField: fieldData.childField,
+        fieldData: fieldData,
+        type: fieldData.type,
+        valueToIdMap: fieldData.choices.value.reduce((map, value, index) => {
+            map[value] = fieldData.choices.ids[index];
+            return map;
+        }, {}),
+        choicesList: fieldData.choices
+    };
+
+    if (survey.onValueChanged) {
+        const existingHandlers = survey.onValueChanged.actions || [];
+        survey.onValueChanged.actions = existingHandlers.filter(
+            handler => handler.name !== `update_${fieldName}_children`
+        );
+    }
+
+    const handlerFunction = function(sender, options) {
+        if (options.name !== fieldName) return;
+        updateChildFields(fieldName, options.value);
+        saveSurveyProgress(survey);
+    };
+
+    survey.onValueChanged.add(handlerFunction, `update_${fieldName}_children`);
+
+    const currentValue = survey.getQuestionByName(fieldName).value;
+    if (currentValue) {
+        updateChildFields(fieldName, currentValue);
+    }
+}
+
+function updateChildFields(parentField, parentValue) {
+    if (!parentValue) return;
+
+    const parentConfig = survey.parentConfig[parentField];
+    if (!parentConfig) {
+        console.warn(`No parent config found for ${parentField}`);
+        return;
+    }
+
+    const childField = parentConfig.childField;
+    if (!childField) {
+        console.warn(`No child field found for parent ${parentField}`);
+        return;
+    }
+
+    const childData = survey.childConfig[childField];
+    if (!childData) {
+        console.warn(`No child data found for ${childField}`);
+        return;
+    }
+
+    const childQuestion = survey.getQuestionByName(childField);
+    if (!childQuestion) {
+        console.warn(`Child question ${childField} not found`);
+        return;
+    }
+
+    const parentId = parentConfig.valueToIdMap[parentValue];
+    const relevantChoices = [];
+    const choicesData = childData.choices;
+
+    choicesData.value.forEach((value, idx) => {
+        if (choicesData.parentId[idx] === parentId) {
+            relevantChoices.push({
+                value: value,
+                text: choicesData.text[idx]
+            });
+        }
+    });
+
+    childQuestion.choices = relevantChoices;
+
+    if (childQuestion.value && !relevantChoices.some(c => c.value === childQuestion.value)) {
+        childQuestion.value = null;
+    }
+
+    saveSurveyProgress(survey);
+}
+
+function updateChildFieldsFromParents() {
+    if (!survey.parentConfig) {
+        console.warn("No parent config found");
+        return;
+    }
+
+    Object.entries(survey.parentConfig).forEach(([parentField, config]) => {
+        const parentQuestion = survey.getQuestionByName(parentField);
+        if (parentQuestion && parentQuestion.value) {
+            updateChildFields(parentField, parentQuestion.value);
+        }
+    });
+}
+
 // Update dynamic choices based on incoming data
 function updateDynamicChoices(data) {
-    // Store metrics for summary
     const metrics = {
         processedFields: {
             standalone: 0,
@@ -121,131 +238,6 @@ function updateDynamicChoices(data) {
         errors: [],
         warnings: []
     };
-
-    function updateChildFieldsFromParents() {
-        if (!survey.parentConfig) {
-            metrics.warnings.push("No parent config found");
-            return;
-        }
-
-        Object.entries(survey.parentConfig).forEach(([parentField, config]) => {
-            const parentQuestion = survey.getQuestionByName(parentField);
-            if (parentQuestion && parentQuestion.value) {
-                updateChildFields(parentField, parentQuestion.value);
-            }
-        });
-    }
-
-    function processChildField(fieldName, fieldData) {
-        survey.childConfig = survey.childConfig || {};
-        survey.childConfig[fieldName] = fieldData;
-        metrics.processedFields.child++;
-    }
-
-    function setChoices(question, choicesData) {
-        if (!choicesData || !Array.isArray(choicesData.value)) {
-            metrics.warnings.push(`Invalid choices data for ${question.name}`);
-            return;
-        }
-
-        const surveyChoices = choicesData.value.map((value, index) => ({
-            value: value,
-            text: choicesData.text[index]
-        }));
-
-        question.choices = surveyChoices;
-        metrics.updatedChoices++;
-    }
-
-    function setupParentHandler(fieldName, fieldData) {
-        survey.parentConfig = survey.parentConfig || {};
-        survey.parentConfig[fieldName] = {
-            data: data,
-            childField: fieldData.childField,
-            fieldData: fieldData,
-            type: fieldData.type,
-            valueToIdMap: fieldData.choices.value.reduce((map, value, index) => {
-                map[value] = fieldData.choices.ids[index];
-                return map;
-            }, {}),
-            choicesList: fieldData.choices
-        };
-
-        if (survey.onValueChanged) {
-            const existingHandlers = survey.onValueChanged.actions || [];
-            survey.onValueChanged.actions = existingHandlers.filter(
-                handler => handler.name !== `update_${fieldName}_children`
-            );
-        }
-
-        const handlerFunction = function(sender, options) {
-            if (options.name !== fieldName) return;
-            updateChildFields(fieldName, options.value);
-            saveSurveyProgress(survey);
-        };
-
-        survey.onValueChanged.add(handlerFunction, `update_${fieldName}_children`);
-
-        const currentValue = survey.getQuestionByName(fieldName).value;
-        if (currentValue) {
-            updateChildFields(fieldName, currentValue);
-        }
-
-        if (fieldData.type === 'param_parent') {
-            metrics.processedFields.paramParent++;
-        } else if (fieldData.type === 'choice_parent') {
-            metrics.processedFields.choiceParent++;
-        }
-    }
-
-    function updateChildFields(parentField, parentValue) {
-        if (!parentValue) return;
-
-        const parentConfig = survey.parentConfig[parentField];
-        if (!parentConfig) {
-            metrics.warnings.push(`No parent config found for ${parentField}`);
-            return;
-        }
-
-        const childField = parentConfig.childField;
-        if (!childField) {
-            metrics.warnings.push(`No child field found for parent ${parentField}`);
-            return;
-        }
-
-        const childData = survey.childConfig[childField];
-        if (!childData) {
-            metrics.warnings.push(`No child data found for ${childField}`);
-            return;
-        }
-
-        const childQuestion = survey.getQuestionByName(childField);
-        if (!childQuestion) {
-            metrics.warnings.push(`Child question ${childField} not found`);
-            return;
-        }
-
-        const parentId = parentConfig.valueToIdMap[parentValue];
-        const relevantChoices = [];
-        const choicesData = childData.choices;
-
-        choicesData.value.forEach((value, idx) => {
-            if (choicesData.parentId[idx] === parentId) {
-                relevantChoices.push({
-                    value: value,
-                    text: choicesData.text[idx]
-                });
-            }
-        });
-
-        childQuestion.choices = relevantChoices;
-
-        if (childQuestion.value && !relevantChoices.some(c => c.value === childQuestion.value)) {
-            childQuestion.value = null;
-        }
-
-        saveSurveyProgress(survey);
-    }
 
     const attemptUpdate = (retries = 3) => {
         if (typeof survey === 'undefined' || survey === null) {
@@ -275,6 +267,7 @@ function updateDynamicChoices(data) {
                     metrics.processedFields.standalone++;
                 } else {
                     processChildField(fieldName, fieldData);
+                    metrics.processedFields.child++;
                 }
             }
         });
@@ -292,16 +285,30 @@ function updateDynamicChoices(data) {
 
                 if (fieldData.type === "choice_parent") {
                     setChoices(targetQuestion, fieldData.choices);
+                    metrics.processedFields.choiceParent++;
+                } else {
+                    metrics.processedFields.paramParent++;
                 }
             }
         });
 
-        setTimeout(updateChildFieldsFromParents, CHOICE_UPDATE_DELAY);
+        // Update child fields and set up unique validation
+        setTimeout(() => {
+            updateChildFieldsFromParents();
 
-        // Setup unique validation if present
-        if (data.unique_validation) {
-            setupUniqueValidation(data);
-        }
+            if (data.unique_validation) {
+                setupUniqueValidation(data);
+            }
+
+            // Signal that dynamic configuration is complete
+            console.log("Dynamic configuration complete");
+            Shiny.setInputValue("dynamicConfigComplete", true);
+
+            // Now show the survey container and hide the loading message
+            document.getElementById("surveyContainer").style.display = "block";
+            document.getElementById("waitingMessage").style.display = "none";
+
+        }, CHOICE_UPDATE_DELAY);
 
         // Log final summary
         console.log("Dynamic choices update summary:", {
@@ -312,8 +319,12 @@ function updateDynamicChoices(data) {
         });
     };
 
+    // Start the update process
     attemptUpdate();
 }
+
+// Handler registration
+Shiny.addCustomMessageHandler("updateDynamicChoices", updateDynamicChoices);
 
 // Cookie handling functions remain the same
 function saveSurveyProgress(survey) {
@@ -396,8 +407,6 @@ function restoreDynamicChoices(survey, savedData) {
         console.error("Error restoring dynamic choices:", error);
     }
 }
-
-Shiny.addCustomMessageHandler("updateDynamicChoices", updateDynamicChoices);
 
 function restoreDynamicChoices(survey, savedData) {
     if (!savedData || !savedData._dynamicConfig) return;
