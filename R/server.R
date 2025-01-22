@@ -1,8 +1,8 @@
-#' Deploy a Single Survey Shiny Application
+#' Deploy a Survey Shiny Application
 #'
-#' Creates and deploys a Shiny application for conducting a single survey using SurveyJS
-#' (<https://surveyjs.io>) with PostgreSQL database integration. The application handles both
-#' survey data collection and asynchronous logging through a future plan.
+#' Creates and deploys a Shiny application for a survey using SurveyJS
+#' (<https://surveyjs.io>) with PostgreSQL database integration. The application handles
+#' survey data collection, dynamic fields, and asynchronous logging through a future plan.
 #'
 #' @param json String. JSON survey definition or object.
 #' @param list List. Survey structure to convert to JSON.
