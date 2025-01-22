@@ -467,7 +467,7 @@ db_ops <- R6::R6Class(
     read_table = function(table_name, columns = NULL, filters = NULL,
                           order_by = NULL, desc = FALSE, limit = NULL) {
       if (is.null(table_name) || !is.character(table_name)) {
-        self$logger$log_message("Invalid table_name parameter", "ERROR", "DATABASE")
+        self$logger$log_message(paste("Invalid table_name parameter:", table_name), "ERROR", "DATABASE")
         stop("Invalid table name")
       }
 
@@ -660,7 +660,7 @@ db_ops <- R6::R6Class(
     #' \dontrun{
     #' # Inside a Shiny server function
     #' server <- function(input, output, session) {
-    #'   db_ops <- DatabaseOperations$new(pool, session$token, logger)
+    #'   db_ops <- db_ops$new(pool, session$token, logger)
     #'   client_ip <- db_ops$get_client_ip()
     #' }
     #' }

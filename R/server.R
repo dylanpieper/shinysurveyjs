@@ -57,15 +57,15 @@ survey_single <- function(json = NULL,
                           cookie_expiration_days = 7,
                           custom_css = NULL,
                           suppress_logs = FALSE) {
-
   if (missing(json) && missing(list)) {
     stop("Survey JSON or list is required")
   }
 
-  if (!missing(list) & missing(json)){
+  if (!missing(list) & missing(json)) {
     json <- jsonlite::toJSON(list,
-                             pretty = TRUE,
-                             auto_unbox = TRUE)
+      pretty = TRUE,
+      auto_unbox = TRUE
+    )
   }
 
   survey_setup(db_config, shiny_config)
@@ -164,73 +164,93 @@ survey_single <- function(json = NULL,
     observe({
       req(session)
 
-      tryCatch({
-        isolate({
-          if (!is.null(dynamic_config)) {
-            validation_result <- validate_params_reactive()
+      tryCatch(
+        {
+          isolate({
+            if (!is.null(dynamic_config)) {
+              validation_result <- validate_params_reactive()
 
-            if (!validation_result$valid) {
-              hide_and_show("waitingMessage", "invalidQueryMessage")
-              return()
+              if (!validation_result$valid) {
+                hide_and_show("waitingMessage", "invalidQueryMessage")
+                return()
+              }
+
+              rv$validated_params <- validation_result$values
             }
 
-            rv$validated_params <- validation_result$values
-          }
+            survey_obj <- if (is.character(json)) {
+              jsonlite::fromJSON(json, simplifyVector = FALSE)
+            } else {
+              json
+            }
 
-          survey_obj <- if (is.character(json)) {
-            jsonlite::fromJSON(json, simplifyVector = FALSE)
-          } else {
-            json
-          }
-
-          validated_params <- transform_validated_params(
-            rv$validated_params, config_list_reactive()
+            validated_params <- transform_validated_params(
+              rv$validated_params, config_list_reactive()
             )
 
-          survey_data <- list(
-            survey = survey_obj,
-            params = validated_params
-          )
+            survey_data <- list(
+              survey = survey_obj,
+              params = validated_params
+            )
 
-          logger$log_message(
-            sprintf(
-              "Attached JSON to survey data: %s",
-              jsonlite::toJSON(rv$validated_params)
-            ),
-            zone = "SURVEY"
-          )
+            json <- jsonlite::toJSON(rv$validated_params)
 
-          session$sendCustomMessage("loadSurvey", survey_data)
+            logger$log_message(
+              sprintf(
+                "Attached JSON to survey data: %s",
+                json
+              ),
+              zone = "SURVEY"
+            )
 
-          configure_dynamic_fields(
-            dynamic_config = dynamic_config,
-            config_list_reactive = config_list_reactive(),
-            session = session,
-            logger = logger
-          )
+            session$sendCustomMessage("loadSurvey", survey_data)
 
-          hide_and_show("waitingMessage", "surveyContainer")
+            # Wait for survey to be ready before configuring dynamic fields
+            observeEvent(input$surveyReady,
+              {
+                req(session)
+                req(dynamic_config)
+                req(db_ops)
 
-          rv$start_time <- Sys.time()
-          rv$duration_load <- as.numeric(
-            difftime(rv$start_time, rv$load_start_time, units = "secs")
-          )
+                configure_dynamic_fields(
+                  dynamic_config = dynamic_config,
+                  config_list_reactive = config_list_reactive(),
+                  session = session,
+                  logger = logger,
+                  write_table = db_config$write_table,
+                  db_ops = db_ops
+                )
 
-          logger$log_message("Loaded survey", zone = "SURVEY")
-        })
-      },
-      error = function(e) {
-        msg <- sprintf("Survey initialization error: %s", e$message)
-        logger$log_message(msg, type = "ERROR", zone = "SURVEY")
-        shinyjs::show("surveyNotDefinedMessage")
-        shinyjs::hide("waitingMessage")
-      })
+                logger$log_message("Configured dynamic fields", zone = "SURVEY")
+              },
+              once = TRUE
+            )
+
+            hide_and_show("waitingMessage", "surveyContainer")
+
+            rv$start_time <- Sys.time()
+            rv$duration_load <- as.numeric(
+              difftime(rv$start_time, rv$load_start_time, units = "secs")
+            )
+
+            logger$log_message("Loaded survey", zone = "SURVEY")
+          })
+        },
+        error = function(e) {
+          msg <- sprintf("Survey initialization error: %s", e$message)
+          logger$log_message(msg, type = "ERROR", zone = "SURVEY")
+          shinyjs::show("surveyNotDefinedMessage")
+          shinyjs::hide("waitingMessage")
+        }
+      )
     }) |> bindEvent(session$clientData$url_search, ignoreInit = FALSE)
 
     observeEvent(input$surveyComplete, {
-      shinyjs::hide(id = "surveyContainer",
-                    anim = TRUE,
-                    animType = "fade")
+      shinyjs::hide(
+        id = "surveyContainer",
+        anim = TRUE,
+        animType = "fade"
+      )
 
       rv$survey_completed <- TRUE
       rv$loading <- TRUE
@@ -238,7 +258,8 @@ survey_single <- function(json = NULL,
       rv$duration_complete <- as.numeric(difftime(
         rv$complete_time,
         rv$start_time,
-        units = "secs"))
+        units = "secs"
+      ))
       logger$log_message("Completed survey", zone = "SURVEY")
     })
 
@@ -289,9 +310,9 @@ survey_single <- function(json = NULL,
             rv$save_time <- Sys.time()
             rv$duration_save <- as.numeric(
               difftime(rv$save_time, rv$complete_time, units = "secs")
-              )
+            )
 
-            if(show_response){
+            if (show_response) {
               parsed_data$duration_load <- rv$duration_load |> round(2)
               parsed_data$duration_complete <- rv$duration_complete |> round(2)
               parsed_data$duration_save <- rv$duration_save |> round(2)
@@ -303,11 +324,13 @@ survey_single <- function(json = NULL,
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
 
-            shinyjs::show(id = "surveyContainer",
-                          anim = TRUE,
-                          animType = "fade")
+            shinyjs::show(
+              id = "surveyContainer",
+              anim = TRUE,
+              animType = "fade"
+            )
 
-            if(show_response){
+            if (show_response) {
               hide_and_show("savingDataMessage", "surveyResponseContainer")
             } else {
               shinyjs::hide(id = "savingDataMessage")

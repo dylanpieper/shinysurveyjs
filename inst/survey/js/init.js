@@ -200,10 +200,13 @@ function initializeSurvey(data) {
             }
         });
 
+        // Initialize survey and signal when ready
         $("#surveyContainer").Survey({
             model: survey,
             onAfterRenderSurvey: () => {
                 console.log("Loaded survey");
+                // Signal that survey is ready for dynamic updates
+                Shiny.setInputValue("surveyReady", true);
             }
         });
 

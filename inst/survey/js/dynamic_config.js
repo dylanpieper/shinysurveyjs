@@ -1,3 +1,113 @@
+// Normalize field value for comparison (matching R-side normalization)
+function normalizeFieldValue(value, settings = {}) {
+    if (!value || typeof value !== 'string') return value;
+
+    const {
+        removeSpecial = true
+    } = settings;
+
+    // Convert to lowercase and trim whitespace
+    let normalized = value.toLowerCase().trim().replace(/\s+/g, ' ');
+
+    if (removeSpecial) {
+        // Remove special characters, keeping only alphanumeric and space
+        normalized = normalized.replace(/[^a-z0-9\s]/g, '');
+    }
+
+    return normalized;
+}
+
+function setupUniqueValidation(data) {
+    if (!data.unique_validation) {
+        console.log("No unique validation data");
+        return;
+    }
+
+    const attemptSetup = () => {
+        if (typeof survey === 'undefined' || survey === null) {
+            console.error("Survey not initialized");
+            return;
+        }
+
+        console.log("Setting up unique validation:", data.unique_validation);
+
+        // Store validation data on survey instance
+        survey.uniqueValidation = data.unique_validation;
+
+        // Setup validators for each unique field
+        Object.entries(data.unique_validation).forEach(([fieldName, config]) => {
+            const question = survey.getQuestionByName(fieldName);
+            if (!question) {
+                console.warn(`Question ${fieldName} not found for unique validation`);
+                return;
+            }
+
+            // Add validator function
+            question.validators = question.validators || [];
+            question.validators.push({
+                type: "custom",
+                text: "This value already exists. Please enter a unique value.",
+                validate: function(value, name) {
+                    console.log("Validation triggered for:", name, "with value:", value);
+
+                    if (!value) return true; // Skip empty values
+
+                    const normalizedInput = normalizeFieldValue(value, config.normalization_settings);
+                    console.log("Normalized input:", normalizedInput);
+
+                    const normalizedValues = Array.isArray(config.normalized_values)
+                        ? config.normalized_values
+                        : [config.normalized_values];
+                    console.log("Normalized values:", normalizedValues);
+
+                    // Check each object in the normalizedValues array
+                    const matches = config.normalized_values.some(item =>
+                        item.normalized === normalizedInput
+                    );
+
+                    console.log("Match found:", matches);
+
+                    if (matches && config.result === "warn") {
+                        const warningField = survey.getQuestionByName(config.result_field);
+                        console.log("Warning field found:", warningField);
+                        if (warningField) {
+                            warningField.visible = true;
+                            console.log("Warning field made visible");
+                        }
+                        return true; // Allow submission despite warning
+                    }
+
+                    if (matches && config.result === "stop") {
+                        console.log("Stopping submission due to match");
+                        return false; // Block submission
+                    }
+
+                    if (!matches && config.result === "warn") {
+                        const warningField = survey.getQuestionByName(config.result_field);
+                        console.log("Unique value detected, hiding warning field");
+                        if (warningField) {
+                            warningField.visible = false;
+                            console.log("Warning field hidden");
+                        }
+                    }
+
+                    return true;
+                }
+            });
+
+            // Add change handler to validate on input
+            question.valueChangedCallback = function() {
+                question.hasErrors(true); // Force error check
+                survey.runConditions(); // Update visibility states
+            };
+        });
+    };
+
+    // Start the setup attempt
+    attemptSetup();
+}
+
+// Update dynamic choices based on incoming data
 function updateDynamicChoices(data) {
     // Store metrics for summary
     const metrics = {
@@ -187,6 +297,11 @@ function updateDynamicChoices(data) {
         });
 
         setTimeout(updateChildFieldsFromParents, CHOICE_UPDATE_DELAY);
+
+        // Setup unique validation if present
+        if (data.unique_validation) {
+            setupUniqueValidation(data);
+        }
 
         // Log final summary
         console.log("Dynamic choices update summary:", {

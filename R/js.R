@@ -35,11 +35,11 @@ survey_single_js <- function(cookie_expiration_days = 7) {
     wrapper_start = "$(document).ready(function() {",
 
     # Core files
-    config = read_asset(file.path(pkg_dir, "survey/js/config.js")),
+    js_config = read_asset(file.path(pkg_dir, "survey/js/js_config.js")),
     cookies = read_asset(file.path(pkg_dir, "survey/js/cookies.js")),
     save_survey_progress = read_asset(file.path(pkg_dir, "survey/js/save_survey_progress.js")),
     set_hidden_fields_from_shiny = read_asset(file.path(pkg_dir, "survey/js/set_hidden_fields_from_shiny.js")),
-    dynamic_fields = read_asset(file.path(pkg_dir, "survey/js/dynamic_fields.js")),
+    dynamic_config = read_asset(file.path(pkg_dir, "survey/js/dynamic_config.js")),
     init = read_asset(file.path(pkg_dir, "survey/js/init.js")),
     load_survey = read_asset(file.path(pkg_dir, "survey/js/load_survey.js")),
 
@@ -48,16 +48,16 @@ survey_single_js <- function(cookie_expiration_days = 7) {
   )
 
   # Replace configuration parameters
-  js_files$config <- sprintf(js_files$config, cookie_expiration_days)
+  js_files$js_config <- sprintf(js_files$js_config, cookie_expiration_days)
 
   # Combine JS files in the correct order
   js_code <- paste(
     js_files$wrapper_start,
-    js_files$config,
+    js_files$js_config,
     js_files$cookies,
     js_files$save_survey_progress,
     js_files$set_hidden_fields_from_shiny,
-    js_files$dynamic_fields,
+    js_files$dynamic_config,
     js_files$init,
     js_files$load_survey,
     js_files$wrapper_end,

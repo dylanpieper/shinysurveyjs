@@ -6,8 +6,7 @@
 #'
 #' @param db_ops Database operations object that contains methods for reading tables.
 #'   Must have a `read_table` method that accepts a table name as parameter.
-#' @param dynamic_config List of table configurations. Each configuration must be a list
-#'   containing at least a `table_name` field specifying which table to read.
+#' @param dynamic_config List of table configurations. Each configuration must be a list containing at least a `table_name` field specifying which table to read.
 #'
 #' @return A named list of cached tables.
 #'   Access individual tables using `tables$table_name`.
@@ -43,8 +42,11 @@ read_and_cache <- function(db_ops, dynamic_config) {
 
   # Read and store each table
   for (config in dynamic_config) {
-    table_name <- config$table_name
-    tables_cache[[table_name]] <- db_ops$read_table(table_name)
+    # Check if table_name exists and is not NULL
+    if (!is.null(config$table_name)) {
+      table_name <- config$table_name
+      tables_cache[[table_name]] <- db_ops$read_table(table_name)
+    }
   }
 
   # Return the cache
@@ -148,8 +150,10 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
     required_fields <- c("table_name", "group_type", "group_col")
     missing_fields <- required_fields[!required_fields %in% names(config)]
     if (length(missing_fields) > 0) {
-      error_msg <- paste0(prefix, "missing required fields: ",
-                          paste(missing_fields, collapse = ", "))
+      error_msg <- paste0(
+        prefix, "missing required fields: ",
+        paste(missing_fields, collapse = ", ")
+      )
       errors <- c(errors, error_msg)
       if (!is.null(survey_logger)) {
         survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
@@ -169,7 +173,7 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
 
     # Check parent table configuration if provided
     if (("parent_table_name" %in% names(config) && !"parent_id_col" %in% names(config)) ||
-        (!"parent_table_name" %in% names(config) && "parent_id_col" %in% names(config))) {
+      (!"parent_table_name" %in% names(config) && "parent_id_col" %in% names(config))) {
       error_msg <- paste0(prefix, "both parent_table_name and parent_id_col must be provided together")
       errors <- c(errors, error_msg)
       if (!is.null(survey_logger)) {
@@ -197,8 +201,10 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
 
         missing_cols <- cols_to_check[!cols_to_check %in% names(table_data)]
         if (length(missing_cols) > 0) {
-          error_msg <- paste0(prefix, "columns not found in table: ",
-                              paste(missing_cols, collapse = ", "))
+          error_msg <- paste0(
+            prefix, "columns not found in table: ",
+            paste(missing_cols, collapse = ", ")
+          )
           errors <- c(errors, error_msg)
           if (!is.null(survey_logger)) {
             survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
@@ -216,8 +222,10 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
           } else {
             parent_table_data <- config_list[[config$parent_table_name]]
             if (!config$parent_id_col %in% names(parent_table_data)) {
-              error_msg <- paste0(prefix, "parent_id_col '", config$parent_id_col,
-                                  "' not found in parent table '", config$parent_table_name, "'")
+              error_msg <- paste0(
+                prefix, "parent_id_col '", config$parent_id_col,
+                "' not found in parent table '", config$parent_table_name, "'"
+              )
               errors <- c(errors, error_msg)
               if (!is.null(survey_logger)) {
                 survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
@@ -333,8 +341,10 @@ validate_url_parameters <- function(dynamic_config, config_list, query_list, sur
     # Log successful validation
     if (!is.null(survey_logger)) {
       survey_logger$log_message(
-        sprintf("Validated parameter '%s' with value '%s'",
-                param_name, param_value),
+        sprintf(
+          "Validated parameter '%s' with value '%s'",
+          param_name, param_value
+        ),
         zone = "SURVEY"
       )
     }
@@ -373,7 +383,9 @@ validate_url_parameters <- function(dynamic_config, config_list, query_list, sur
 #' @keywords internal
 get_source_display_text <- function(source_value, config_source_df) {
   display_text <- config_source_df$display_text[config_source_df$source == source_value]
-  if(length(display_text) == 0) return(source_value)  # fallback to value if not found
+  if (length(display_text) == 0) {
+    return(source_value)
+  } # fallback to value if not found
   return(display_text)
 }
 
@@ -397,10 +409,10 @@ transform_validated_params <- function(validated_params, config_list) {
   lapply(names(validated_params), function(param_name) {
     # Handle both atomic vectors and list values
     param <- validated_params[[param_name]]
-    param_value <- if(is.list(param)) param$value else param
+    param_value <- if (is.list(param)) param$value else param
 
     # If it's a source parameter, look up the display text
-    if(param_name == "source") {
+    if (param_name == "source") {
       list(
         text = get_source_display_text(param_value, config_list$config_source),
         value = param_value
@@ -463,12 +475,14 @@ format_choices_for_js <- function(choices,
                                   display_col = NULL,
                                   is_param_parent = FALSE,
                                   choice_ids = NULL) {
-  if (is.null(choices)) return(NULL)
+  if (is.null(choices)) {
+    return(NULL)
+  }
 
   # Create base structure based on relationship type
   base_structure <- if (is_parent) {
     list(
-      type = if(is_param_parent) "param_parent" else "parent",
+      type = if (is_param_parent) "param_parent" else "parent",
       choices = list()
     )
   } else if (is_child) {
@@ -512,7 +526,7 @@ format_choices_for_js <- function(choices,
       ids = if (!is.null(choice_ids)) choice_ids else seq_along(choices)
     )
     if (child_field) {
-      base_structure$childField <- child_field  # Move childField to top level
+      base_structure$childField <- child_field # Move childField to top level
     }
   }
 
@@ -523,33 +537,28 @@ format_choices_for_js <- function(choices,
 #'
 #' @description
 #' Configures dynamic fields based on the provided configuration, handling both
-#' choices and parameters. Supports parent-child relationships between fields and
-#' optional display text for choices. Sends the formatted field configurations
-#' to the client via a custom message.
+#' choices and parameters. Supports parent-child relationships between fields,
+#' optional display text for choices, and unique field validation. Sends the
+#' formatted field configurations to the client via a custom message.
 #'
 #' @param dynamic_config List of configuration entries. Each entry must be a list containing:
-#'   - **group_type**: Character, either "choice" or "param"
-#'   - **table_name**: Character, name of the source table
+#'   - **group_type**: Character, either "choice", "param", or "unique"
 #'   - **group_col**: Character, name of the column containing choices
 #'   - **parent_table_name**: (Optional) Character, name of parent table
 #'   - **parent_id_col**: (Optional) Character, column name for parent-child relationship
-#'   - display_col: (Optional) Character, column name containing display text
+#'   - **display_col**: (Optional) Character, column name containing display text
+#'   For unique validation:
+#'   - **result**: Character, either "warn" or "stop"
+#'   - **result_field**: (Required for warn) Character, field to show warning
 #' @param config_list_reactive Reactive expression containing cached database tables
 #' @param session Shiny session object for sending messages to the client
 #' @param logger Logger object for recording operation results
+#' @param write_table Character, name of the table to check for unique values
+#' @param db_ops Database operations object that contains methods for reading tables.
 #'
-#' @return Invisible NULL. The function operates via side effects, sending formatted
-#'   field configurations to the client via `session$sendCustomMessage`.
-#'
-#' @keywords internal
-configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger) {
-  # Validate inputs
-  if (is.null(dynamic_config) || !is.list(dynamic_config)) {
-    logger$log_message("Invalid dynamic_config parameter", type = "ERROR", zone = "SURVEY")
-    return(invisible(NULL))
-  }
-
-  # Process each choice configuration
+#' @return Invisible NULL. The function operates via side effects.
+configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops) {
+  # Initialize empty list for choices
   choices_data <- list()
 
   # First pass: Process parent fields (both param and choice types)
@@ -562,77 +571,84 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
       }))
 
       if (is_parent) {
-        tryCatch({
-          # Get table data
-          table_data <- config_list_reactive[[config$table_name]]
-          if (is.null(table_data)) {
-            logger$log_message(sprintf("Table '%s' not found", config$table_name), "ERROR", "SURVEY")
-            next
-          }
+        tryCatch(
+          {
+            # Get table data
+            table_data <- config_list_reactive[[config$table_name]]
+            if (is.null(table_data)) {
+              logger$log_message(sprintf("Table '%s' not found", config$table_name), "ERROR", "SURVEY")
+              next
+            }
 
-          # Find child config
-          child_config <- Find(function(other_config) {
-            !is.null(other_config$parent_table_name) &&
-              other_config$parent_table_name == config$table_name
-          }, dynamic_config)
+            # Find child config
+            child_config <- Find(function(other_config) {
+              !is.null(other_config$parent_table_name) &&
+                other_config$parent_table_name == config$table_name
+            }, dynamic_config)
 
-          if (is.null(child_config)) {
-            logger$log_message("No child configuration found", "ERROR", "SURVEY")
-            next
-          }
+            if (is.null(child_config)) {
+              logger$log_message("No child configuration found", "ERROR", "SURVEY")
+              next
+            }
 
-          # Create parent field data
-          parent_data <- list(
-            type = if(config$group_type == "param") "param_parent" else "choice_parent",
-            childField = child_config$group_col,
-            choices = list(
-              value = table_data[[config$group_col]],
-              text = if(!is.null(config$display_col)) {
-                table_data[[config$display_col]]
-              } else {
-                table_data[[config$group_col]]
-              },
-              ids = table_data$package_id
+            # Create parent field data
+            parent_data <- list(
+              type = if (config$group_type == "param") "param_parent" else "choice_parent",
+              childField = child_config$group_col,
+              choices = list(
+                value = table_data[[config$group_col]],
+                text = if (!is.null(config$display_col)) {
+                  table_data[[config$display_col]]
+                } else {
+                  table_data[[config$group_col]]
+                },
+                ids = table_data$package_id
+              )
             )
-          )
 
-          choices_data[[config$group_col]] <- parent_data
+            choices_data[[config$group_col]] <- parent_data
 
-          logger$log_message(
-            sprintf("Created parent data for '%s'", config$group_col),
-            "INFO",
-            "SURVEY"
-          )
-
-        }, error = function(e) {
-          logger$log_message(sprintf("Error in parent processing: %s", e$message), "ERROR", "SURVEY")
-        })
+            logger$log_message(
+              sprintf("Created parent data for '%s'", config$group_col),
+              "INFO",
+              "SURVEY"
+            )
+          },
+          error = function(e) {
+            logger$log_message(sprintf("Error in parent processing: %s", e$message), "ERROR", "SURVEY")
+          }
+        )
       } else if (config$group_type == "choice") {
         # Handle standalone choice fields (no parent/child relationship)
-        tryCatch({
-          table_data <- config_list_reactive[[config$table_name]]
-          if (!is.null(table_data)) {
-            choices <- unique(table_data[[config$group_col]])
-            choices <- choices[!is.na(choices)]
+        tryCatch(
+          {
+            table_data <- config_list_reactive[[config$table_name]]
+            if (!is.null(table_data)) {
+              choices <- unique(table_data[[config$group_col]])
+              choices <- choices[!is.na(choices)]
 
-            if (length(choices) > 0) {
-              choices_data[[config$group_col]] <- list(
-                type = "standalone",
-                choices = list(
-                  value = choices,
-                  text = if(!is.null(config$display_col)) {
-                    table_data[[config$display_col]][!is.na(choices)]
-                  } else {
-                    choices
-                  }
+              if (length(choices) > 0) {
+                choices_data[[config$group_col]] <- list(
+                  type = "standalone",
+                  choices = list(
+                    value = choices,
+                    text = if (!is.null(config$display_col)) {
+                      table_data[[config$display_col]][!is.na(choices)]
+                    } else {
+                      choices
+                    }
+                  )
                 )
-              )
+              }
             }
+          },
+          error = function(e) {
+            logger$log_message(
+              sprintf("Error in standalone choice processing: %s", e$message),
+              "ERROR", "SURVEY"
+            )
           }
-        }, error = function(e) {
-          logger$log_message(sprintf("Error in standalone choice processing: %s", e$message),
-                             "ERROR", "SURVEY")
-        })
+        )
       }
     }
   }
@@ -640,63 +656,328 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
   # Second pass: Process child fields
   for (config in dynamic_config) {
     if (config$group_type == "choice" &&
-        !is.null(config$parent_table_name) &&
-        !is.null(config$parent_id_col)) {
-      tryCatch({
-        # Get tables
-        child_table <- config_list_reactive[[config$table_name]]
-        parent_table <- config_list_reactive[[config$parent_table_name]]
+      !is.null(config$parent_table_name) &&
+      !is.null(config$parent_id_col)) {
+      tryCatch(
+        {
+          # Get tables
+          child_table <- config_list_reactive[[config$table_name]]
+          parent_table <- config_list_reactive[[config$parent_table_name]]
 
-        if (is.null(child_table) || is.null(parent_table)) {
-          logger$log_message("Missing required tables", "ERROR", "SURVEY")
-          next
-        }
+          if (is.null(child_table) || is.null(parent_table)) {
+            logger$log_message("Missing required tables", "ERROR", "SURVEY")
+            next
+          }
 
-        # Create child field data
-        child_data <- list(
-          type = "child",
-          parentField = config$parent_id_col,  # Use the actual parent field
-          choices = list(
-            value = child_table[[config$group_col]],
-            text = child_table[[config$group_col]],
-            parentId = child_table[[config$parent_id_col]],
-            parentValue = parent_table[[config$group_col]][match(
-              child_table[[config$parent_id_col]],
-              parent_table[[config$parent_id_col]]
-            )]
+          # Create child field data
+          child_data <- list(
+            type = "child",
+            parentField = config$parent_id_col,
+            choices = list(
+              value = child_table[[config$group_col]],
+              text = child_table[[config$group_col]],
+              parentId = child_table[[config$parent_id_col]],
+              parentValue = parent_table[[config$group_col]][match(
+                child_table[[config$parent_id_col]],
+                parent_table[[config$parent_id_col]]
+              )]
+            )
           )
-        )
 
-        choices_data[[config$group_col]] <- child_data
+          choices_data[[config$group_col]] <- child_data
 
-        logger$log_message(
-          sprintf("Created child data for '%s'", config$group_col),
-          "INFO",
-          "SURVEY"
-        )
-
-      }, error = function(e) {
-        logger$log_message(sprintf("Error in child processing: %s", e$message), "ERROR", "SURVEY")
-      })
+          logger$log_message(
+            sprintf("Created child data for '%s'", config$group_col),
+            "INFO",
+            "SURVEY"
+          )
+        },
+        error = function(e) {
+          logger$log_message(sprintf("Error in child processing: %s", e$message), "ERROR", "SURVEY")
+        }
+      )
     }
   }
 
-  # Send choices to the client
-  if (length(choices_data) > 0) {
-    tryCatch({
-      session$sendCustomMessage("updateDynamicChoices", choices_data)
-
+  # Third pass: Process unique validation fields
+  unique_fields <- tryCatch(
+    {
+      get_unique_field_values(
+        dynamic_config = dynamic_config,
+        db_ops = db_ops,
+        write_table = write_table
+      )
+    },
+    error = function(e) {
       logger$log_message(
-        sprintf("Sent JSON to frontend: %s", jsonlite::toJSON(choices_data)),
-        "INFO",
+        sprintf("Error getting unique field values: %s", e$message),
+        "ERROR",
         "SURVEY"
       )
-    }, error = function(e) {
-      logger$log_message(sprintf("Error sending choices: %s", e$message), "ERROR", "SURVEY")
-    })
+      list()
+    }
+  )
+
+  if (length(unique_fields) > 0) {
+    choices_data$unique_validation <- unique_fields
+    logger$log_message(
+      sprintf("Added unique validation for %d fields", length(unique_fields)),
+      "INFO",
+      "SURVEY"
+    )
+  }
+
+  # Send data to the client if we have either choices or unique validation
+  has_data <- length(unique_fields) > 0 ||
+    length(setdiff(names(choices_data), "unique_validation")) > 0
+
+  if (has_data) {
+    tryCatch(
+      {
+        session$sendCustomMessage("updateDynamicChoices", as.list(choices_data))
+        logger$log_message(
+          sprintf("Sent data to frontend: %s", jsonlite::toJSON(choices_data)),
+          "INFO",
+          "SURVEY"
+        )
+      },
+      error = function(e) {
+        logger$log_message(sprintf("Error sending data: %s", e$message), "ERROR", "SURVEY")
+      }
+    )
   } else {
-    logger$log_message("No choices data to send", "WARN", "SURVEY")
+    logger$log_message("No data to send", "WARN", "SURVEY")
   }
 
   invisible(NULL)
+}
+
+#' Normalize field value for comparison
+#'
+#' @description
+#' Normalizes field values for consistent comparison by:
+#' - Converting to lowercase
+#' - Trimming whitespace
+#' - Removing multiple spaces
+#' - Removing special characters (optional)
+#'
+#' @param value Character value to normalize
+#' @param remove_special Logical. Whether to remove special characters
+#' @return Normalized character value
+#'
+#' @keywords internal
+normalize_field_value <- function(value, remove_special = TRUE) {
+  if (is.null(value) || !is.character(value)) {
+    return(value)
+  }
+
+  # Convert to lowercase
+  normalized <- tolower(value)
+
+  # Trim whitespace and collapse multiple spaces
+  normalized <- gsub("\\s+", " ", trimws(normalized))
+
+  if (remove_special) {
+    # Remove special characters, keeping only alphanumeric and space
+    normalized <- gsub("[^[:alnum:]\\s]", "", normalized)
+  }
+
+  return(normalized)
+}
+
+#' Validate Dynamic Configuration
+#'
+#' @description
+#' Validates the structure and content of the dynamic configuration list.
+#'
+#' @param dynamic_config List of configuration entries
+#' @param config_list Optional cached tables
+#' @param survey_logger Logger object
+#' @return List with validation results
+#'
+#' @keywords internal
+validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_logger = NULL) {
+  errors <- character()
+
+  # Check if dynamic_config is a list
+  if (!is.list(dynamic_config)) {
+    error_msg <- "dynamic_config must be a list"
+    if (!is.null(survey_logger)) {
+      survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+    }
+    return(list(
+      valid = FALSE,
+      errors = error_msg
+    ))
+  }
+
+  # Check each configuration entry
+  for (i in seq_along(dynamic_config)) {
+    config <- dynamic_config[[i]]
+    prefix <- sprintf("Configuration entry %d: ", i)
+
+    # Check if config is a list
+    if (!is.list(config)) {
+      error_msg <- paste0(prefix, "must be a list")
+      errors <- c(errors, error_msg)
+      if (!is.null(survey_logger)) {
+        survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+      }
+      next
+    }
+
+    # Check required fields
+    required_fields <- c("group_type", "group_col")
+    missing_fields <- required_fields[!required_fields %in% names(config)]
+    if (length(missing_fields) > 0) {
+      error_msg <- paste0(
+        prefix, "missing required fields: ",
+        paste(missing_fields, collapse = ", ")
+      )
+      errors <- c(errors, error_msg)
+      if (!is.null(survey_logger)) {
+        survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+      }
+    }
+
+    # Check group_type validity
+    if ("group_type" %in% names(config)) {
+      if (!config$group_type %in% c("choice", "param", "unique")) {
+        error_msg <- paste0(prefix, "group_type must be 'choice', 'param', or 'unique'")
+        errors <- c(errors, error_msg)
+        if (!is.null(survey_logger)) {
+          survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+        }
+      }
+
+      # Additional validation for unique type
+      if (config$group_type == "unique") {
+        # Validate required fields for unique validation
+        unique_required <- c("result")
+        missing_unique <- unique_required[!unique_required %in% names(config)]
+
+        if (length(missing_unique) > 0) {
+          error_msg <- paste0(
+            prefix, "unique validation missing required fields: ",
+            paste(missing_unique, collapse = ", ")
+          )
+          errors <- c(errors, error_msg)
+        }
+
+        # Validate result type
+        if ("result" %in% names(config) &&
+          !config$result %in% c("warn", "stop")) {
+          error_msg <- paste0(prefix, "result must be either 'warn' or 'stop'")
+          errors <- c(errors, error_msg)
+        }
+
+        # If warn type, must have result_field
+        if ("result" %in% names(config) &&
+          config$result == "warn" &&
+          !"result_field" %in% names(config)) {
+          error_msg <- paste0(prefix, "warn result type requires result_field")
+          errors <- c(errors, error_msg)
+        }
+      }
+    }
+  }
+
+  # Return validation results
+  return(list(
+    valid = length(errors) == 0,
+    errors = errors
+  ))
+}
+
+#' Get Existing Values for Unique Fields
+#'
+#' @description
+#' Retrieves existing values from the database for fields that require uniqueness validation
+#'
+#' @param dynamic_config List of configuration entries
+#' @param db_ops Database operations object that contains methods for reading tables
+#' @param write_table Table name to check
+#' @return List of unique field values by field name
+get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
+  if (is.null(db_ops)) {
+    warning("Database operations not initialized")
+    return(list())
+  }
+
+  if (is.null(write_table) || nchar(write_table) == 0) {
+    warning("Write table not specified")
+    return(list())
+  }
+
+  unique_configs <- Filter(function(config) {
+    isTRUE(config$group_type == "unique")
+  }, dynamic_config)
+
+  if (length(unique_configs) == 0) {
+    warning("No unique configurations found")
+    return(list())
+  }
+
+  table_exists <- tryCatch(
+    {
+      db_ops$operate(
+        function(conn) DBI::dbExistsTable(conn, write_table),
+        "Failed to check table existence"
+      )
+    },
+    error = function(e) {
+      warning("Error checking table existence: ", e$message)
+      return(FALSE)
+    }
+  )
+
+  if (!isTRUE(table_exists)) {
+    return(list())
+  }
+
+  values <- lapply(unique_configs, function(config) {
+    field_name <- config$group_col
+
+    existing <- tryCatch(
+      {
+        db_ops$read_table(
+          table_name = write_table,
+          columns = c(field_name)
+        )
+      },
+      error = function(e) {
+        warning(paste("Error reading table for field", field_name, ":", e$message))
+        return(data.frame())
+      }
+    )
+
+    if (nrow(existing) > 0) {
+      original_values <- existing[[field_name]]
+
+      # Create normalized values as a list instead of a named vector
+      normalized_values <- lapply(original_values, function(val) {
+        normalized <- normalize_field_value(val, remove_special = TRUE)
+        list(
+          original = val,
+          normalized = normalized
+        )
+      })
+
+      return(list(
+        values = as.list(original_values),
+        normalized_values = normalized_values,
+        result = config$result,
+        result_field = config$result_field,
+        normalization_settings = list(
+          remove_special = TRUE
+        )
+      ))
+    }
+
+    return(NULL)
+  })
+
+  names(values) <- vapply(unique_configs, function(x) x$group_col, character(1))
+
+  return(values)
 }
