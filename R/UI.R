@@ -130,7 +130,6 @@ survey_ui_wrapper <- function(id, theme, theme_color, theme_mode, cookie_expirat
       shiny::div(
         id = "surveyResponseContainer",
         style = "display: none;",
-        #shiny::h3("Your Response:"),
         shiny::div(
           class = "nested-spinner-container",
           shinycssloaders::withSpinner(

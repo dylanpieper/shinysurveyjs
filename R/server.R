@@ -1,31 +1,92 @@
-#' Single Survey Shiny Application
+#' Deploy a Single Survey Shiny Application
 #'
-#' Deploys a Shiny application for a single survey with database integration.
-#' Survey data and app logs are stored in a PostgreSQL database with configurable table names.
-#' App logs are stored asynchronously using a future plan.
+#' Creates and deploys a Shiny application for conducting a single survey using SurveyJS
+#' (<https://surveyjs.io>) with PostgreSQL database integration. The application handles both
+#' survey data collection and asynchronous logging through a future plan.
 #'
-#' @param json Survey JSON string or object defining the survey structure
-#' @param list List with survey structure to convert to JSON
-#' @param show_response Logical. Show responses in a `data.table()` after submission (default: FALSE)
-#' @param theme Theme name for SurveyJS: "defaultV2" or "modern" (default: "defaultV2")
-#' @param theme_color Primary color hex code for theme customization
-#' @param theme_mode Color mode selection: "light" or "dark" (default: "light")
-#' @param shiny_config Optional list. Shiny configuration parameters
-#' @param db_config List. Database connection parameters (defaults to environment variables):
-#'   \itemize{
-#'     \item **host**: Database host (default: HOST environment variable)
-#'     \item **port**: Database port (default: PORT environment variable)
-#'     \item **db_name**: Database name (default: DB_NAME environment variable)
-#'     \item **user**: Database username (default: USER environment variable)
-#'     \item **password**: Database password (default: PASSWORD environment variable)
-#'     \item **write_table**: Table name to write survey data (default: WRITE_TABLE environment variable)
-#'     \item **log_table**: Table name to write log messages (default: LOG_TABLE environment variable)
+#' @param json String. JSON survey definition or object.
+#' @param list List. Survey structure to convert to JSON.
+#' @param show_response Logical. Display responses in a data.table after submission.
+#'   Default: `FALSE`.
+#' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
+#'   Default: "defaultV2".
+#' @param theme_color String. Hex color code for primary theme customization.
+#' @param theme_mode String. Color mode, either "light" or "dark".
+#'   Default: "light".
+#' @param shiny_config List. Optional Shiny configuration parameters.
+#' @param db_config List. Database connection parameters. If not specified,
+#'   values are read from environment variables:
+#'   * `host`: Database host (env: HOST)
+#'   * `port`: Database port (env: PORT)
+#'   * `db_name`: Database name (env: DB_NAME)
+#'   * `user`: Database username (env: USER)
+#'   * `password`: Database password (env: PASSWORD)
+#'   * `write_table`: Survey data table name (env: WRITE_TABLE)
+#'   * `log_table`: Log messages table name (env: LOG_TABLE)
+#' @param dynamic_config List. Configuration for dynamic fields. Supports three types:
+#'   \subsection{Choice Configuration}{
+#'     Populates dropdown or radio button choices from database tables:
+#'     * `group_type`: Set to "choice"
+#'     * `table_name`: Database table to populate choices from
+#'     * `group_col`: Column containing choice text
+#'     * `display_col`: Optional column for display text
+#'
+#'     For dependent fields:
+#'     * `parent_table_name`: Parent table for dependency chain
+#'     * `parent_id_col`: Column linking to parent table
 #'   }
-#' @param cookie_expiration_days Number of days to keep cookies for survey data (default: 7)
-#' @param custom_css Optional custom CSS to append to the theme
-#' @param suppress_logs Logical. Suppress log messages in the console (default: FALSE)
+#'   \subsection{Parameter Configuration}{
+#'     Handles URL query parameters and hidden fields:
+#'     * `group_type`: Set to "param"
+#'     * `table_name`: Database table with valid parameters
+#'     * `group_col`: Column matching URL parameter name
+#'     * `display_col`: Optional column for display text
+#'   }
+#'   \subsection{Unique Value Configuration}{
+#'     Validates unique entries against existing database records:
+#'     * `group_type`: Set to "unique"
+#'     * `group_col`: Column to check for uniqueness
+#'     * `result`: Action on duplicate ("warn" or "stop")
+#'     * `result_field`: Survey field for warning message (should be hidden)
+#'   }
+#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
+#'   Default: 7.
+#' @param custom_css String. Custom CSS rules to append to the theme.
+#' @param suppress_logs Logical. Suppress console log messages. Default: `FALSE`.
 #'
 #' @return A Shiny application object
+#'
+#' @examples
+#' \dontrun{
+#' # Choice configuration example
+#' dynamic_config <- list(
+#'   list(
+#'     group_type = "choice",
+#'     table_name = "packages",
+#'     group_col = "name"
+#'   )
+#' )
+#'
+#' # Parameter configuration example
+#' dynamic_config <- list(
+#'   list(
+#'     group_type = "param",
+#'     table_name = "sources",
+#'     group_col = "source",
+#'     display_col = "display_text"
+#'   )
+#' )
+#'
+#' # Unique value configuration example
+#' dynamic_config <- list(
+#'   list(
+#'     group_type = "unique",
+#'     group_col = "title",
+#'     result = "warn",
+#'     result_field = "warning_message"
+#'   )
+#' )
+#' }
 #'
 #' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
 #' @importFrom DT renderDT datatable

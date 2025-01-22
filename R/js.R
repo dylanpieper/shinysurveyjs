@@ -21,10 +21,6 @@
 #'
 #' @keywords internal
 survey_single_js <- function(cookie_expiration_days = 7) {
-  # Input validation
-  if (!is.numeric(cookie_expiration_days) || cookie_expiration_days < 1) {
-    stop("cookie_expiration_days must be a positive number")
-  }
 
   # Get the package installation directory
   pkg_dir <- system.file(package = "shinysurveyjs")
