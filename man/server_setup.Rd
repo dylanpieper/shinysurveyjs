@@ -14,31 +14,30 @@ server_setup(
 )
 }
 \arguments{
-\item{session}{A Shiny session object containing the session token}
+\item{session}{Shiny session object containing the session token.}
 
-\item{db_config}{A list containing database configuration with elements:
+\item{db_config}{List. Database configuration parameters:
 \itemize{
-\item log_table: Name of the logging table in the database
-\item write_table: Name of the survey table in the database
+\item \code{log_table}: Name of logging table
+\item \code{write_table}: Name of survey data table
 }}
 
-\item{app_pool}{A database connection pool object from the global environment}
+\item{app_pool}{Database connection pool object from global environment}
 
-\item{survey_logger}{A reference class object for logging functionality}
+\item{survey_logger}{Reference class object for logging functionality}
 
-\item{db_ops}{A reference class object for database operations}
+\item{db_ops}{Reference class object for database operations}
 }
 \description{
-Setup the server-side components of the survey application by setting up
-logging and database operations in the parent environment. Creates a new logger instance
-and attempts to establish database operations, with error handling for database
-initialization failures.
+Setup the server-side components of the survey application by initializing logging and
+database operations in the parent environment. Creates a logger instance and establishes
+database connections with error handling.
 }
 \details{
-This function creates two objects in the parent environment:
+Creates two objects in the parent environment:
 \itemize{
-\item logger: The initialized survey logger object
-\item db_ops: The initialized database operations object (or NULL if initialization failed)
+\item \code{logger}: Initialized survey logger object
+\item \code{db_ops}: Initialized database operations object (NULL if initialization fails)
 }
 }
 \examples{
@@ -50,7 +49,6 @@ server_setup(
   survey_logger = survey_logger,
   db_ops = db_ops
 )
-# After running, 'logger' and 'db_ops' are available in the parent environment
 }
 
 }

@@ -7,26 +7,30 @@
 generate_survey_theme(
   theme = "defaultV2",
   primary = "#003594",
-  primary_foreground = NULL,
   mode = "light",
   custom_css = NULL
 )
 }
 \arguments{
-\item{theme}{Character string specifying "defaultV2" or "modern" theme}
+\item{theme}{String. Base theme template, either "defaultV2" or "modern".
+Default: "defaultV2".}
 
-\item{primary}{Character string specifying the primary color in hex format}
+\item{primary}{String. Hex color code for primary theme color (e.g., "#1ab394").}
 
-\item{primary_foreground}{Character string specifying text color for primary elements (optional)}
+\item{mode}{String. Color scheme mode, either "light" or "dark".
+Default: "light".}
 
-\item{mode}{Character string specifying "light" or "dark" mode}
+\item{custom_css}{String. Additional CSS rules to append to the theme.
+Default: \code{NULL}.}
 
-\item{custom_css}{Optional custom CSS to append to the theme}
+\item{primary_foreground}{String. Hex color code for text on primary elements.
+If not specified, automatically determined for contrast.}
 }
 \value{
-A character string containing complete CSS for survey styling
+String containing complete CSS stylesheet for survey styling
 }
 \description{
-Creates a comprehensive theme including both CSS variables and complete styling for survey components.
+Creates a comprehensive theme including CSS variables and styling for all
+SurveyJS components based on specified parameters.
 }
 \keyword{internal}

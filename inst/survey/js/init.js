@@ -21,6 +21,7 @@ function initializeSurvey(data) {
 
         let surveyJSON;
         let urlParams = {};
+        let expectDynamicConfig = false;  // New flag to track dynamic config expectation
 
         if (typeof data === "object") {
             surveyJSON = data.survey || data;
@@ -28,6 +29,8 @@ function initializeSurvey(data) {
                 urlParams = data.params;
                 console.log("URL parameters:", urlParams);
             }
+            // Check if dynamic config is expected
+            expectDynamicConfig = !!data.dynamic_config;
         } else if (typeof data === "string") {
             try {
                 surveyJSON = JSON.parse(data);
@@ -174,13 +177,20 @@ function initializeSurvey(data) {
             }
         });
 
-        // Initialize survey but don't show it yet
+        // Initialize survey with proper dynamic config handling
         $("#surveyContainer").Survey({
             model: survey,
             onAfterRenderSurvey: () => {
-                console.log("Survey rendered, waiting for dynamic config");
-                // Signal that survey is ready for dynamic updates
-                Shiny.setInputValue("surveyReady", true);
+                console.log("Survey rendered, expectDynamicConfig:", expectDynamicConfig);
+                if (expectDynamicConfig) {
+                    console.log("Waiting for dynamic config");
+                    Shiny.setInputValue("surveyReady", true);
+                } else {
+                    console.log("No dynamic config expected, showing survey");
+                    document.getElementById("waitingMessage").style.display = "none";
+                    document.getElementById("surveyContainer").style.display = "block";
+                    Shiny.setInputValue("dynamicConfigComplete", true);
+                }
             }
         });
 

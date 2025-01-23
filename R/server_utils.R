@@ -1,64 +1,40 @@
 #' Setup Global Survey Environment and Database Connection
 #'
-#' @description
 #' Setup the global survey environment by creating database connections,
-#' environment variables, and a future asynchronous processing plan. The function:
-#' \itemize{
-#'   \item Validates database configuration parameters
-#'   \item Sets required environment variables if not already present
-#'   \item Configures optional Shiny settings
-#'   \item Establishes a global database connection pool
-#'   \item Sets up asynchronous processing using future package with OS-specific configuration
-#' }
+#' environment variables, and a future asynchronous processing plan. Validates
+#' database configuration, sets environment variables if needed, configures Shiny
+#' settings, establishes a database connection pool, and initializes a future plan.
 #'
-#' @param db_config A list containing database configuration parameters:
-#'   \itemize{
-#'     \item **host**: Database host address
-#'     \item **port**: Database port number
-#'     \item **db_name**: Name of the database
-#'     \item **user**: Database username
-#'     \item **password**: Database password
-#'     \item **write_table**: Name of the table for write operations
-#'   }
-#' @param shiny_config Optional list of Shiny configuration parameters to be passed
-#'   to configure_shiny function. If provided, these settings will be applied
-#'   before database initialization.
-#' @param workers Number of workers for parallel processing. Default is 3.
-#'
-#' @return Invisibly returns the database pool object. The pool is also assigned to
-#'   'app_pool' in the global environment.
+#' @param db_config List. Database configuration parameters:
+#'   * `host`: Database host address
+#'   * `port`: Database port number
+#'   * `db_name`: Name of the database
+#'   * `user`: Database username
+#'   * `password`: Database password
+#'   * `write_table`: Table name for write operations
+#' @param shiny_config List. Optional Shiny configuration parameters to pass to
+#'   `configure_shiny()`. Applied before database initialization.
+#' @param workers Integer. Number of workers for parallel processing. Default: 3.
 #'
 #' @details
-#' The function performs several initialization steps:
-#' \itemize{
-#'   \item Validates the write_table parameter is a non-empty string
-#'   \item Checks for required database configuration fields
-#'   \item Sets environment variables (**HOST**, **PORT**, **DB_NAME**, **USER**, **PASSWORD**) if not present
-#'   \item Applies optional Shiny configuration
-#'   \item Creates a global database connection pool if it doesn't exist
-#'   \item Initializes future package for asynchronous operations based on OS
-#' }
+#' The function:
+#' * Validates write_table is non-empty
+#' * Checks required database fields
+#' * Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)
+#' * Applies optional Shiny settings
+#' * Creates global database pool if needed
+#' * Initializes future package based on OS:
+#'   - Windows: Uses multisession
+#'   - macOS/Linux: Uses multicore if supported, falls back to multisession
 #'
-#' Environment variables are only set if they don't already exist, preserving
-#' any existing configurations.
-#'
-#' @section Database Pool:
-#' The database pool is created using the `db_pool_open` function and stored in
-#' the global environment as 'app_pool'. If a pool already exists, it is
-#' not recreated.
-#'
-#' @section Asynchronous Processing:
-#' The function detects the operating system and sets up the appropriate future plan:
-#' \itemize{
-#'   \item **Windows**: Uses `multisession`
-#'   \item **macOS**: Uses `multicore` if supported, falls back to `multisession`
-#'   \item **Linux**: Uses `multicore` if supported, falls back to `multisession`
-#' }
-#'
-#' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info cli_alert_warning
-#' @importFrom future plan multisession multicore
+#' The database pool is stored globally as 'app_pool' and reused if it exists.
+#' Environment variables are only set if not already present.
 #'
 #' @return Invisibly returns the initialized database pool object
+#'
+#' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info
+#'   cli_alert_warning
+#' @importFrom future plan multisession multicore
 #'
 #' @keywords internal
 survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
@@ -67,8 +43,8 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
 
   # Validate write_table parameter
   if (is.null(db_config$write_table) ||
-      !is.character(db_config$write_table)
-      || nchar(db_config$write_table) == 0) {
+      !is.character(db_config$write_table) ||
+      nchar(db_config$write_table) == 0) {
     cli::cli_alert_danger("db_config$write_table must be a non-empty character string")
     stop("Invalid write_table parameter")
   }
@@ -142,13 +118,16 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
     cli::cli_alert_success("Using multisession plan with {workers} workers")
   } else {
     # Linux/macOS: Try multicore first, fall back to multisession if not available
-    tryCatch({
-      future::plan(future::multicore, workers = workers)
-      cli::cli_alert_success("Using multicore plan with {workers} workers")
-    }, error = function(e) {
-      future::plan(future::multisession, workers = workers)
-      cli::cli_alert_warning("Multicore not available, falling back to multisession with {workers} workers")
-    })
+    tryCatch(
+      {
+        future::plan(future::multicore, workers = workers)
+        cli::cli_alert_success("Using multicore plan with {workers} workers")
+      },
+      error = function(e) {
+        future::plan(future::multisession, workers = workers)
+        cli::cli_alert_warning("Multicore not available, falling back to multisession with {workers} workers")
+      }
+    )
   }
 
   # Return pool object invisibly
@@ -157,11 +136,17 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
 
 #' Configure Shiny App Settings
 #'
-#' @param ... Named arguments corresponding to Shiny options. Names will be prefixed with 'shiny.'
-#' @param type_handlers Named list of functions to process specific options. Default handlers
-#'        are provided for numeric, logical, and character values.
+#' Sets global Shiny options by automatically adding the 'shiny.' prefix to option names.
+#' Validates and processes option values using type-specific handlers.
 #'
-#' @return NULL (invisibly). Sets global options for Shiny.
+#' @param ... Named arguments passed as Shiny options. Names will be prefixed with 'shiny.'.
+#' @param type_handlers Named list of functions for option value processing. Default handlers
+#'   provided for:
+#'   * numeric: Validates numeric values
+#'   * logical: Converts to TRUE/FALSE
+#'   * character: Processes string values
+#'
+#' @return Invisible NULL. Modifies global Shiny options.
 #'
 #' @examples
 #' \dontrun{
@@ -207,28 +192,22 @@ configure_shiny <- function(..., type_handlers = list()) {
 
 #' Setup Server Components for Survey Application
 #'
-#' @description
-#' Setup the server-side components of the survey application by setting up
-#' logging and database operations in the parent environment. Creates a new logger instance
-#' and attempts to establish database operations, with error handling for database
-#' initialization failures.
+#' Setup the server-side components of the survey application by initializing logging and
+#' database operations in the parent environment. Creates a logger instance and establishes
+#' database connections with error handling.
 #'
-#' @param session A Shiny session object containing the session token
-#' @param db_config A list containing database configuration with elements:
-#'   \itemize{
-#'     \item log_table: Name of the logging table in the database
-#'     \item write_table: Name of the survey table in the database
-#'   }
-#' @param app_pool A database connection pool object from the global environment
-#' @param survey_logger A reference class object for logging functionality
-#' @param db_ops A reference class object for database operations
+#' @param session Shiny session object containing the session token.
+#' @param db_config List. Database configuration parameters:
+#'   * `log_table`: Name of logging table
+#'   * `write_table`: Name of survey data table
+#' @param app_pool Database connection pool object from global environment
+#' @param survey_logger Reference class object for logging functionality
+#' @param db_ops Reference class object for database operations
 #'
 #' @details
-#' This function creates two objects in the parent environment:
-#'   \itemize{
-#'     \item logger: The initialized survey logger object
-#'     \item db_ops: The initialized database operations object (or NULL if initialization failed)
-#'   }
+#' Creates two objects in the parent environment:
+#' * `logger`: Initialized survey logger object
+#' * `db_ops`: Initialized database operations object (NULL if initialization fails)
 #'
 #' @examples
 #' \dontrun{
@@ -239,7 +218,6 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'   survey_logger = survey_logger,
 #'   db_ops = db_ops
 #' )
-#' # After running, 'logger' and 'db_ops' are available in the parent environment
 #' }
 #'
 #' @keywords internal
@@ -275,44 +253,33 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 
 #' Create Survey Response Table Output
 #'
-#' This function sets up the server-side logic for displaying a survey response
-#' data table in a Shiny application. It handles the rendering of the response
-#' table, controls its visibility, and applies theming based on light/dark mode.
+#' Sets up server-side logic for displaying survey responses in a themed DataTable.
+#' Handles rendering, visibility control, and theme-based styling.
 #'
-#' @param output The Shiny output object
-#' @param rv A reactive values object containing:
-#'   \itemize{
-#'     \item survey_completed - Boolean indicating if survey is completed
-#'     \item loading - Boolean indicating loading state
-#'     \item survey_responses - Data frame of survey responses
-#'     \item error_message - String containing error message if any
-#'   }
-#' @param show_response Boolean indicating whether to show the response table
-#' @param theme_mode Character string specifying the theme mode ("light" or "dark")
-#' @param theme_color Character string specifying the primary theme color (hex code)
-#'
-#' @return None (called for side effects)
+#' @param output Shiny output object.
+#' @param rv Reactive values object containing:
+#'   * `survey_completed`: Boolean indicating survey completion
+#'   * `loading`: Boolean for loading state
+#'   * `survey_responses`: Data frame of responses
+#'   * `error_message`: Error message string if any
+#' @param show_response Logical. Display response table. Default: `FALSE`.
+#' @param theme_mode String. Color mode, either "light" or "dark". Default: "light".
+#' @param theme_color String. Hex color code for primary theme.
 #'
 #' @details
-#' The function creates two reactive outputs:
-#' \itemize{
-#'   \item surveyResponseTable - A DataTable showing survey responses with themed styling
-#'   \item showResponseTable - Controls visibility of the response table
-#' }
+#' Creates two reactive outputs:
+#'   * `surveyResponseTable`: Themed DataTable of responses
+#'   * `showResponseTable`: Visibility control
 #'
-#' The table will only be shown when:
-#' \itemize{
-#'   \item The survey is completed
-#'   \item Data is not loading
-#'   \item There are no error messages
-#'   \item show_response parameter is TRUE
-#' }
+#' Table displays when:
+#'   * Survey is completed
+#'   * Not loading
+#'   * No errors present
+#'   * `show_response` is `TRUE`
 #'
-#' The function applies different color schemes based on the theme_mode:
-#' \itemize{
-#'   \item Light mode: White background with dark text and subtle borders
-#'   \item Dark mode: Dark background with light text and contrasting borders
-#' }
+#' Theme styling:
+#'   * Light mode: White background, dark text
+#'   * Dark mode: Dark background, light text
 #'
 #' @examples
 #' \dontrun{
@@ -370,8 +337,8 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
       rv$survey_responses,
       options = list(
         scrollX = TRUE,
-        dom = "t",  # Show only the table, no controls
-        ordering = FALSE,  # Disable sorting
+        dom = "t", # Show only the table, no controls
+        ordering = FALSE, # Disable sorting
         initComplete = DT::JS(sprintf(
           "function(settings, json) {
             $(this.api().table().container()).css({
@@ -412,32 +379,19 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 
 #' Clean Up Server Session Resources
 #'
-#' This function handles cleanup tasks when a Shiny session ends. It ensures proper
-#' resource disposal by logging the session end and closing database connections.
+#' Handles cleanup tasks when a Shiny session ends by logging session termination
+#' and closing database connections. Should be called within server initialization.
 #'
-#' @param session The Shiny session object
-#' @param logger A logger object with a log_message method for recording events
-#' @param zone Character string specifying the logging zone (default: "SURVEY")
+#' @param session Shiny session object
+#' @param logger Logger object with log_message method for event recording
+#' @param zone Character. Logging zone identifier. Default: "SURVEY"
 #'
-#' @return None (called for side effects)
-#'
-#' @details
-#' The function performs the following cleanup tasks:
-#' \itemize{
-#'   \item Logs the session end event
-#'   \item Closes any open database pool connections
-#' }
-#'
-#' This function should be called within the server function of a Shiny application
-#' to ensure proper resource management.
+#' @return No return value, called for side effects
 #'
 #' @examples
 #' \dontrun{
 #' server <- function(input, output, session) {
-#'   # Setup logger
 #'   logger <- LoggerFactory$new()
-#'
-#'   # Register cleanup
 #'   server_clean(session, logger)
 #' }
 #' }
@@ -458,20 +412,23 @@ server_clean <- function(session, logger, zone = "SURVEY") {
 
 #' Parse URL Query Parameters
 #'
-#' Extracts query parameters from either a URL string or a Shiny session object
-#' and returns them as a named list. The function handles URL encoding, empty values,
+#' Extracts and decodes query parameters from a URL string or Shiny session,
+#' returning a named list of parameter values. Handles URL encoding, empty values,
 #' and multiple parameters with the same name.
 #'
-#' @param input Either a character string containing a URL with query parameters,
-#'              or a Shiny session object
-#' @return A named list where names are parameter names and values are parameter values
-#' @examples
-#' # From URL string
-#' parse_query("https://example.com/page?name=John&age=25")
+#' @param input Character string URL with query parameters, or a Shiny session object.
 #'
-#' # From Shiny session (within Shiny server function)
+#' @return Named list of decoded query parameters.
+#'
+#' @examples
+#' # Parse from URL string
+#' params <- parse_query("https://example.com/page?name=John&age=25")
+#'
+#' # Parse within Shiny server
+#' \dontrun{
 #' server <- function(input, output, session) {
 #'   params <- parse_query(session)
+#' }
 #' }
 #'
 #' @keywords internal
@@ -531,22 +488,19 @@ parse_query <- function(input) {
   return(result)
 }
 
-#' Update Duration Save
+#' Update Survey Response Duration
 #'
-#' @description
-#' Updates the duration_save value for a specific survey response using the
-#' provided database connection pool.
+#' Updates the duration_save field for a survey response identified by session ID.
+#' Records time spent completing the survey before final submission.
 #'
-#' @param db_ops Database operations object instance
-#' @param db_config List containing database configuration including:
-#'   \itemize{
-#'     \item write_table: Table name for survey data
-#'   }
-#' @param session_id Character string containing the Shiny session token
-#' @param duration_save Numeric value of the duration to save
-#' @param logger Logger object for recording operations
+#' @param db_ops Database operations object for query execution
+#' @param db_config List. Database configuration parameters:
+#'   * `write_table`: Survey response data table name
+#' @param session_id String. Shiny session token identifying the response
+#' @param duration_save Numeric. Survey completion duration in seconds
+#' @param logger Logger object. Records database operations and errors
 #'
-#' @return NULL invisibly
+#' @return Invisible NULL
 #'
 #' @keywords internal
 update_duration_save <- function(db_ops, db_config, session_id, duration_save, logger) {
@@ -560,27 +514,29 @@ update_duration_save <- function(db_ops, db_config, session_id, duration_save, l
     limit = 1
   )$id
 
-  tryCatch({
-    # Perform the update using the existing db_ops instance
-    db_ops$update_by_id(
-      db_config$write_table,
-      row_id,
-      list(duration_save = duration_save)
-    )
+  tryCatch(
+    {
+      # Perform the update using the existing db_ops instance
+      db_ops$update_by_id(
+        db_config$write_table,
+        row_id,
+        list(duration_save = duration_save)
+      )
 
-    logger$log_message(
-      sprintf("Updated duration_save for row %d", row_id),
-      "INFO",
-      "DATABASE"
-    )
-  },
-  error = function(e) {
-    logger$log_message(
-      sprintf("Failed to update duration_save: %s", e$message),
-      "ERROR",
-      "DATABASE"
-    )
-  })
+      logger$log_message(
+        sprintf("Updated duration_save for row %d", row_id),
+        "INFO",
+        "DATABASE"
+      )
+    },
+    error = function(e) {
+      logger$log_message(
+        sprintf("Failed to update duration_save: %s", e$message),
+        "ERROR",
+        "DATABASE"
+      )
+    }
+  )
 
   invisible(NULL)
 }

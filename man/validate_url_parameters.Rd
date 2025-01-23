@@ -12,25 +12,25 @@ validate_url_parameters(
 )
 }
 \arguments{
-\item{dynamic_config}{List of configuration entries}
+\item{dynamic_config}{List. Configuration entries defining parameter validation rules.}
 
-\item{config_list}{Cached tables from read_and_cache}
+\item{config_list}{List. Cached configuration tables from read_and_cache().}
 
-\item{query_list}{List of URL parameters from parse_query}
+\item{query_list}{List. Parsed URL query parameters from parse_query().}
 
-\item{survey_logger}{Logger object for recording validation results}
+\item{survey_logger}{Logger. Object for recording validation results and errors.}
 }
 \value{
-List with validation results:
+A list containing:
 \itemize{
-\item valid: Logical indicating if all parameters are valid
-\item errors: Character vector of error messages
-\item values: List of validated parameter values
+\item \code{valid}: Logical. \code{TRUE} if all parameters are valid.
+\item \code{errors}: Character vector. Error messages for invalid parameters.
+\item \code{values}: List. Validated and cleaned parameter values.
 }
 }
 \description{
-Validates URL parameters against the cached configuration tables for entries
-with group_type = "param". Checks if the parameter values exist in the
-corresponding tables.
+Validates URL query parameters against cached configuration tables marked as
+"param" type. Ensures parameter values exist in the corresponding reference
+tables.
 }
 \keyword{internal}

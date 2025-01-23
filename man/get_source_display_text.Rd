@@ -7,16 +7,19 @@
 get_source_display_text(source_value, config_source_df)
 }
 \arguments{
-\item{source_value}{Character. The source identifier (e.g., "GITHUB", "CRAN")}
+\item{source_value}{Character. Source identifier (e.g., "GITHUB", "CRAN").}
 
-\item{config_source_df}{Data frame. Configuration table containing source mappings
-with columns 'source' and 'display_text'}
+\item{config_source_df}{Data frame. Configuration table with columns:
+\itemize{
+\item \code{source}: Source identifier
+\item \code{display_text}: Display text for the source
+}}
 }
 \value{
-Character. The display text corresponding to the source value
+Character string containing the display text or original source value
 }
 \description{
-Looks up the display text from the config source table based on the source value.
-If no match is found, returns the original value.
+Retrieves the display text for a source identifier from a configuration table.
+Returns the original value if no mapping exists.
 }
 \keyword{internal}

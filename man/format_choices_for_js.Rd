@@ -16,45 +16,61 @@ format_choices_for_js(
 )
 }
 \arguments{
-\item{choices}{Either a vector of choices or a list of hierarchical choices}
+\item{choices}{Vector or list. Either a vector of choices or a list of hierarchical
+choices.}
 
-\item{is_parent}{Logical, whether this field is a parent field}
+\item{is_parent}{Logical. Whether this field is a parent field. Default: \code{FALSE}.}
 
-\item{child_field}{Character, name of the field containing child choices}
+\item{child_field}{String. Name of the field containing child choices.}
 
-\item{is_child}{Logical, whether this field contains child choices}
+\item{is_child}{Logical. Whether this field contains child choices. Default: \code{FALSE}.}
 
-\item{parent_field}{Character, name of the field containing parent choices}
+\item{parent_field}{String. Name of the field containing parent choices.}
 
-\item{display_col}{Character, optional name of column containing display text}
+\item{display_col}{String. Optional column name containing display text.}
 
-\item{is_param_parent}{Logical, whether this is a parameter parent field}
+\item{is_param_parent}{Logical. Whether this is a parameter parent field.
+Default: \code{FALSE}.}
 
-\item{choice_ids}{Vector, optional IDs to associate with choices}
+\item{choice_ids}{Vector. Optional IDs to associate with choices.}
 }
 \value{
 A list formatted for JavaScript survey components containing:
 \itemize{
-\item \strong{type}: Type of field ("parent", "param_parent", "child", or "standalone")
-\item \strong{choices}: List of formatted choices with value, text, and relationship data
+\item \code{type}: Field type ("parent", "param_parent", "child", or "standalone")
+\item \code{choices}: List of formatted choices with value, text, and relationship data
 \item Additional metadata fields depending on relationship type
 }
 }
 \description{
-Formats R choice data structures into a format compatible with JavaScript survey components.
-Handles both flat lists of choices and hierarchical choice structures, with support for
-parent-child relationships between fields.
+Formats R choice data structures into a format compatible with JavaScript survey
+components. Handles both flat lists of choices and hierarchical choice structures,
+with support for parent-child relationships between fields.
 }
 \examples{
 \dontrun{
 # Parent choices
 choices <- c("parent1", "parent2")
-formatted <- format_choices_for_js(choices, is_parent = TRUE, child_field = "child_field")
+formatted <- format_choices_for_js(
+  choices,
+  is_parent = TRUE,
+  child_field = "child_field"
+)
 
 # Child choices with parent IDs
 child_choices <- list(
-  list(value = "child1", text = "Child 1", parentId = 1, parentValue = "parent1"),
-  list(value = "child2", text = "Child 2", parentId = 1, parentValue = "parent1")
+  list(
+    value = "child1",
+    text = "Child 1",
+    parentId = 1,
+    parentValue = "parent1"
+  ),
+  list(
+    value = "child2",
+    text = "Child 2",
+    parentId = 1,
+    parentValue = "parent1"
+  )
 )
 formatted_children <- format_choices_for_js(
   child_choices,

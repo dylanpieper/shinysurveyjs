@@ -1,27 +1,23 @@
 #' Generate JavaScript Code for Single Survey Implementation
 #'
-#' @description
-#' Creates a consolidated JavaScript code bundle for handling single survey functionality
-#' by combining multiple JS components including configuration, cookie management,
-#' progress saving, Shiny integration, initialization, and event handlers.
+#' Creates a consolidated JavaScript code bundle for handling single survey functionality,
+#' including configuration, cookie management, progress saving, Shiny integration,
+#' initialization, and event handlers.
 #'
-#' @param cookie_expiration_days Numeric value specifying how many days the survey
-#'   cookies should persist in the user's browser. Must be a positive integer.
-#'   Default is 7 days.
+#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
+#'   Must be positive. Default: 7.
 #'
-#' @return A character string containing the concatenated JavaScript code with all
-#'   necessary components for survey functionality.
+#' @return String containing concatenated JavaScript code for survey functionality
 #'
 #' @examples
-#' # Generate JavaScript with default 7-day cookie expiration
+#' # Default 7-day cookie expiration
 #' js_code <- survey_single_js()
 #'
-#' # Generate JavaScript with 30-day cookie expiration
+#' # Custom 30-day cookie expiration
 #' js_code <- survey_single_js(cookie_expiration_days = 30)
 #'
 #' @keywords internal
 survey_single_js <- function(cookie_expiration_days = 7) {
-
   # Get the package installation directory
   pkg_dir <- system.file(package = "shinysurveyjs")
 

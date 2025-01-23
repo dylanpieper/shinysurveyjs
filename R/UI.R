@@ -1,12 +1,19 @@
 #' Create Survey UI with CSS and Message Components
 #'
-#' @param id ID for the survey div container (e.g., "surveyContainer")
-#' @param theme Theme name ("defaultV2" or "modern")
-#' @param primary Primary color hex code (optional)
-#' @param mode Color mode ("light" or "dark")
-#' @param cookie_expiration_days Number of days to keep cookies for survey data
-#' @param custom_css Optional custom CSS to append to the theme
-#' @return A tagList containing survey dependencies and container
+#' Builds the UI components for a SurveyJS-based survey, including CSS styling,
+#' message panels, and data display elements.
+#'
+#' @param id String. HTML ID for the survey container div. Default: "surveyContainer".
+#' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
+#'   Default: "defaultV2".
+#' @param primary String. Hex color code for primary theme customization.
+#' @param mode String. Color mode, either "light" or "dark". Default: "light".
+#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
+#'   Default: 7.
+#' @param custom_css String. Custom CSS rules to append to the theme.
+#'
+#' @return A tagList containing survey dependencies, container div, message panels,
+#'   and optional data display components.
 #'
 #' @importFrom shiny div conditionalPanel h4 tags
 #' @importFrom htmltools tagList HTML
@@ -17,8 +24,8 @@
 #' @keywords internal
 survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_css) {
   css_file <- switch(theme,
-                     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
-                     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
+    "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
+    "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
   )
 
   # Combine all UI elements
@@ -107,13 +114,18 @@ survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_c
 #' Creates a Shiny UI wrapper for displaying a survey with an optional response table.
 #' The UI includes a loading spinner and conditional panels based on survey state.
 #'
-#' @param id The ID for the survey div container
-#' @param theme The theme configuration for styling the survey
-#' @param theme_color Primary color used for UI elements like the loading spinner
-#' @param theme_mode The theme mode (e.g., 'light' or 'dark')
-#' @param cookie_expiration_days Number of days to keep cookies for survey data
-#' @param custom_css Optional custom CSS to append to the theme
-#' @return A Shiny UI definition
+#' @param id String. ID for the survey div container.
+#' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
+#'   Default: "defaultV2".
+#' @param theme_color String. Hex color code for primary theme customization.
+#' @param theme_mode String. Color mode, either "light" or "dark".
+#'   Default: "light".
+#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
+#'   Default: 7.
+#' @param custom_css String. Custom CSS rules to append to the theme.
+#'
+#' @return A Shiny UI definition containing survey container, loading spinner,
+#'   and optional response table.
 #'
 #' @importFrom shiny fluidPage conditionalPanel div h3
 #' @importFrom shinyjs useShinyjs

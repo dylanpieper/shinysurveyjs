@@ -2,25 +2,21 @@
 % Please edit documentation in R/dynamic_config.R
 \name{normalize_field_value}
 \alias{normalize_field_value}
-\title{Normalize field value for comparison}
+\title{Normalize Field Value for Comparison}
 \usage{
 normalize_field_value(value, remove_special = TRUE)
 }
 \arguments{
-\item{value}{Character value to normalize}
+\item{value}{Character. Value to normalize.}
 
-\item{remove_special}{Logical. Whether to remove special characters}
+\item{remove_special}{Logical. Remove special characters. Default: \code{FALSE}.}
 }
 \value{
-Normalized character value
+Character. Normalized string value.
 }
 \description{
-Normalizes field values for consistent comparison by:
-\itemize{
-\item Converting to lowercase
-\item Trimming whitespace
-\item Removing multiple spaces
-\item Removing special characters (optional)
-}
+Takes a character value and normalizes it for consistent comparison by converting
+to lowercase, trimming whitespace, removing multiple spaces, and optionally
+removing special characters.
 }
 \keyword{internal}

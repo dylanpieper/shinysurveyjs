@@ -9,61 +9,31 @@ validate_dynamic_config(
   config_list = NULL,
   survey_logger = NULL
 )
-
-validate_dynamic_config(
-  dynamic_config,
-  config_list = NULL,
-  survey_logger = NULL
-)
 }
 \arguments{
-\item{dynamic_config}{List of configuration entries}
+\item{dynamic_config}{List. Dynamic field configurations to validate with required
+elements:
+\itemize{
+\item \code{config_type}: Configuration type ("choice", "param", or "unique")
+\item Additional type-specific parameters as defined in survey documentation
+}}
 
-\item{config_list}{Optional cached tables}
+\item{config_list}{List. Pre-cached configuration tables for validation.
+Default: \code{NULL}.}
 
-\item{survey_logger}{Logger object}
+\item{survey_logger}{Logger. Logging object for validation messages.}
 }
 \value{
-List with two elements:
+Named list:
 \itemize{
-\item valid: Logical indicating if the configuration is valid
-\item errors: Character vector of error messages (empty if valid)
+\item \code{valid}: Logical. \code{TRUE} if configuration passes all checks
+\item \code{errors}: Character. Validation error messages if any
+\item \code{cached_tables}: List. Validated and cached database tables
 }
-
-List with validation results
 }
 \description{
-Validates the structure and content of the dynamic configuration list.
-Checks that all required fields are present and valid for each configuration entry.
-Logs validation results using the provided survey logger.
-
-Validates the structure and content of the dynamic configuration list.
-}
-\examples{
-\dontrun{
-config <- list(
-  list(
-    table_name = "config_packages",
-    group_type = "choice",
-    group_col = "package"
-  ),
-  list(
-    table_name = "config_pid",
-    group_type = "param",
-    group_col = "pid",
-    display_col = "full_name"
-  )
-)
-
-# First cache the tables
-config_list <- read_and_cache(db_ops, config)
-
-# Then validate using the cache
-result <- validate_dynamic_config(config, config_list, survey_logger)
-if (!result$valid) {
-  stop(paste(result$errors, collapse = "\n"))
-}
-}
-
+Validates survey field dynamic configuration structure, checking configuration types,
+required parameters, and database table references. Provides detailed validation
+results and caches validated tables.
 }
 \keyword{internal}

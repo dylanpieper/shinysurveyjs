@@ -7,24 +7,25 @@
 parse_query(input)
 }
 \arguments{
-\item{input}{Either a character string containing a URL with query parameters,
-or a Shiny session object}
+\item{input}{Character string URL with query parameters, or a Shiny session object.}
 }
 \value{
-A named list where names are parameter names and values are parameter values
+Named list of decoded query parameters.
 }
 \description{
-Extracts query parameters from either a URL string or a Shiny session object
-and returns them as a named list. The function handles URL encoding, empty values,
+Extracts and decodes query parameters from a URL string or Shiny session,
+returning a named list of parameter values. Handles URL encoding, empty values,
 and multiple parameters with the same name.
 }
 \examples{
-# From URL string
-parse_query("https://example.com/page?name=John&age=25")
+# Parse from URL string
+params <- parse_query("https://example.com/page?name=John&age=25")
 
-# From Shiny session (within Shiny server function)
+# Parse within Shiny server
+\dontrun{
 server <- function(input, output, session) {
   params <- parse_query(session)
+}
 }
 
 }

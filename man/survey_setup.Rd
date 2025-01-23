@@ -7,68 +7,46 @@
 survey_setup(db_config, shiny_config = NULL, workers = 2L)
 }
 \arguments{
-\item{db_config}{A list containing database configuration parameters:
+\item{db_config}{List. Database configuration parameters:
 \itemize{
-\item \strong{host}: Database host address
-\item \strong{port}: Database port number
-\item \strong{db_name}: Name of the database
-\item \strong{user}: Database username
-\item \strong{password}: Database password
-\item \strong{write_table}: Name of the table for write operations
+\item \code{host}: Database host address
+\item \code{port}: Database port number
+\item \code{db_name}: Name of the database
+\item \code{user}: Database username
+\item \code{password}: Database password
+\item \code{write_table}: Table name for write operations
 }}
 
-\item{shiny_config}{Optional list of Shiny configuration parameters to be passed
-to configure_shiny function. If provided, these settings will be applied
-before database initialization.}
+\item{shiny_config}{List. Optional Shiny configuration parameters to pass to
+\code{configure_shiny()}. Applied before database initialization.}
 
-\item{workers}{Number of workers for parallel processing. Default is 3.}
+\item{workers}{Integer. Number of workers for parallel processing. Default: 3.}
 }
 \value{
-Invisibly returns the database pool object. The pool is also assigned to
-'app_pool' in the global environment.
-
 Invisibly returns the initialized database pool object
 }
 \description{
 Setup the global survey environment by creating database connections,
-environment variables, and a future asynchronous processing plan. The function:
-\itemize{
-\item Validates database configuration parameters
-\item Sets required environment variables if not already present
-\item Configures optional Shiny settings
-\item Establishes a global database connection pool
-\item Sets up asynchronous processing using future package with OS-specific configuration
-}
+environment variables, and a future asynchronous processing plan. Validates
+database configuration, sets environment variables if needed, configures Shiny
+settings, establishes a database connection pool, and initializes a future plan.
 }
 \details{
-The function performs several initialization steps:
+The function:
 \itemize{
-\item Validates the write_table parameter is a non-empty string
-\item Checks for required database configuration fields
-\item Sets environment variables (\strong{HOST}, \strong{PORT}, \strong{DB_NAME}, \strong{USER}, \strong{PASSWORD}) if not present
-\item Applies optional Shiny configuration
-\item Creates a global database connection pool if it doesn't exist
-\item Initializes future package for asynchronous operations based on OS
-}
-
-Environment variables are only set if they don't already exist, preserving
-any existing configurations.
-}
-\section{Database Pool}{
-
-The database pool is created using the \code{db_pool_open} function and stored in
-the global environment as 'app_pool'. If a pool already exists, it is
-not recreated.
-}
-
-\section{Asynchronous Processing}{
-
-The function detects the operating system and sets up the appropriate future plan:
+\item Validates write_table is non-empty
+\item Checks required database fields
+\item Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)
+\item Applies optional Shiny settings
+\item Creates global database pool if needed
+\item Initializes future package based on OS:
 \itemize{
-\item \strong{Windows}: Uses \code{multisession}
-\item \strong{macOS}: Uses \code{multicore} if supported, falls back to \code{multisession}
-\item \strong{Linux}: Uses \code{multicore} if supported, falls back to \code{multisession}
+\item Windows: Uses multisession
+\item macOS/Linux: Uses multicore if supported, falls back to multisession
 }
 }
 
+The database pool is stored globally as 'app_pool' and reused if it exists.
+Environment variables are only set if not already present.
+}
 \keyword{internal}

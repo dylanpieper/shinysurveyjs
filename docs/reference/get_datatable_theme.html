@@ -9,7 +9,7 @@ the application's theme mode (light/dark) and color scheme."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">shinysurveyjs</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,35 +55,49 @@ the application's theme mode (light/dark) and color scheme.</p>
 
 
 <dl><dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
-<dd><p>Character string specifying "light" or "dark" mode</p></dd>
+<dd><p>String. Theme mode, either "light" or "dark". Default: "light".</p></dd>
 
 
 <dt id="arg-theme-color">theme_color<a class="anchor" aria-label="anchor" href="#arg-theme-color"></a></dt>
-<dd><p>Hex color code for primary theme color</p></dd>
+<dd><p>String. Hex color code for primary theme color.
+Default: "#0275d8".</p></dd>
 
 
 <dt id="arg-container-bg">container_bg<a class="anchor" aria-label="anchor" href="#arg-container-bg"></a></dt>
-<dd><p>Background color for the container (optional)</p></dd>
+<dd><p>String. Background color hex code for table container.
+Default: "#FFFFFF" for light, "#242424" for dark.</p></dd>
 
 
 <dt id="arg-text-color">text_color<a class="anchor" aria-label="anchor" href="#arg-text-color"></a></dt>
-<dd><p>Text color (optional)</p></dd>
+<dd><p>String. Text color hex code.
+Default: "#000000" for light, "#FFFFFF" for dark.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>List of DT options and callback functions for table styling</p>
-    </div>
+    <p>List of DataTable options and callback JavaScript for styling:</p><ul><li><p><code>options</code>: List of datatable initialization options</p></li>
+<li><p><code>callback</code>: JavaScript function for row hover effects</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Light mode table</span></span></span>
-<span class="r-in"><span><span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">data</span>, options <span class="op">=</span> <span class="fu">get_datatable_theme</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">options</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in get_datatable_theme():</span> could not find function "get_datatable_theme"</span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># Light mode table</span></span></span>
+<span class="r-in"><span><span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">mtcars</span>,</span></span>
+<span class="r-in"><span>  options <span class="op">=</span> <span class="fu">get_datatable_theme</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">options</span>,</span></span>
+<span class="r-in"><span>  callback <span class="op">=</span> <span class="fu">get_datatable_theme</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">callback</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Dark mode table</span></span></span>
-<span class="r-in"><span><span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">data</span>, options <span class="op">=</span> <span class="fu">get_datatable_theme</span><span class="op">(</span><span class="st">"dark"</span>, <span class="st">"#003594"</span><span class="op">)</span><span class="op">$</span><span class="va">options</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in get_datatable_theme("dark", "#003594"):</span> could not find function "get_datatable_theme"</span>
+<span class="r-in"><span><span class="co"># Dark mode table with custom color</span></span></span>
+<span class="r-in"><span><span class="va">theme</span> <span class="op">&lt;-</span> <span class="fu">get_datatable_theme</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"dark"</span>,</span></span>
+<span class="r-in"><span>  theme_color <span class="op">=</span> <span class="st">"#003594"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">mtcars</span>,</span></span>
+<span class="r-in"><span>  options <span class="op">=</span> <span class="va">theme</span><span class="op">$</span><span class="va">options</span>,</span></span>
+<span class="r-in"><span>  callback <span class="op">=</span> <span class="va">theme</span><span class="op">$</span><span class="va">callback</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -7,28 +7,29 @@
 adjust_hex(hex, percent = 25)
 }
 \arguments{
-\item{hex}{A character string representing a hex color code (e.g., "#FF0000" or "FF0000")}
+\item{hex}{String. Hex color code, with or without leading "#" (e.g., "#FF0000"
+or "FF0000").}
 
-\item{percent}{Numeric value between -100 and 100 for the adjustment percentage:
-positive values lighten, negative values darken (default: 25)}
+\item{percent}{Numeric. Adjustment percentage between -100 and 100. Positive values
+lighten, negative values darken. Default: 25.}
 }
 \value{
-A character string containing the adjusted hex color code with leading "#"
+String. Adjusted hex color code with leading "#".
 }
 \description{
-Adjusts a hex color's brightness by a specified percentage. Positive percentages
-lighten the color (moving towards white), while negative percentages darken it
-(moving towards black).
+Adjusts the brightness of a hex color code by a specified percentage. Positive
+percentages lighten the color (towards white), negative percentages darken it
+(towards black).
 }
 \examples{
-# Lighten a color by 25\%
-adjust_hex("#FF0000", 25)    # Makes red lighter
+# Lighten red by 25\%
+adjust_hex("#FF0000", 25)
 
-# Darken a color by 30\%
-adjust_hex("#00FF00", -30)   # Makes green darker
+# Darken green by 30\%
+adjust_hex("#00FF00", -30)
 
-# Lighten without leading "#"
-adjust_hex("0000FF", 20)     # Makes blue lighter
+# Lighten blue by 20\% (without leading "#")
+adjust_hex("0000FF", 20)
 
 }
 \keyword{internal}

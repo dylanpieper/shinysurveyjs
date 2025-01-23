@@ -2,17 +2,23 @@
 % Please edit documentation in R/ui_utils.R
 \name{hex_to_rgb}
 \alias{hex_to_rgb}
-\title{Convert hex color to RGB values}
+\title{Convert Hexadecimal Color Code to RGB Values}
 \usage{
 hex_to_rgb(hex)
 }
 \arguments{
-\item{hex}{Hex color code}
+\item{hex}{Character. Hex color code, with or without leading "#".}
 }
 \value{
-Numeric vector of RGB values
+Numeric vector of length 3 containing RGB values (0-255).
 }
 \description{
-Convert hex color to RGB values
+Converts a hex color code (e.g., "#FF0000") to a numeric vector of RGB values
+between 0 and 255.
+}
+\examples{
+hex_to_rgb("#FF0000")  # Returns c(255, 0, 0)
+hex_to_rgb("00FF00")   # Returns c(0, 255, 0)
+
 }
 \keyword{internal}

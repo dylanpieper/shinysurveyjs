@@ -111,7 +111,6 @@ db_pool_close <- function(session) {
 #' @importFrom shiny getDefaultReactiveDomain parseQueryString
 db_ops <- R6::R6Class(
   "Database Operations",
-
   public = list(
     #' @field session_id Unique identifier for the current session
     session_id = NULL,
@@ -512,13 +511,17 @@ db_ops <- R6::R6Class(
             if (is.null(value)) {
               sprintf("%s IS NULL", DBI::dbQuoteIdentifier(conn, col))
             } else if (is.character(value)) {
-              sprintf("%s = %s",
-                      DBI::dbQuoteIdentifier(conn, col),
-                      DBI::dbQuoteString(conn, value))
+              sprintf(
+                "%s = %s",
+                DBI::dbQuoteIdentifier(conn, col),
+                DBI::dbQuoteString(conn, value)
+              )
             } else {
-              sprintf("%s = %s",
-                      DBI::dbQuoteIdentifier(conn, col),
-                      value)
+              sprintf(
+                "%s = %s",
+                DBI::dbQuoteIdentifier(conn, col),
+                value
+              )
             }
           }, character(1))
 
@@ -604,13 +607,17 @@ db_ops <- R6::R6Class(
         set_parts <- vapply(names(values), function(col) {
           value <- values[[col]]
           if (is.character(value)) {
-            sprintf("%s = %s",
-                    DBI::dbQuoteIdentifier(conn, col),
-                    DBI::dbQuoteString(conn, value))
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              DBI::dbQuoteString(conn, value)
+            )
           } else {
-            sprintf("%s = %s",
-                    DBI::dbQuoteIdentifier(conn, col),
-                    value)
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              value
+            )
           }
         }, character(1))
 
@@ -682,7 +689,6 @@ db_ops <- R6::R6Class(
       return(ip)
     }
   ),
-
   private = list(
     init_tracking_triggers = function() {
       self$operate(function(conn) {
@@ -698,11 +704,9 @@ db_ops <- R6::R6Class(
         DBI::dbExecute(conn, trigger_func_query)
       }, "Failed to initialize tracking triggers")
     },
-
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
-
     generate_column_definitions = function(data) {
       vapply(names(data), function(col) {
         type <- private$get_postgres_type(data[[col]])
@@ -713,7 +717,6 @@ db_ops <- R6::R6Class(
         )
       }, character(1))
     },
-
     get_postgres_type = function(vector) {
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {

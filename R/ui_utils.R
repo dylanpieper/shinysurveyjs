@@ -1,23 +1,18 @@
-#' Read Asset Files
+#' Read JavaScript or CSS Asset Files
 #'
-#' Reads JavaScript or CSS files.
+#' Reads and validates JavaScript (.js) or CSS (.css) asset files from disk.
 #'
-#' @param filepath Character string. Path to the file to be read.
+#' @param filepath String. Path to the JavaScript or CSS file.
 #'
-#' @return A character string containing the file contents.
-#'
-#' @details
-#' This function handles reading JavaScript and CSS files, validating the file
-#' exists and has the correct extension before reading.
+#' @return String containing the file contents.
 #'
 #' @examples
 #' \dontrun{
-#' # Read a JavaScript file
-#' js_content <- read_asset("path/to/script.js")
-#'
-#' # Read a CSS file
-#' css_content <- read_asset("path/to/styles.css")
+#' js_content <- read_asset("www/custom.js")
+#' css_content <- read_asset("www/theme.css")
 #' }
+#'
+#' @noRd
 #'
 #' @keywords internal
 read_asset <- function(filepath) {
@@ -40,13 +35,14 @@ read_asset <- function(filepath) {
 
 #' Switch Visibility Between Two Elements
 #'
-#' Shows one element while hiding another. Simple toggle between two DIV elements
-#' without animations.
+#' Shows one element while hiding another element via shinyjs. Provides a simple
+#' toggle between two HTML elements without animations.
 #'
-#' @param hide_id Character string specifying the ID of the element to hide
-#' @param show_id Character string specifying the ID of the element to show
+#' @param hide_id String. ID of the element to hide.
+#' @param show_id String. ID of the element to show.
 #'
 #' @importFrom shinyjs hide show
+#'
 #' @keywords internal
 hide_and_show <- function(hide_id, show_id) {
   shinyjs::hide(hide_id)
@@ -55,25 +51,26 @@ hide_and_show <- function(hide_id, show_id) {
 
 #' Adjust Hex Color Brightness
 #'
-#' Adjusts a hex color's brightness by a specified percentage. Positive percentages
-#' lighten the color (moving towards white), while negative percentages darken it
-#' (moving towards black).
+#' Adjusts the brightness of a hex color code by a specified percentage. Positive
+#' percentages lighten the color (towards white), negative percentages darken it
+#' (towards black).
 #'
-#' @param hex A character string representing a hex color code (e.g., "#FF0000" or "FF0000")
-#' @param percent Numeric value between -100 and 100 for the adjustment percentage:
-#'               positive values lighten, negative values darken (default: 25)
+#' @param hex String. Hex color code, with or without leading "#" (e.g., "#FF0000"
+#'   or "FF0000").
+#' @param percent Numeric. Adjustment percentage between -100 and 100. Positive values
+#'   lighten, negative values darken. Default: 25.
 #'
-#' @return A character string containing the adjusted hex color code with leading "#"
+#' @return String. Adjusted hex color code with leading "#".
 #'
 #' @examples
-#' # Lighten a color by 25%
-#' adjust_hex("#FF0000", 25)    # Makes red lighter
+#' # Lighten red by 25%
+#' adjust_hex("#FF0000", 25)
 #'
-#' # Darken a color by 30%
-#' adjust_hex("#00FF00", -30)   # Makes green darker
+#' # Darken green by 30%
+#' adjust_hex("#00FF00", -30)
 #'
-#' # Lighten without leading "#"
-#' adjust_hex("0000FF", 20)     # Makes blue lighter
+#' # Lighten blue by 20% (without leading "#")
+#' adjust_hex("0000FF", 20)
 #'
 #' @keywords internal
 adjust_hex <- function(hex, percent = 25) {
@@ -97,9 +94,19 @@ adjust_hex <- function(hex, percent = 25) {
   sprintf("#%02x%02x%02x", round(r), round(g), round(b))
 }
 
-#' Convert hex color to RGB values
-#' @param hex Hex color code
-#' @return Numeric vector of RGB values
+#' Convert Hexadecimal Color Code to RGB Values
+#'
+#' Converts a hex color code (e.g., "#FF0000") to a numeric vector of RGB values
+#' between 0 and 255.
+#'
+#' @param hex Character. Hex color code, with or without leading "#".
+#'
+#' @return Numeric vector of length 3 containing RGB values (0-255).
+#'
+#' @examples
+#' hex_to_rgb("#FF0000")  # Returns c(255, 0, 0)
+#' hex_to_rgb("00FF00")   # Returns c(0, 255, 0)
+#'
 #' @keywords internal
 hex_to_rgb <- function(hex) {
   hex <- sub("^#", "", hex)
@@ -110,9 +117,18 @@ hex_to_rgb <- function(hex) {
   as.numeric(paste0("0x", rgb))
 }
 
-#' Calculate relative luminance of a color
-#' @param hex Hex color code
-#' @return Numeric value between 0 and 1 representing relative luminance
+#' Calculate Relative Luminance From Color
+#'
+#' Calculates the relative luminance of a color according to WCAG 2.0 definition.
+#' Relative luminance represents the relative brightness of a color where 0 is
+#' black and 1 is white.
+#'
+#' @param hex String. Hex color code in "#RRGGBB" format.
+#' @return Numeric between 0 and 1 representing the relative luminance.
+#'
+#' @references
+#' WCAG 2.0: <https://www.w3.org/TR/WCAG20/#relativeluminancedef>
+#'
 #' @keywords internal
 calculate_luminance <- function(hex) {
   # Convert hex to RGB
@@ -126,7 +142,7 @@ calculate_luminance <- function(hex) {
     if (x <= 0.03928) {
       x / 12.92
     } else {
-      ((x + 0.055) / 1.055) ^ 2.4
+      ((x + 0.055) / 1.055)^2.4
     }
   })
 
@@ -137,68 +153,85 @@ calculate_luminance <- function(hex) {
   return(luminance)
 }
 
-#' Determine if a color is light or dark
-#' @param hex Hex color code
-#' @param threshold Luminance threshold (default: 0.179, based on WCAG guidelines)
-#' @return Boolean indicating if color is light (TRUE) or dark (FALSE)
+#' Determine if a Color is Light or Dark
+#'
+#' Calculates the relative luminance of a hex color code and compares it against
+#' a threshold to determine if the color should be considered light or dark.
+#'
+#' @param hex Character. Hex color code (e.g., "#FFFFFF").
+#' @param threshold Numeric. Luminance threshold between 0 and 1.
+#'   Values above threshold are considered light.
+#'   Default: 0.35
+#'
+#' @return Logical. `TRUE` if color is light, `FALSE` if dark.
+#'
 #' @keywords internal
 is_light_color <- function(hex, threshold = 0.35) {
   calculate_luminance(hex) > threshold
 }
 
-#' Get contrasting text color
-#' @param background_hex Background hex color code
-#' @return Hex color code for text ("#000000" for dark text or "#ffffff" for light text)
+#' Get Contrasting Text Color
+#'
+#' Determines the optimal text color (black or white) based on background color
+#' brightness using W3C compliant relative luminance calculation.
+#'
+#' @param background_hex String. Background hex color code (e.g., "#123456").
+#'
+#' @return String. Hex color code for text: "#000000" for dark text or "#FFFFFF" for
+#'   light text to ensure WCAG contrast requirements are met.
+#'
 #' @keywords internal
 get_contrast_color <- function(background_hex) {
   if (is_light_color(background_hex)) {
-    "#000000"  # Dark text for light backgrounds
+    "#000000" # Dark text for light backgrounds
   } else {
-    "#ffffff"  # Light text for dark backgrounds
-  }
-}
-
-#' Generate button text color based on background
-#' @param primary_hex Primary color hex code
-#' @param primary_foreground Optional override for text color
-#' @return Hex color code for button text
-#' @keywords internal
-get_button_text_color <- function(primary_hex, primary_foreground = NULL) {
-  if (!is.null(primary_foreground) && !is.na(primary_foreground) && primary_foreground != "") {
-    primary_foreground
-  } else {
-    get_contrast_color(primary_hex)
+    "#ffffff" # Light text for dark backgrounds
   }
 }
 
 #' Style DataTable Based on Theme Mode
 #'
-#' @description
 #' Creates a consistent styling configuration for DataTables that matches
 #' the application's theme mode (light/dark) and color scheme.
 #'
-#' @param mode Character string specifying "light" or "dark" mode
-#' @param theme_color Hex color code for primary theme color
-#' @param container_bg Background color for the container (optional)
-#' @param text_color Text color (optional)
+#' @param mode String. Theme mode, either "light" or "dark". Default: "light".
+#' @param theme_color String. Hex color code for primary theme color.
+#'   Default: "#0275d8".
+#' @param container_bg String. Background color hex code for table container.
+#'   Default: "#FFFFFF" for light, "#242424" for dark.
+#' @param text_color String. Text color hex code.
+#'   Default: "#000000" for light, "#FFFFFF" for dark.
 #'
-#' @return List of DT options and callback functions for table styling
-#'
-#' @importFrom DT datatable formatStyle
+#' @return List of DataTable options and callback JavaScript for styling:
+#'   * `options`: List of datatable initialization options
+#'   * `callback`: JavaScript function for row hover effects
 #'
 #' @examples
+#' \dontrun{
 #' # Light mode table
-#' DT::datatable(data, options = get_datatable_theme()$options)
+#' DT::datatable(mtcars,
+#'   options = get_datatable_theme()$options,
+#'   callback = get_datatable_theme()$callback
+#' )
 #'
-#' # Dark mode table
-#' DT::datatable(data, options = get_datatable_theme("dark", "#003594")$options)
+#' # Dark mode table with custom color
+#' theme <- get_datatable_theme(
+#'   mode = "dark",
+#'   theme_color = "#003594"
+#' )
+#' DT::datatable(mtcars,
+#'   options = theme$options,
+#'   callback = theme$callback
+#' )
+#' }
+#'
+#' @importFrom DT datatable formatStyle
 #'
 #' @keywords internal
 get_datatable_theme <- function(mode = "light",
                                 theme_color = "#003594",
                                 container_bg = NULL,
                                 text_color = NULL) {
-
   # Define color schemes based on mode
   if (mode == "dark") {
     colors <- list(
@@ -231,7 +264,8 @@ get_datatable_theme <- function(mode = "light",
   }
 
   # Custom CSS for DataTable
-  custom_css <- sprintf("
+  custom_css <- sprintf(
+    "
     .dataTables_wrapper {
       background-color: %s;
       color: %s;
@@ -322,19 +356,19 @@ get_datatable_theme <- function(mode = "light",
       cursor: not-allowed;
     }
   ",
-                        colors$background, colors$text, colors$border,
-                        colors$background, colors$header_bg, colors$header_text,
-                        colors$border, colors$border, colors$even_row,
-                        colors$odd_row, colors$hover, colors$text,
-                        colors$input_bg, colors$input_text, colors$input_border,
-                        theme_color, theme_color, colors$text,
-                        colors$background, colors$text, colors$border,
-                        theme_color, "#ffffff", theme_color
+    colors$background, colors$text, colors$border,
+    colors$background, colors$header_bg, colors$header_text,
+    colors$border, colors$border, colors$even_row,
+    colors$odd_row, colors$hover, colors$text,
+    colors$input_bg, colors$input_text, colors$input_border,
+    theme_color, theme_color, colors$text,
+    colors$background, colors$text, colors$border,
+    theme_color, "#ffffff", theme_color
   )
 
   # DataTable options
   options <- list(
-    dom = "frtip",  # Configure shown elements (filter, processing, table, info, pagination)
+    dom = "frtip", # Configure shown elements (filter, processing, table, info, pagination)
     pageLength = 10,
     lengthMenu = list(c(5, 10, 25, 50), c("5", "10", "25", "50")),
     scrollX = TRUE,

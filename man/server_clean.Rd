@@ -7,36 +7,23 @@
 server_clean(session, logger, zone = "SURVEY")
 }
 \arguments{
-\item{session}{The Shiny session object}
+\item{session}{Shiny session object}
 
-\item{logger}{A logger object with a log_message method for recording events}
+\item{logger}{Logger object with log_message method for event recording}
 
-\item{zone}{Character string specifying the logging zone (default: "SURVEY")}
+\item{zone}{Character. Logging zone identifier. Default: "SURVEY"}
 }
 \value{
-None (called for side effects)
+No return value, called for side effects
 }
 \description{
-This function handles cleanup tasks when a Shiny session ends. It ensures proper
-resource disposal by logging the session end and closing database connections.
-}
-\details{
-The function performs the following cleanup tasks:
-\itemize{
-\item Logs the session end event
-\item Closes any open database pool connections
-}
-
-This function should be called within the server function of a Shiny application
-to ensure proper resource management.
+Handles cleanup tasks when a Shiny session ends by logging session termination
+and closing database connections. Should be called within server initialization.
 }
 \examples{
 \dontrun{
 server <- function(input, output, session) {
-  # Setup logger
   logger <- LoggerFactory$new()
-
-  # Register cleanup
   server_clean(session, logger)
 }
 }

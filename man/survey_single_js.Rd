@@ -7,24 +7,22 @@
 survey_single_js(cookie_expiration_days = 7)
 }
 \arguments{
-\item{cookie_expiration_days}{Numeric value specifying how many days the survey
-cookies should persist in the user's browser. Must be a positive integer.
-Default is 7 days.}
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
+Must be positive. Default: 7.}
 }
 \value{
-A character string containing the concatenated JavaScript code with all
-necessary components for survey functionality.
+String containing concatenated JavaScript code for survey functionality
 }
 \description{
-Creates a consolidated JavaScript code bundle for handling single survey functionality
-by combining multiple JS components including configuration, cookie management,
-progress saving, Shiny integration, initialization, and event handlers.
+Creates a consolidated JavaScript code bundle for handling single survey functionality,
+including configuration, cookie management, progress saving, Shiny integration,
+initialization, and event handlers.
 }
 \examples{
-# Generate JavaScript with default 7-day cookie expiration
+# Default 7-day cookie expiration
 js_code <- survey_single_js()
 
-# Generate JavaScript with 30-day cookie expiration
+# Custom 30-day cookie expiration
 js_code <- survey_single_js(cookie_expiration_days = 30)
 
 }

@@ -14,20 +14,24 @@ survey_ui_wrapper(
 )
 }
 \arguments{
-\item{id}{The ID for the survey div container}
+\item{id}{String. ID for the survey div container.}
 
-\item{theme}{The theme configuration for styling the survey}
+\item{theme}{String. SurveyJS theme, either "defaultV2" or "modern".
+Default: "defaultV2".}
 
-\item{theme_color}{Primary color used for UI elements like the loading spinner}
+\item{theme_color}{String. Hex color code for primary theme customization.}
 
-\item{theme_mode}{The theme mode (e.g., 'light' or 'dark')}
+\item{theme_mode}{String. Color mode, either "light" or "dark".
+Default: "light".}
 
-\item{cookie_expiration_days}{Number of days to keep cookies for survey data}
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
+Default: 7.}
 
-\item{custom_css}{Optional custom CSS to append to the theme}
+\item{custom_css}{String. Custom CSS rules to append to the theme.}
 }
 \value{
-A Shiny UI definition
+A Shiny UI definition containing survey container, loading spinner,
+and optional response table.
 }
 \description{
 Creates a Shiny UI wrapper for displaying a survey with an optional response table.

@@ -7,42 +7,21 @@
 read_and_cache(db_ops, dynamic_config)
 }
 \arguments{
-\item{db_ops}{Database operations object that contains methods for reading tables.
-Must have a \code{read_table} method that accepts a table name as parameter.}
+\item{db_ops}{Object. Database operations object with a \code{read_table} method that
+accepts a table name parameter.}
 
-\item{dynamic_config}{List of table configurations. Each configuration must be a list containing at least a \code{table_name} field specifying which table to read.}
+\item{dynamic_config}{List. Table configurations. Each configuration must contain:
+\itemize{
+\item \code{table_name}: Name of database table to read
+\item Additional configuration fields are allowed but not used for caching
+}}
 }
 \value{
-A named list of cached tables.
-Access individual tables using \code{tables$table_name}.
+Named list of data frames. Access tables using \code{tables$table_name}.
 }
 \description{
-Creates a cache of database tables for efficient access.
-Tables are read from the database and stored in a list.
-}
-\examples{
-\dontrun{
-# Define dynamic fields configuration
-config <- list(
-  list(
-    group_type = "choice",
-    table_name = "config_packages",
-    group_col = "package"
-  ),
-  list(
-    group_type = "param",
-    table_name = "config_source",
-    group_col = "source",
-    display_col = "display_text"
-  )
-)
-tables <- read_and_cache(db_ops, config)
-
-# Access cached table
-output$packageTable <- renderTable({
-  tables$config_packages
-})
-}
-
+Creates a cache of database tables for efficient access by reading tables from
+the database and storing them in a list. This prevents redundant database reads
+during dynamic field population.
 }
 \keyword{internal}

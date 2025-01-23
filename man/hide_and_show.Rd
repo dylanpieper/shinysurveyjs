@@ -7,12 +7,12 @@
 hide_and_show(hide_id, show_id)
 }
 \arguments{
-\item{hide_id}{Character string specifying the ID of the element to hide}
+\item{hide_id}{String. ID of the element to hide.}
 
-\item{show_id}{Character string specifying the ID of the element to show}
+\item{show_id}{String. ID of the element to show.}
 }
 \description{
-Shows one element while hiding another. Simple toggle between two DIV elements
-without animations.
+Shows one element while hiding another element via shinyjs. Provides a simple
+toggle between two HTML elements without animations.
 }
 \keyword{internal}

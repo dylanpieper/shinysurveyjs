@@ -2,17 +2,19 @@
 % Please edit documentation in R/ui_utils.R
 \name{get_contrast_color}
 \alias{get_contrast_color}
-\title{Get contrasting text color}
+\title{Get Contrasting Text Color}
 \usage{
 get_contrast_color(background_hex)
 }
 \arguments{
-\item{background_hex}{Background hex color code}
+\item{background_hex}{String. Background hex color code (e.g., "#123456").}
 }
 \value{
-Hex color code for text ("#000000" for dark text or "#ffffff" for light text)
+String. Hex color code for text: "#000000" for dark text or "#FFFFFF" for
+light text to ensure WCAG contrast requirements are met.
 }
 \description{
-Get contrasting text color
+Determines the optimal text color (black or white) based on background color
+brightness using W3C compliant relative luminance calculation.
 }
 \keyword{internal}

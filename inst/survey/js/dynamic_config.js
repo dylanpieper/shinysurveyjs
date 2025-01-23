@@ -1,4 +1,4 @@
-// Normalize field value for comparison (matching R-side normalization)
+// Normalize field value for comparison
 function normalizeFieldValue(value, settings = {}) {
     if (!value || typeof value !== 'string') return value;
 
@@ -6,22 +6,160 @@ function normalizeFieldValue(value, settings = {}) {
         removeSpecial = true
     } = settings;
 
-    // Convert to lowercase and trim whitespace
     let normalized = value.toLowerCase().trim().replace(/\s+/g, ' ');
 
     if (removeSpecial) {
-        // Remove special characters, keeping only alphanumeric and space
         normalized = normalized.replace(/[^a-z0-9\s]/g, '');
     }
 
     return normalized;
 }
 
-function setupUniqueValidation(data) {
-    if (!data.unique_validation) {
-        console.log("No unique validation data");
-        return;
+const UniqueValidation = {
+    fields: new Map(),
+    errorElements: new Map(),
+
+    initField(fieldName, config) {
+        this.fields.set(fieldName, config);
+        this.setupErrorDisplay(fieldName);
+    },
+
+    setupErrorDisplay(fieldName) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'unique-validation-error';
+        errorDiv.style.cssText = `
+            color: #d92929;
+            font-size: 14px;
+            padding: 8px 0;
+            display: none;
+            margin-top: 4px;
+            font-family: inherit;
+            font-weight: bold;
+        `;
+        this.errorElements.set(fieldName, errorDiv);
+
+        // Watch for the question element and attach error display
+        const observer = new MutationObserver(() => {
+            const questionEl = document.querySelector(`[data-name="${fieldName}"]`);
+            if (questionEl && !questionEl.querySelector('.unique-validation-error')) {
+                questionEl.appendChild(errorDiv);
+                observer.disconnect();
+
+                // Set up input monitoring
+                const inputEl = questionEl.querySelector('input') ||
+                              questionEl.querySelector('textarea');
+
+                if (inputEl) {
+                    let lastValue = inputEl.value;
+
+                    // Monitor all possible input methods
+                    ['input', 'change', 'blur', 'keyup'].forEach(eventType => {
+                        inputEl.addEventListener(eventType, () => {
+                            const currentValue = inputEl.value;
+                            if (currentValue !== lastValue) {
+                                lastValue = currentValue;
+                                this.validateField(fieldName, currentValue);
+                            }
+                        });
+                    });
+                }
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    },
+
+    validateField(fieldName, value) {
+        console.log(`Validating ${fieldName}:`, value);
+
+        const config = this.fields.get(fieldName);
+        const errorEl = this.errorElements.get(fieldName);
+
+        if (!config || !errorEl) return true;
+
+        // Always hide error initially
+        errorEl.style.display = 'none';
+
+        if (!value) return true;
+
+        const normalizedInput = this.normalizeValue(value, config.normalization_settings);
+        const matches = config.normalized_values.some(item =>
+            item.normalized === normalizedInput
+        );
+
+        if (matches && config.result === "stop") {
+            // Show error
+            errorEl.textContent = "This value already exists. Please enter a unique value.";
+            errorEl.style.display = 'block';
+            return false;
+        } else if (matches && config.result === "warn") {
+            // Handle warning field
+            const warningField = survey.getQuestionByName(config.result_field);
+            if (warningField) {
+                warningField.visible = true;
+            }
+        } else if (config.result === "warn") {
+            // Hide warning field
+            const warningField = survey.getQuestionByName(config.result_field);
+            if (warningField) {
+                warningField.visible = false;
+            }
+        }
+
+        return true;
+    },
+
+    normalizeValue(value, settings = {}) {
+        if (!value || typeof value !== 'string') return value;
+        let normalized = value.toLowerCase().trim().replace(/\s+/g, ' ');
+        if (settings.removeSpecial) {
+            normalized = normalized.replace(/[^a-z0-9\s]/g, '');
+        }
+        return normalized;
+    },
+
+    hasErrors() {
+        // Check all error elements for visibility
+        for (const errorEl of this.errorElements.values()) {
+            if (errorEl.style.display === 'block') return true;
+        }
+        return false;
+    },
+
+    getFirstErrorField() {
+        for (const [fieldName, errorEl] of this.errorElements) {
+            if (errorEl.style.display === 'block') return fieldName;
+        }
+        return null;
+    },
+
+    focusField(fieldName) {
+        const questionEl = document.querySelector(`[data-name="${fieldName}"]`);
+        if (!questionEl) return;
+
+        const inputEl = questionEl.querySelector('input') ||
+                       questionEl.querySelector('textarea') ||
+                       questionEl;
+
+        // Scroll into view
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Focus after scroll
+        setTimeout(() => {
+            try {
+                inputEl.focus();
+            } catch (e) {
+                console.warn('Could not focus field:', e);
+            }
+        }, 500);
     }
+};
+
+function setupUniqueValidation(data) {
+    if (!data.unique_validation) return;
 
     const attemptSetup = () => {
         if (typeof survey === 'undefined' || survey === null) {
@@ -29,81 +167,41 @@ function setupUniqueValidation(data) {
             return;
         }
 
-        console.log("Setting up unique validation:", data.unique_validation);
-
-        // Store validation data on survey instance
-        survey.uniqueValidation = data.unique_validation;
-
-        // Setup validators for each unique field
+        // Initialize validation for each field
         Object.entries(data.unique_validation).forEach(([fieldName, config]) => {
-            const question = survey.getQuestionByName(fieldName);
-            if (!question) {
-                console.warn(`Question ${fieldName} not found for unique validation`);
-                return;
-            }
+            UniqueValidation.initField(fieldName, config);
 
-            // Add validator function
-            question.validators = question.validators || [];
-            question.validators.push({
-                type: "custom",
-                text: "This value already exists. Please enter a unique value.",
-                validate: function(value, name) {
-                    console.log("Validation triggered for:", name, "with value:", value);
-
-                    if (!value) return true; // Skip empty values
-
-                    const normalizedInput = normalizeFieldValue(value, config.normalization_settings);
-                    console.log("Normalized input:", normalizedInput);
-
-                    const normalizedValues = Array.isArray(config.normalized_values)
-                        ? config.normalized_values
-                        : [config.normalized_values];
-                    console.log("Normalized values:", normalizedValues);
-
-                    // Check each object in the normalizedValues array
-                    const matches = config.normalized_values.some(item =>
-                        item.normalized === normalizedInput
-                    );
-
-                    console.log("Match found:", matches);
-
-                    if (matches && config.result === "warn") {
-                        const warningField = survey.getQuestionByName(config.result_field);
-                        console.log("Warning field found:", warningField);
-                        if (warningField) {
-                            warningField.visible = true;
-                            console.log("Warning field made visible");
-                        }
-                        return true; // Allow submission despite warning
-                    }
-
-                    if (matches && config.result === "stop") {
-                        console.log("Stopping submission due to match");
-                        return false; // Block submission
-                    }
-
-                    if (!matches && config.result === "warn") {
-                        const warningField = survey.getQuestionByName(config.result_field);
-                        console.log("Unique value detected, hiding warning field");
-                        if (warningField) {
-                            warningField.visible = false;
-                            console.log("Warning field hidden");
-                        }
-                    }
-
-                    return true;
+            // Add survey-level validation as backup
+            survey.onValueChanged.add((sender, options) => {
+                if (options.name === fieldName && options.value !== undefined) {
+                    UniqueValidation.validateField(fieldName, options.value);
                 }
             });
+        });
 
-            // Add change handler to validate on input
-            question.valueChangedCallback = function() {
-                question.hasErrors(true); // Force error check
-                survey.runConditions(); // Update visibility states
-            };
+        // Handle page navigation
+        survey.onCurrentPageChanging.add((sender, options) => {
+            if (UniqueValidation.hasErrors()) {
+                const errorField = UniqueValidation.getFirstErrorField();
+                if (errorField) {
+                    UniqueValidation.focusField(errorField);
+                    options.allow = false;
+                }
+            }
+        });
+
+        // Handle form completion
+        survey.onCompleting.add((sender, options) => {
+            if (UniqueValidation.hasErrors()) {
+                const errorField = UniqueValidation.getFirstErrorField();
+                if (errorField) {
+                    UniqueValidation.focusField(errorField);
+                    options.allow = false;
+                }
+            }
         });
     };
 
-    // Start the setup attempt
     attemptSetup();
 }
 

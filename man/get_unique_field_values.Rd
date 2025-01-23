@@ -7,15 +7,23 @@
 get_unique_field_values(dynamic_config, db_ops, write_table)
 }
 \arguments{
-\item{dynamic_config}{List of configuration entries}
+\item{dynamic_config}{List. Configuration specifying fields requiring unique values.
+Each entry should contain:
+\itemize{
+\item \code{config_type}: Must be "unique"
+\item \code{config_col}: Column to check for uniqueness
+}}
 
-\item{db_ops}{Database operations object that contains methods for reading tables}
+\item{db_ops}{Object. Database operations handler containing read methods.}
 
-\item{write_table}{Table name to check}
+\item{write_table}{String. Name of the database table to check values against.}
 }
 \value{
-List of unique field values by field name
+Named list mapping field names to vectors of their existing values
+in the database.
 }
 \description{
-Retrieves existing values from the database for fields that require uniqueness validation
+Retrieves existing values from the database for fields that require uniqueness
+validation according to a dynamic configuration.
 }
+\keyword{internal}

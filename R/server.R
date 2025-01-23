@@ -26,9 +26,9 @@
 #' @param dynamic_config List. Configuration for dynamic fields. Supports three types:
 #'   \subsection{Choice Configuration}{
 #'     Populates dropdown or radio button choices from database tables:
-#'     * `group_type`: Set to "choice"
+#'     * `config_type`: Set to "choice"
 #'     * `table_name`: Database table to populate choices from
-#'     * `group_col`: Column containing choice text
+#'     * `config_col`: Column containing choice text
 #'     * `display_col`: Optional column for display text
 #'
 #'     For dependent fields:
@@ -37,15 +37,15 @@
 #'   }
 #'   \subsection{Parameter Configuration}{
 #'     Handles URL query parameters and hidden fields:
-#'     * `group_type`: Set to "param"
+#'     * `config_type`: Set to "param"
 #'     * `table_name`: Database table with valid parameters
-#'     * `group_col`: Column matching URL parameter name
+#'     * `config_col`: Column matching URL parameter name
 #'     * `display_col`: Optional column for display text
 #'   }
 #'   \subsection{Unique Value Configuration}{
 #'     Validates unique entries against existing database records:
-#'     * `group_type`: Set to "unique"
-#'     * `group_col`: Column to check for uniqueness
+#'     * `config_type`: Set to "unique"
+#'     * `config_col`: Column to check for uniqueness
 #'     * `result`: Action on duplicate ("warn" or "stop")
 #'     * `result_field`: Survey field for warning message (should be hidden)
 #'   }
@@ -61,18 +61,18 @@
 #' # Choice configuration example
 #' dynamic_config <- list(
 #'   list(
-#'     group_type = "choice",
+#'     config_type = "choice",
 #'     table_name = "packages",
-#'     group_col = "name"
+#'     config_col = "name"
 #'   )
 #' )
 #'
 #' # Parameter configuration example
 #' dynamic_config <- list(
 #'   list(
-#'     group_type = "param",
+#'     config_type = "param",
 #'     table_name = "sources",
-#'     group_col = "source",
+#'     config_col = "source",
 #'     display_col = "display_text"
 #'   )
 #' )
@@ -80,8 +80,8 @@
 #' # Unique value configuration example
 #' dynamic_config <- list(
 #'   list(
-#'     group_type = "unique",
-#'     group_col = "title",
+#'     config_type = "unique",
+#'     config_col = "title",
 #'     result = "warn",
 #'     result_field = "warning_message"
 #'   )
@@ -251,7 +251,8 @@ survey_single <- function(json = NULL,
 
             survey_data <- list(
               survey = survey_obj,
-              params = validated_params
+              params = validated_params,
+              dynamic_config = !is.null(dynamic_config)
             )
 
             json <- jsonlite::toJSON(rv$validated_params)
@@ -297,8 +298,9 @@ survey_single <- function(json = NULL,
                   difftime(rv$start_time, rv$load_start_time, units = "secs")
                 )
 
-                logger$log_message("Loaded survey with dynamic configuration",
-                                   zone = "SURVEY")
+                logger$log_message("Loaded survey",
+                  zone = "SURVEY"
+                )
               },
               once = TRUE
             )

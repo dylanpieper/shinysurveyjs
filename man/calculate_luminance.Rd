@@ -2,17 +2,22 @@
 % Please edit documentation in R/ui_utils.R
 \name{calculate_luminance}
 \alias{calculate_luminance}
-\title{Calculate relative luminance of a color}
+\title{Calculate Relative Luminance From Color}
 \usage{
 calculate_luminance(hex)
 }
 \arguments{
-\item{hex}{Hex color code}
+\item{hex}{String. Hex color code in "#RRGGBB" format.}
 }
 \value{
-Numeric value between 0 and 1 representing relative luminance
+Numeric between 0 and 1 representing the relative luminance.
 }
 \description{
-Calculate relative luminance of a color
+Calculates the relative luminance of a color according to WCAG 2.0 definition.
+Relative luminance represents the relative brightness of a color where 0 is
+black and 1 is white.
+}
+\references{
+WCAG 2.0: \url{https://www.w3.org/TR/WCAG20/#relativeluminancedef}
 }
 \keyword{internal}

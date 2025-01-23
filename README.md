@@ -143,7 +143,7 @@ By default, the database configuration looks for environmental variables (e.g., 
 
 -   Add survey start and end date controls to limit access to a survey
 
--   Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to turn off access after completion)
+-   Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to disable access after completion)
 
 -   Dynamically stage JSON objects in the database to modify surveys using a staging table
 

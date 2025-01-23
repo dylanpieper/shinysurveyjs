@@ -13,49 +13,45 @@ server_response(
 )
 }
 \arguments{
-\item{output}{The Shiny output object}
+\item{output}{Shiny output object.}
 
-\item{rv}{A reactive values object containing:
+\item{rv}{Reactive values object containing:
 \itemize{
-\item survey_completed - Boolean indicating if survey is completed
-\item loading - Boolean indicating loading state
-\item survey_responses - Data frame of survey responses
-\item error_message - String containing error message if any
+\item \code{survey_completed}: Boolean indicating survey completion
+\item \code{loading}: Boolean for loading state
+\item \code{survey_responses}: Data frame of responses
+\item \code{error_message}: Error message string if any
 }}
 
-\item{show_response}{Boolean indicating whether to show the response table}
+\item{show_response}{Logical. Display response table. Default: \code{FALSE}.}
 
-\item{theme_mode}{Character string specifying the theme mode ("light" or "dark")}
+\item{theme_mode}{String. Color mode, either "light" or "dark". Default: "light".}
 
-\item{theme_color}{Character string specifying the primary theme color (hex code)}
-}
-\value{
-None (called for side effects)
+\item{theme_color}{String. Hex color code for primary theme.}
 }
 \description{
-This function sets up the server-side logic for displaying a survey response
-data table in a Shiny application. It handles the rendering of the response
-table, controls its visibility, and applies theming based on light/dark mode.
+Sets up server-side logic for displaying survey responses in a themed DataTable.
+Handles rendering, visibility control, and theme-based styling.
 }
 \details{
-The function creates two reactive outputs:
+Creates two reactive outputs:
 \itemize{
-\item surveyResponseTable - A DataTable showing survey responses with themed styling
-\item showResponseTable - Controls visibility of the response table
+\item \code{surveyResponseTable}: Themed DataTable of responses
+\item \code{showResponseTable}: Visibility control
 }
 
-The table will only be shown when:
+Table displays when:
 \itemize{
-\item The survey is completed
-\item Data is not loading
-\item There are no error messages
-\item show_response parameter is TRUE
+\item Survey is completed
+\item Not loading
+\item No errors present
+\item \code{show_response} is \code{TRUE}
 }
 
-The function applies different color schemes based on the theme_mode:
+Theme styling:
 \itemize{
-\item Light mode: White background with dark text and subtle borders
-\item Dark mode: Dark background with light text and contrasting borders
+\item Light mode: White background, dark text
+\item Dark mode: Dark background, light text
 }
 }
 \examples{

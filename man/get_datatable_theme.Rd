@@ -12,27 +12,46 @@ get_datatable_theme(
 )
 }
 \arguments{
-\item{mode}{Character string specifying "light" or "dark" mode}
+\item{mode}{String. Theme mode, either "light" or "dark". Default: "light".}
 
-\item{theme_color}{Hex color code for primary theme color}
+\item{theme_color}{String. Hex color code for primary theme color.
+Default: "#0275d8".}
 
-\item{container_bg}{Background color for the container (optional)}
+\item{container_bg}{String. Background color hex code for table container.
+Default: "#FFFFFF" for light, "#242424" for dark.}
 
-\item{text_color}{Text color (optional)}
+\item{text_color}{String. Text color hex code.
+Default: "#000000" for light, "#FFFFFF" for dark.}
 }
 \value{
-List of DT options and callback functions for table styling
+List of DataTable options and callback JavaScript for styling:
+\itemize{
+\item \code{options}: List of datatable initialization options
+\item \code{callback}: JavaScript function for row hover effects
+}
 }
 \description{
 Creates a consistent styling configuration for DataTables that matches
 the application's theme mode (light/dark) and color scheme.
 }
 \examples{
+\dontrun{
 # Light mode table
-DT::datatable(data, options = get_datatable_theme()$options)
+DT::datatable(mtcars,
+  options = get_datatable_theme()$options,
+  callback = get_datatable_theme()$callback
+)
 
-# Dark mode table
-DT::datatable(data, options = get_datatable_theme("dark", "#003594")$options)
+# Dark mode table with custom color
+theme <- get_datatable_theme(
+  mode = "dark",
+  theme_color = "#003594"
+)
+DT::datatable(mtcars,
+  options = theme$options,
+  callback = theme$callback
+)
+}
 
 }
 \keyword{internal}

@@ -2,19 +2,22 @@
 % Please edit documentation in R/ui_utils.R
 \name{is_light_color}
 \alias{is_light_color}
-\title{Determine if a color is light or dark}
+\title{Determine if a Color is Light or Dark}
 \usage{
 is_light_color(hex, threshold = 0.35)
 }
 \arguments{
-\item{hex}{Hex color code}
+\item{hex}{Character. Hex color code (e.g., "#FFFFFF").}
 
-\item{threshold}{Luminance threshold (default: 0.179, based on WCAG guidelines)}
+\item{threshold}{Numeric. Luminance threshold between 0 and 1.
+Values above threshold are considered light.
+Default: 0.35}
 }
 \value{
-Boolean indicating if color is light (TRUE) or dark (FALSE)
+Logical. \code{TRUE} if color is light, \code{FALSE} if dark.
 }
 \description{
-Determine if a color is light or dark
+Calculates the relative luminance of a hex color code and compares it against
+a threshold to determine if the color should be considered light or dark.
 }
 \keyword{internal}

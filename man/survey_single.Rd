@@ -2,7 +2,7 @@
 % Please edit documentation in R/server.R
 \name{survey_single}
 \alias{survey_single}
-\title{Deploy a Single Survey Shiny Application}
+\title{Deploy a Survey Shiny Application}
 \usage{
 survey_single(
   json = NULL,
@@ -55,9 +55,9 @@ values are read from environment variables:
 \item{dynamic_config}{List. Configuration for dynamic fields. Supports three types:
 \subsection{Choice Configuration}{
 Populates dropdown or radio button choices from database tables:
-* \code{group_type}: Set to "choice"
+* \code{config_type}: Set to "choice"
 * \code{table_name}: Database table to populate choices from
-* \code{group_col}: Column containing choice text
+* \code{config_col}: Column containing choice text
 * \code{display_col}: Optional column for display text
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{For dependent fields:
@@ -68,15 +68,15 @@ Populates dropdown or radio button choices from database tables:
 }
 \subsection{Parameter Configuration}{
 Handles URL query parameters and hidden fields:
-* \code{group_type}: Set to "param"
+* \code{config_type}: Set to "param"
 * \code{table_name}: Database table with valid parameters
-* \code{group_col}: Column matching URL parameter name
+* \code{config_col}: Column matching URL parameter name
 * \code{display_col}: Optional column for display text
 }
 \subsection{Unique Value Configuration}{
 Validates unique entries against existing database records:
-* \code{group_type}: Set to "unique"
-* \code{group_col}: Column to check for uniqueness
+* \code{config_type}: Set to "unique"
+* \code{config_col}: Column to check for uniqueness
 * \code{result}: Action on duplicate ("warn" or "stop")
 * \code{result_field}: Survey field for warning message (should be hidden)
 }}
@@ -92,27 +92,27 @@ Default: 7.}
 A Shiny application object
 }
 \description{
-Creates and deploys a Shiny application for conducting a single survey using SurveyJS
-(\url{https://surveyjs.io}) with PostgreSQL database integration. The application handles both
-survey data collection and asynchronous logging through a future plan.
+Creates and deploys a Shiny application for a survey using SurveyJS
+(\url{https://surveyjs.io}) with PostgreSQL database integration. The application handles
+survey data collection, dynamic fields, and asynchronous logging through a future plan.
 }
 \examples{
 \dontrun{
 # Choice configuration example
 dynamic_config <- list(
   list(
-    group_type = "choice",
+    config_type = "choice",
     table_name = "packages",
-    group_col = "name"
+    config_col = "name"
   )
 )
 
 # Parameter configuration example
 dynamic_config <- list(
   list(
-    group_type = "param",
+    config_type = "param",
     table_name = "sources",
-    group_col = "source",
+    config_col = "source",
     display_col = "display_text"
   )
 )
@@ -120,8 +120,8 @@ dynamic_config <- list(
 # Unique value configuration example
 dynamic_config <- list(
   list(
-    group_type = "unique",
-    group_col = "title",
+    config_type = "unique",
+    config_col = "title",
     result = "warn",
     result_field = "warning_message"
   )

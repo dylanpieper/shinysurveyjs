@@ -14,34 +14,34 @@ configure_dynamic_fields(
 )
 }
 \arguments{
-\item{dynamic_config}{List of configuration entries. Each entry must be a list containing:
-\itemize{
-\item \strong{group_type}: Character, either "choice", "param", or "unique"
-\item \strong{group_col}: Character, name of the column containing choices
-\item \strong{parent_table_name}: (Optional) Character, name of parent table
-\item \strong{parent_id_col}: (Optional) Character, column name for parent-child relationship
-\item \strong{display_col}: (Optional) Character, column name containing display text
-For unique validation:
-\item \strong{result}: Character, either "warn" or "stop"
-\item \strong{result_field}: (Required for warn) Character, field to show warning
+\item{dynamic_config}{List. Configuration entries, where each entry contains:
+\describe{
+\item{config_type}{String. Field type: "choice", "param", or "unique"}
+\item{config_col}{String. Column name containing choice values}
+\item{parent_table_name}{String. Optional parent table for dependencies}
+\item{parent_id_col}{String. Optional column for parent-child relationships}
+\item{display_col}{String. Optional column for display text}
+\item{result}{String. For unique validation: "warn" or "stop"}
+\item{result_field}{String. Required for warnings: field to display message}
 }}
 
-\item{config_list_reactive}{Reactive expression containing cached database tables}
+\item{config_list_reactive}{Reactive. Contains cached database tables.}
 
-\item{session}{Shiny session object for sending messages to the client}
+\item{session}{ShinySession. Session object for client communication.}
 
-\item{logger}{Logger object for recording operation results}
+\item{logger}{Logger. Object for operation logging.}
 
-\item{write_table}{Character, name of the table to check for unique values}
+\item{write_table}{String. Table name for unique value validation.}
 
-\item{db_ops}{Database operations object that contains methods for reading tables.}
+\item{db_ops}{DBOps. Database operations object with table reading methods.}
 }
 \value{
-Invisible NULL. The function operates via side effects.
+Invisible NULL, called for side effects.
 }
 \description{
-Configures dynamic fields based on the provided configuration, handling both
-choices and parameters. Supports parent-child relationships between fields,
-optional display text for choices, and unique field validation. Sends the
-formatted field configurations to the client via a custom message.
+Configures dynamic fields in a survey based on provided configuration parameters.
+Handles choice population from database tables, parent-child field relationships,
+parameter-based field values, and unique value validation. Sends formatted field
+configurations to the client via custom messages.
 }
+\keyword{internal}

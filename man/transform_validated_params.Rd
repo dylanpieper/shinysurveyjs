@@ -7,18 +7,18 @@
 transform_validated_params(validated_params, config_list)
 }
 \arguments{
-\item{validated_params}{List. Input parameters in the format:
-list(param_name = "value") or list(param_name = list(value = "value"))}
+\item{validated_params}{List of parameters in format \code{list(param_name = "value")} or
+\code{list(param_name = list(value = "value"))}.}
 
-\item{config_list}{List. Configuration data containing tables including:
+\item{config_list}{List of configuration data frames:
 \itemize{
-\item \strong{config_source}: Data frame with columns 'source' and 'display_text'
-\item \strong{config_packages}: Data frame with package configurations
+\item \code{config_source}: Table with 'source' and 'display_text' columns
+\item \code{config_packages}: Table with package configurations
 }}
 }
 \value{
-List. Transformed parameters in the format:
-list(param_name = list(text = "display_text", value = "value"))
+List of transformed parameters in format
+\code{list(param_name = list(text = "display_text", value = "value"))}
 }
 \description{
 Transforms a list of validated parameters into a structured format with text/value pairs,

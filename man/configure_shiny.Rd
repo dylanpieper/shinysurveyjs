@@ -7,16 +7,22 @@
 configure_shiny(..., type_handlers = list())
 }
 \arguments{
-\item{...}{Named arguments corresponding to Shiny options. Names will be prefixed with 'shiny.'}
+\item{...}{Named arguments passed as Shiny options. Names will be prefixed with 'shiny.'.}
 
-\item{type_handlers}{Named list of functions to process specific options. Default handlers
-are provided for numeric, logical, and character values.}
+\item{type_handlers}{Named list of functions for option value processing. Default handlers
+provided for:
+\itemize{
+\item numeric: Validates numeric values
+\item logical: Converts to TRUE/FALSE
+\item character: Processes string values
+}}
 }
 \value{
-NULL (invisibly). Sets global options for Shiny.
+Invisible NULL. Modifies global Shiny options.
 }
 \description{
-Configure Shiny App Settings
+Sets global Shiny options by automatically adding the 'shiny.' prefix to option names.
+Validates and processes option values using type-specific handlers.
 }
 \examples{
 \dontrun{

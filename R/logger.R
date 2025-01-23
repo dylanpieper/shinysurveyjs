@@ -1,58 +1,27 @@
-#' @title Shiny App Logger Class
+#' Shiny App Logger Class
 #'
-#' @description An R6 class that provides asynchronous logging functionality for shiny app messages.
+#' An R6 class that provides asynchronous logging functionality for Shiny
+#' application messages. This class efficiently handles logging to a PostgreSQL
+#' database using connection pooling and futures for non-blocking database operations.
 #'
-#' @format An R6 class object
-#' @details This class handles asynchronous logging of shiny app messages to a PostgreSQL database.
-#' It uses connection pooling and futures for efficient database operations. The class maintains
-#' a single logging table per instance and handles all database connections internally.
+#' @format An [R6][R6::R6Class] class object.
+#'
+#' @description
+#' Creates a new logger instance for recording application messages asynchronously
+#' to a PostgreSQL database with visual console feedback.
 #'
 #' @section Message Types:
-#' The logger supports different message types that are displayed with distinct visual styles:
-#' \describe{
-#'   \item{INFO}{Regular informational messages (displayed in green)}
-#'   \item{WARN}{Warning messages (displayed in yellow)}
-#'   \item{ERROR}{Error messages (displayed in red)}
-#' }
+#' Supported message types with distinct visual styles:
+#' * `INFO`: Regular informational messages (green)
+#' * `WARN`: Warning messages (yellow)
+#' * `ERROR`: Error messages (red)
 #'
 #' @section Public Fields:
-#' \describe{
-#'   \item{log_table}{character. Name of the database table for logging}
-#'   \item{session_id}{character. Unique identifier for the current session}
-#'   \item{survey_name}{character. Name of the survey being logged}
-#'   \item{db_params}{list. Database connection parameters}
-#'   \item{suppress_logs}{logical. Whether to suppress logs from console output}
-#' }
-#'
-#' @section Methods:
-#' \describe{
-#'   \item{initialize(log_table, session_id, survey_name, suppress_logs = FALSE)}{
-#'     Creates a new logger instance
-#'     \describe{
-#'       \item{log_table}{character. Name of the logging table}
-#'       \item{session_id}{character. Unique session identifier}
-#'       \item{survey_name}{character. Name of the survey}
-#'       \item{suppress_logs}{logical. Whether to suppress console output}
-#'       \item{db_config}{list. Optional database configuration parameters}
-#'     }
-#'   }
-#'   \item{log_message(message, type = "INFO", zone = "DEFAULT")}{
-#'     Logs a message asynchronously with appropriate visual styling
-#'     \describe{
-#'       \item{message}{character. Message to log}
-#'       \item{type}{character. Type of message ("INFO", "WARN", "ERROR")}
-#'       \item{zone}{character. Zone identifier for message categorization}
-#'     }
-#'   }
-#' }
-#'
-#' @importFrom R6 R6Class
-#' @importFrom promises future_promise then catch
-#' @importFrom future future
-#' @importFrom DBI dbExecute dbConnect dbDisconnect dbExistsTable
-#' @importFrom RPostgres Postgres
-#' @importFrom pool poolCheckout poolReturn
-#' @importFrom cli cli_alert_success cli_alert_danger cli_alert_warning cli_alert_info
+#' * `log_table`: Character. Database table name for logging
+#' * `session_id`: Character. Unique identifier for current session
+#' * `survey_name`: Character. Name of the survey being logged
+#' * `db_params`: List. Database connection parameters
+#' * `suppress_logs`: Logical. Whether to suppress console output
 #'
 #' @examples
 #' \dontrun{
@@ -63,42 +32,50 @@
 #'   survey_name = "customer_feedback"
 #' )
 #'
-#' # Initialize logger without console output
-#' quiet_logger <- survey_logger$new(
-#'   log_table = "survey_app_logs",
-#'   session_id = "user123",
-#'   survey_name = "customer_feedback",
-#'   suppress_logs = TRUE
-#' )
-#'
 #' # Log different types of messages
 #' logger$log_message("Survey started", "INFO", "initialization")
 #' logger$log_message("Missing optional field", "WARN", "validation")
-#' logger$log_message("Required field empty", "ERROR", "validation")
+#' logger$log_message("Database error", "ERROR", "data")
 #' }
+#'
+#' @import R6
+#' @importFrom promises future_promise then catch
+#' @importFrom future future
+#' @importFrom DBI dbExecute dbConnect dbDisconnect dbExistsTable
+#' @importFrom RPostgres Postgres
+#' @importFrom pool poolCheckout poolReturn
+#' @importFrom cli cli_alert_success cli_alert_danger cli_alert_warning
 survey_logger <- R6::R6Class(
   "survey_logger",
   public = list(
-    #' @field log_table Name of the database table for logging
+    #' @field log_table Character string specifying the name of the PostgreSQL table where logs will be stored.
     log_table = NULL,
 
-    #' @field session_id Unique identifier for the current session
+    #' @field session_id Character string containing a unique identifier for the current Shiny session.
     session_id = NULL,
 
-    #' @field survey_name Name of the survey being logged
+    #' @field survey_name Character string identifying which survey is being logged.
     survey_name = NULL,
 
-    #' @field db_params List of database connection parameters
+    #' @field db_params List containing PostgreSQL connection parameters including host, port, database name,
+    #' username and password.
     db_params = NULL,
 
-    #' @field suppress_logs Whether to suppress console output
+    #' @field suppress_logs Logical flag indicating whether to suppress console output messages. When TRUE,
+    #' messages are only logged to the database without console feedback.
     suppress_logs = NULL,
 
-    #' @description Initialize a new survey logger instance
-    #' @param log_table character. Name of the logging table
-    #' @param session_id character. Unique session identifier
-    #' @param survey_name character. Name of the survey
-    #' @param suppress_logs logical. Whether to suppress console output
+    #' Initialize a new survey logger instance
+    #'
+    #' Creates a new logger instance and ensures the logging table exists in the database.
+    #' Connection parameters are read from environment variables if not explicitly provided.
+    #'
+    #' @param log_table Character string specifying the name of the logging table
+    #' @param session_id Character string containing a unique session identifier
+    #' @param survey_name Character string identifying the survey
+    #' @param suppress_logs Logical flag to suppress console output. Default: FALSE
+    #'
+    #' @return A new survey_logger instance (invisible)
     initialize = function(log_table, session_id, survey_name, suppress_logs = FALSE) {
       self$log_table <- log_table
       self$session_id <- session_id
@@ -118,11 +95,22 @@ survey_logger <- R6::R6Class(
       private$ensure_table_exists()
     },
 
-    #' @description Log a message asynchronously to the database with appropriate visual styling
-    #' @param message character. Message to log
-    #' @param type character. Type of message ("INFO", "WARN", "ERROR")
-    #' @param zone character. Zone identifier for message categorization
-    #' @return invisible(NULL)
+    #' Log a message asynchronously
+    #'
+    #' Records a message to the PostgreSQL database asynchronously using futures and
+    #' provides visual console feedback based on message type. Messages are stored with
+    #' timestamp, session ID, and zone information.
+    #'
+    #' @param message Character string containing the message to log
+    #' @param type Character string specifying message type. Must be one of:
+    #'   * "INFO": Regular informational messages (green)
+    #'   * "WARN": Warning messages (yellow)
+    #'   * "ERROR": Error messages (red)
+    #'   Default: "INFO"
+    #' @param zone Character string identifying the logging zone for message
+    #'   categorization. Default: "DEFAULT"
+    #'
+    #' @return NULL invisibly. Operation happens asynchronously.
     log_message = function(message, type = "INFO", zone = "DEFAULT") {
       db_params <- self$db_params
       log_table <- self$log_table

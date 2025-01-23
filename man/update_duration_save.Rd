@@ -2,29 +2,29 @@
 % Please edit documentation in R/server_utils.R
 \name{update_duration_save}
 \alias{update_duration_save}
-\title{Update Duration Save}
+\title{Update Survey Response Duration}
 \usage{
 update_duration_save(db_ops, db_config, session_id, duration_save, logger)
 }
 \arguments{
-\item{db_ops}{Database operations object instance}
+\item{db_ops}{Database operations object for query execution}
 
-\item{db_config}{List containing database configuration including:
+\item{db_config}{List. Database configuration parameters:
 \itemize{
-\item write_table: Table name for survey data
+\item \code{write_table}: Survey response data table name
 }}
 
-\item{session_id}{Character string containing the Shiny session token}
+\item{session_id}{String. Shiny session token identifying the response}
 
-\item{duration_save}{Numeric value of the duration to save}
+\item{duration_save}{Numeric. Survey completion duration in seconds}
 
-\item{logger}{Logger object for recording operations}
+\item{logger}{Logger object. Records database operations and errors}
 }
 \value{
-NULL invisibly
+Invisible NULL
 }
 \description{
-Updates the duration_save value for a specific survey response using the
-provided database connection pool.
+Updates the duration_save field for a survey response identified by session ID.
+Records time spent completing the survey before final submission.
 }
 \keyword{internal}

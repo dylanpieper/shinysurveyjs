@@ -7,22 +7,26 @@
 survey_ui(id, theme, primary, mode, cookie_expiration_days, custom_css)
 }
 \arguments{
-\item{id}{ID for the survey div container (e.g., "surveyContainer")}
+\item{id}{String. HTML ID for the survey container div. Default: "surveyContainer".}
 
-\item{theme}{Theme name ("defaultV2" or "modern")}
+\item{theme}{String. SurveyJS theme, either "defaultV2" or "modern".
+Default: "defaultV2".}
 
-\item{primary}{Primary color hex code (optional)}
+\item{primary}{String. Hex color code for primary theme customization.}
 
-\item{mode}{Color mode ("light" or "dark")}
+\item{mode}{String. Color mode, either "light" or "dark". Default: "light".}
 
-\item{cookie_expiration_days}{Number of days to keep cookies for survey data}
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
+Default: 7.}
 
-\item{custom_css}{Optional custom CSS to append to the theme}
+\item{custom_css}{String. Custom CSS rules to append to the theme.}
 }
 \value{
-A tagList containing survey dependencies and container
+A tagList containing survey dependencies, container div, message panels,
+and optional data display components.
 }
 \description{
-Create Survey UI with CSS and Message Components
+Builds the UI components for a SurveyJS-based survey, including CSS styling,
+message panels, and data display elements.
 }
 \keyword{internal}
