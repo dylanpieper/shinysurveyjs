@@ -345,10 +345,6 @@ format_choices_for_js <- function(choices,
 #'
 #' @return Invisible NULL, called for side effects.
 #'
-#' @importFrom shiny reactiveVal observe isolate
-#' @importFrom purrr map_df
-#' @importFrom dplyr distinct pull
-#'
 #' @keywords internal
 configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops) {
   # Initialize empty list for choices
