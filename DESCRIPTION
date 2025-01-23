@@ -17,6 +17,7 @@ Imports:
     shiny (>= 1.7.0),
     shinyjs,
     shinycssloaders,
+    dplyr,
     DT,
     R6,
     promises,
