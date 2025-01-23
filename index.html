@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Create and Deploy Surveys in Shiny • shinysurveyjs</title>
+<title>Create and Deploy Survey Applications Using Shiny and SurveyJS • shinysurveyjs</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
@@ -16,9 +16,9 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Create and Deploy Surveys in Shiny">
-<meta name="description" content="Create and Deploy Surveys Using Shiny and SurveyJS">
-<meta property="og:description" content="Create and Deploy Surveys Using Shiny and SurveyJS">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Create and Deploy Survey Applications Using Shiny and SurveyJS">
+<meta name="description" content="The goal of this package is to integrate the flexible frontend of the SurveyJS library &lt;https://surveyjs.io/&gt; with the reactive backend of Shiny &lt;https://shiny.posit.co/&gt; to interface with a PostgreSQL database &lt;https://www.postgresql.org/&gt; and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.">
+<meta property="og:description" content="The goal of this package is to integrate the flexible frontend of the SurveyJS library &lt;https://surveyjs.io/&gt; with the reactive backend of Shiny &lt;https://shiny.posit.co/&gt; to interface with a PostgreSQL database &lt;https://www.postgresql.org/&gt; and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -28,7 +28,7 @@
 
     <a class="navbar-brand me-2" href="index.html">shinysurveyjs</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,7 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="shinysurveyjs">shinysurveyjs<img src="reference/figures/SSJS-Hex.svg" align="right" width="200" height="200"><a class="anchor" aria-label="anchor" href="#shinysurveyjs"></a>
+<div class="page-header"><h1 id="shinysurveyjs">shinysurveyjs<img src="reference/figures/SSJS-Hex.svg" alt="A hexagonal logo for the R package shinysurveyjs, styled in the traditional R package hexagon sticker format" align="right" width="200" height="200"><a class="anchor" aria-label="anchor" href="#shinysurveyjs"></a>
 </h1></div>
 <p>The goal of this package is to integrate the flexible frontend of the <a href="https://surveyjs.io/" class="external-link">SurveyJS</a> library with the reactive backend of <a href="https://shiny.posit.co/" class="external-link">Shiny</a> to interface with a <a href="https://www.postgresql.org/" class="external-link">PostgreSQL</a> database and create dynamic user experiences. Whether you need a simple feedback form or a complex survey system for your organization, this package is designed to scale with you.</p>
 <div class="section level2">
@@ -198,7 +198,7 @@
 </h2>
 <ul>
 <li><p>Add survey start and end date controls to limit access to a survey</p></li>
-<li><p>Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to turn off access after completion)</p></li>
+<li><p>Enable one-time access tokens for secure survey distribution (piggyback on the dynamic field config for URL parameters to disable access after completion)</p></li>
 <li><p>Dynamically stage JSON objects in the database to modify surveys using a staging table</p></li>
 <li><p>Add mode for URL parameter encryption</p></li>
 <li><p>Add to asynchronous worker: Update staged JSON objects and manage tokens</p></li>
@@ -210,6 +210,7 @@
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
 <li><a href="https://github.com/dylanpieper/shinysurveyjs" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/yourusername/shinysurveyjs/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 

@@ -9,7 +9,7 @@ The UI includes a loading spinner and conditional panels based on survey state."
 
     <a class="navbar-brand me-2" href="../index.html">shinysurveyjs</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,7 +42,14 @@ The UI includes a loading spinner and conditional panels based on survey state.<
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">survey_ui_wrapper</span><span class="op">(</span><span class="va">id</span>, <span class="va">theme</span>, <span class="va">theme_color</span>, <span class="va">theme_mode</span>, <span class="va">cookie_expiration_days</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">survey_ui_wrapper</span><span class="op">(</span></span>
+<span>  <span class="va">id</span>,</span>
+<span>  <span class="va">theme</span>,</span>
+<span>  <span class="va">theme_color</span>,</span>
+<span>  <span class="va">theme_mode</span>,</span>
+<span>  <span class="va">cookie_expiration_days</span>,</span>
+<span>  <span class="va">custom_css</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -50,24 +57,36 @@ The UI includes a loading spinner and conditional panels based on survey state.<
 
 
 <dl><dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>The ID for the survey div container</p></dd>
+<dd><p>String. ID for the survey div container.</p></dd>
 
 
 <dt id="arg-theme">theme<a class="anchor" aria-label="anchor" href="#arg-theme"></a></dt>
-<dd><p>The theme configuration for styling the survey</p></dd>
+<dd><p>String. SurveyJS theme, either "defaultV2" or "modern".
+Default: "defaultV2".</p></dd>
 
 
 <dt id="arg-theme-color">theme_color<a class="anchor" aria-label="anchor" href="#arg-theme-color"></a></dt>
-<dd><p>Primary color used for UI elements like the loading spinner</p></dd>
+<dd><p>String. Hex color code for primary theme customization.</p></dd>
 
 
 <dt id="arg-theme-mode">theme_mode<a class="anchor" aria-label="anchor" href="#arg-theme-mode"></a></dt>
-<dd><p>The theme mode (e.g., 'light' or 'dark')</p></dd>
+<dd><p>String. Color mode, either "light" or "dark".
+Default: "light".</p></dd>
+
+
+<dt id="arg-cookie-expiration-days">cookie_expiration_days<a class="anchor" aria-label="anchor" href="#arg-cookie-expiration-days"></a></dt>
+<dd><p>Numeric. Number of days to retain survey cookies.
+Default: 7.</p></dd>
+
+
+<dt id="arg-custom-css">custom_css<a class="anchor" aria-label="anchor" href="#arg-custom-css"></a></dt>
+<dd><p>String. Custom CSS rules to append to the theme.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A Shiny UI definition</p>
+    <p>A Shiny UI definition containing survey container, loading spinner,
+and optional response table.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

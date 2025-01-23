@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">shinysurveyjs</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,7 +71,7 @@ to use these features.</p>
 <div class="section level2">
 <h2 id="dynamic-configuration-types">Dynamic Configuration Types<a class="anchor" aria-label="anchor" href="#dynamic-configuration-types"></a>
 </h2>
-<p>The package supports two main types of dynamic configurations:</p>
+<p>The package supports three main types of dynamic configurations:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong>Choice Configuration</strong>: Populate dropdown and radio
@@ -79,14 +79,23 @@ button choices</li>
 <li>
 <strong>Parameter Configuration</strong>: Validate and use data in
 URL query parameters</li>
+<li>
+<strong>Unique Value Configuration</strong>: Validate field values
+against existing database records</li>
 </ol>
-<p>Both features support:</p>
-<ul>
-<li><p>Dependent fields where choices dynamically update based on other
-selections</p></li>
-<li><p>Automatic saving of all data to the survey database</p></li>
-<li><p>Flexible handling of dropdown and radio button options</p></li>
-</ul>
+<p>Each configuration type offers distinct features:</p>
+<p><strong>Choice Configuration</strong> - Dependent fields with dynamic
+updates based on parent selections - Flexible handling of dropdown and
+radio button options - Support for both single and multi-level
+dependencies</p>
+<p><strong>Parameter Configuration</strong> - URL parameter validation
+against database tables - Optional display text mapping - Hidden field
+integration - Support for tracking referral sources</p>
+<p><strong>Unique Value Configuration</strong> - Text normalization for
+comparison - Configurable validation responses (warn or stop) - Custom
+warning messages - Integration with form submission logic</p>
+<p>All types include automatic saving to the survey database and
+comprehensive error handling.</p>
 <div class="section level3">
 <h3 id="basic-structure">Basic Structure<a class="anchor" aria-label="anchor" href="#basic-structure"></a>
 </h3>
@@ -109,10 +118,10 @@ version number populated from a database table:</p>
 <span>    group_col <span class="op">=</span> <span class="st">"package"</span>                    <span class="co"># Column with the choices</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    group_type <span class="op">=</span> <span class="st">"choice"</span>,                   <span class="co"># Type of configuration</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"choice"</span>,                   <span class="co"># Type of configuration </span></span>
 <span>    table_name <span class="op">=</span> <span class="st">"config_packages_versions"</span>, <span class="co"># Database table for dependent choices</span></span>
 <span>    parent_table_name <span class="op">=</span> <span class="st">"config_packages"</span>,   <span class="co"># Parent table for dependency</span></span>
-<span>    parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,            <span class="co"># Links to parent table</span></span>
+<span>    parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,           <span class="co"># Links to parent table</span></span>
 <span>    group_col <span class="op">=</span> <span class="st">"version"</span>                    <span class="co"># Column for dependent choices</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -150,286 +159,218 @@ query to track where I’m receiving feedback from.</p>
 sources. It also allows you to pipe data into the survey UI using a
 hidden text field with the same name.</p>
 </div>
+</div>
+<div class="section level2">
+<h2 id="unique-value-configuration">Unique Value Configuration<a class="anchor" aria-label="anchor" href="#unique-value-configuration"></a>
+</h2>
+<p>The unique value configuration enables validation of field values
+against existing database records. This is useful for ensuring unique
+entries or providing warnings about duplicate submissions.</p>
 <div class="section level3">
-<h3 id="parameter-dependencies">Parameter Dependencies<a class="anchor" aria-label="anchor" href="#parameter-dependencies"></a>
+<h3 id="basic-unique-value-example">Basic Unique Value Example<a class="anchor" aria-label="anchor" href="#basic-unique-value-example"></a>
 </h3>
-<p>The dynamic field configuration can be combined to create complex
-field dependencies. For example, you can use a URL query parameter to
-<strong>select</strong> a package name and use that choice to populate a
-dropdown or radio button field with the versions released for that
-package.</p>
+<p>Imagine I want to ensure that each package issue report has a unique
+title:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># URL: http://127.0.0.1:3838/?package=shinysurveyjs</span></span>
+<code class="sourceCode R"><span><span class="va">dynamic_config</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"unique"</span>,           <span class="co"># Type of configuration</span></span>
+<span>    group_col <span class="op">=</span> <span class="st">"issue_title"</span>,       <span class="co"># Column to check for uniqueness</span></span>
+<span>    result <span class="op">=</span> <span class="st">"warn"</span>,                 <span class="co"># Action on duplicate ("warn" or "stop")</span></span>
+<span>    result_field <span class="op">=</span> <span class="st">"title_warning"</span>   <span class="co"># Field to show warning message (should be hidden)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>This configuration will: 1. Check the entered issue title against
+existing records 2. If a duplicate is found, either: - Display a warning
+message (result = “warn”) - Prevent form submission (result =
+“stop”)</p>
+<p>The validation normalizes text by: - Converting to lowercase -
+Trimming whitespace - Removing special characters</p>
+</div>
+<div class="section level3">
+<h3 id="complex-example-with-warning-message">Complex Example with Warning Message<a class="anchor" aria-label="anchor" href="#complex-example-with-warning-message"></a>
+</h3>
+<p>Here’s how to implement a more complex issue reporting form with
+unique title validation:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create the database tables</span></span>
+<span><span class="va">sql_setup</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<span><span class="st">CREATE TABLE issue_reports (</span></span>
+<span><span class="st">    id SERIAL PRIMARY KEY,</span></span>
+<span><span class="st">    issue_title VARCHAR(255) NOT NULL UNIQUE,</span></span>
+<span><span class="st">    description TEXT,</span></span>
+<span><span class="st">    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP</span></span>
+<span><span class="st">);</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">-- Insert some sample issues</span></span>
+<span><span class="st">INSERT INTO issue_reports (issue_title) VALUES</span></span>
+<span><span class="st">    ('Cannot install on M1 Mac'),</span></span>
+<span><span class="st">    ('Error with special characters in survey');</span></span>
+<span><span class="st">"</span></span>
 <span></span>
-<span><span class="va">dynamic_config</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    group_type <span class="op">=</span> <span class="st">"param"</span>,                    <span class="co"># Type of configuration</span></span>
-<span>    table_name <span class="op">=</span> <span class="st">"config_packages"</span>,          <span class="co"># Database table for parameter</span></span>
-<span>    group_col <span class="op">=</span> <span class="st">"package"</span>                    <span class="co"># Column to validate parameter</span></span>
+<span><span class="co"># Define the survey JSON</span></span>
+<span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  title <span class="op">=</span> <span class="st">"Package Issue Report"</span>,</span>
+<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      name <span class="op">=</span> <span class="st">"issue"</span>,</span>
+<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"issue_title"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Issue Title:"</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"title_warning"</span>,</span>
+<span>          visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>          html <span class="op">=</span> <span class="st">"&lt;div style='color: orange;'&gt;</span></span>
+<span><span class="st">                   ⚠️ This issue may have been reported already. </span></span>
+<span><span class="st">                   Please check existing issues first.</span></span>
+<span><span class="st">                 &lt;/div&gt;"</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"description"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Describe the issue:"</span>,</span>
+<span>          rows <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Deploy the survey with unique validation</span></span>
+<span><span class="fu"><a href="../reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
+<span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
+<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="co"># ... database configuration ...</span></span>
+<span>    write_table <span class="op">=</span> <span class="st">"issue_reports"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    group_type <span class="op">=</span> <span class="st">"choice"</span>,                   <span class="co"># Type of configuration</span></span>
-<span>    table_name <span class="op">=</span> <span class="st">"config_packages_versions"</span>, <span class="co"># Database table for dependent choices</span></span>
-<span>    parent_table_name <span class="op">=</span> <span class="st">"config_packages"</span>,   <span class="co"># Parent table for dependency</span></span>
-<span>    parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,            <span class="co"># Links to parent table</span></span>
-<span>    group_col <span class="op">=</span> <span class="st">"version"</span>                    <span class="co"># Column for dependent choices</span></span>
+<span>  dynamic_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      group_type <span class="op">=</span> <span class="st">"unique"</span>,</span>
+<span>      group_col <span class="op">=</span> <span class="st">"issue_title"</span>,</span>
+<span>      result <span class="op">=</span> <span class="st">"warn"</span>,</span>
+<span>      result_field <span class="op">=</span> <span class="st">"title_warning"</span></span>
+<span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
-<h2 id="examples-package-feedback">Examples: Package Feedback<a class="anchor" aria-label="anchor" href="#examples-package-feedback"></a>
+<h2 id="combining-configuration-types">Combining Configuration Types<a class="anchor" aria-label="anchor" href="#combining-configuration-types"></a>
 </h2>
-<p>Imagine I want to develop an R package feedback survey to allow users
-to <strong>select</strong> one of my packages (parent) and a version
-number (dependent), both populated from a database table, and
-<strong>track</strong> the referral source in the URL query.</p>
-<p>Consider this database structure:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co">-- Create the packages configuration table</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_packages (</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    package_id SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>    <span class="kw">package</span> <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>    <span class="kw">UNIQUE</span>(<span class="kw">package</span>)</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>);</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">-- Create the package versions table with proper foreign key</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_packages_versions (</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>    version_id SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>    package_id <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>    version <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (package_id) <span class="kw">REFERENCES</span> config_packages(package_id),</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>    <span class="kw">UNIQUE</span>(package_id, version)</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>);</span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">-- Create the source configuration table</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_source (</span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>    <span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>    <span class="kw">source</span> <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">UNIQUE</span>,</span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>    display_text <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>);</span>
-<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a></span>
-<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">-- Insert sample data for packages</span></span>
-<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_packages (<span class="kw">package</span>) <span class="kw">VALUES</span></span>
-<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>    (<span class="st">'batchLLM'</span>),</span>
-<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>    (<span class="st">'shinysurveyjs'</span>);</span>
-<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a></span>
-<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">-- Insert sample data for package versions</span></span>
-<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_packages_versions (package_id, version)</span>
-<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="kw">SELECT</span> p.package_id, v.version</span>
-<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="kw">FROM</span> config_packages p</span>
-<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="kw">CROSS</span> <span class="kw">JOIN</span> (</span>
-<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>    <span class="kw">VALUES</span> </span>
-<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>        (<span class="st">'batchLLM'</span>, <span class="st">'dev-github'</span>),</span>
-<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>        (<span class="st">'batchLLM'</span>, <span class="st">'CRAN-0.1.0'</span>),</span>
-<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>        (<span class="st">'batchLLM'</span>, <span class="st">'CRAN-0.2.0'</span>),</span>
-<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>        (<span class="st">'shinysurveyjs'</span>, <span class="st">'dev-github'</span>),</span>
-<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>        (<span class="st">'shinysurveyjs'</span>, <span class="st">'CRAN-0.1.0'</span>)</span>
-<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>) <span class="kw">AS</span> v(package_name, version)</span>
-<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="kw">WHERE</span> p.<span class="kw">package</span> <span class="op">=</span> v.package_name;</span>
-<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a></span>
-<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">-- Insert sample data for source configuration</span></span>
-<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_source (<span class="kw">source</span>, display_text) <span class="kw">VALUES</span></span>
-<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a>    (<span class="st">'github'</span>, <span class="st">'GitHub'</span>),</span>
-<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a>    (<span class="st">'bluesky'</span>, <span class="st">'BlueSky'</span>),</span>
-<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>    (<span class="st">'posit'</span>, <span class="st">'posit::conf(2025)'</span>);</span></code></pre></div>
-<p>Run the following R code to define the JSON and deploy the example
-survey (e.g., <code>http://127.0.0.1:3838/?source=github</code>):</p>
+<p>The dynamic field configuration can be combined to create complex
+field dependencies and validations. For example, you can:</p>
+<ol style="list-style-type: decimal">
+<li>Use URL parameters to track the source</li>
+<li>Validate unique submission titles</li>
+<li>Populate dependent dropdown fields from database tables</li>
+</ol>
+<p>Here’s a complete example:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  title <span class="op">=</span> <span class="st">"R Package Feedback"</span>,</span>
-<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
-<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{source} notempty"</span>,</span>
-<span>          html <span class="op">=</span> <span class="st">"Hi, thanks for visting this survey from &lt;b&gt;{source}&lt;/b&gt;."</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"radiogroup"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"package"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Select an R package:"</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>          choices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"radiogroup"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"version"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Select a version:"</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{package} notempty"</span>,</span>
-<span>          choices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"rating"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"rating"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Please rate the shinysurveyjs 📦:"</span>,</span>
-<span>          rateType <span class="op">=</span> <span class="st">"stars"</span>,</span>
-<span>          rateMax <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} notempty"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Why did you rate it {rating} stars?"</span>,</span>
-<span>          rows <span class="op">=</span> <span class="fl">2</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"lowRatingMessage"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} &lt;= 2"</span>,</span>
-<span>          html <span class="op">=</span> <span class="st">"I am sorry you had a poor experience. Please reach me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can make it right."</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"source"</span>,</span>
-<span>          visible <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>        <span class="op">)</span></span>
-<span>      <span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
-<span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
-<span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
-<span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
-<span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"HOST"</span><span class="op">)</span>,</span>
-<span>    port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    db_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
-<span>    user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"USER"</span><span class="op">)</span>,</span>
-<span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PASSWORD"</span><span class="op">)</span>,</span>
-<span>    write_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"WRITE_TABLE"</span><span class="op">)</span>,</span>
-<span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">dynamic_config</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="co"># Track referral source</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"param"</span>,</span>
+<span>    table_name <span class="op">=</span> <span class="st">"config_source"</span>,</span>
+<span>    group_col <span class="op">=</span> <span class="st">"source"</span>,</span>
+<span>    display_col <span class="op">=</span> <span class="st">"display_text"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  dynamic_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      group_type <span class="op">=</span> <span class="st">"choice"</span>,</span>
-<span>      table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
-<span>      group_col <span class="op">=</span> <span class="st">"package"</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      group_type <span class="op">=</span> <span class="st">"choice"</span>,</span>
-<span>      table_name <span class="op">=</span> <span class="st">"config_packages_versions"</span>, </span>
-<span>      parent_table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
-<span>      parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,</span>
-<span>      group_col <span class="op">=</span> <span class="st">"version"</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      group_type <span class="op">=</span> <span class="st">"param"</span>,</span>
-<span>      table_name <span class="op">=</span> <span class="st">"config_source"</span>,</span>
-<span>      group_col <span class="op">=</span> <span class="st">"source"</span>,</span>
-<span>      display_col <span class="op">=</span> <span class="st">"display_text"</span></span>
-<span>    <span class="op">)</span></span>
+<span>  <span class="co"># Ensure unique issue titles</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"unique"</span>,</span>
+<span>    group_col <span class="op">=</span> <span class="st">"issue_title"</span>,</span>
+<span>    result <span class="op">=</span> <span class="st">"warn"</span>,</span>
+<span>    result_field <span class="op">=</span> <span class="st">"title_warning"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="co"># Package selection</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span>    table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
+<span>    group_col <span class="op">=</span> <span class="st">"package"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="co"># Version selection (depends on package)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    group_type <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span>    table_name <span class="op">=</span> <span class="st">"config_packages_versions"</span>,</span>
+<span>    parent_table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
+<span>    parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,</span>
+<span>    group_col <span class="op">=</span> <span class="st">"version"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>However, upon further reflection, I would only present
-<code>shinysurveyjs</code> at <em>posit::conf(2025)</em> and the
-audience knows nothing about my other packages. To address this, I can
-set up a survey to <strong>track</strong> the R package and referral
-source using URL parameters and allow users to <strong>select</strong> a
-version of the package from a database table.</p>
-<p>Run the following R code to define the JSON and deploy the example
-survey (e.g.,
-<code>http://127.0.0.1:3838/?package=shinysurveyjs&amp;source=posit</code>):</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  title <span class="op">=</span> <span class="st">"R Package Feedback"</span>,</span>
-<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
-<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{source} notempty"</span>,</span>
-<span>          html <span class="op">=</span> <span class="st">"Hi, thanks for visting this survey from &lt;b&gt;{source}&lt;/b&gt;."</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"radiogroup"</span>, </span>
-<span>          name <span class="op">=</span> <span class="st">"version"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Select a version of {package} to rate:"</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{package} notempty"</span>,</span>
-<span>          choices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"rating"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"rating"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Please rate the shinysurveyjs 📦:"</span>,</span>
-<span>          rateType <span class="op">=</span> <span class="st">"stars"</span>,</span>
-<span>          rateMax <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} notempty"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Why did you rate it {rating} stars?"</span>,</span>
-<span>          rows <span class="op">=</span> <span class="fl">2</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"lowRatingMessage"</span>,</span>
-<span>          visibleIf <span class="op">=</span> <span class="st">"{rating} &lt;= 2"</span>,</span>
-<span>          html <span class="op">=</span> <span class="st">"I am sorry you had a poor experience. Please reach me at &lt;b&gt;dylanpieper@gmail.com&lt;/b&gt; so I can make it right."</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"source"</span>,</span>
-<span>          visible <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>        <span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"package"</span>,</span>
-<span>          visible <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>        <span class="op">)</span></span>
-<span>      <span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/survey_single.html">survey_single</a></span><span class="op">(</span></span>
-<span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,</span>
-<span>  theme_color <span class="op">=</span> <span class="st">"#00AD6E"</span>,</span>
-<span>  theme_mode <span class="op">=</span> <span class="st">"dark"</span>,</span>
-<span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"HOST"</span><span class="op">)</span>,</span>
-<span>    port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    db_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
-<span>    user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"USER"</span><span class="op">)</span>,</span>
-<span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PASSWORD"</span><span class="op">)</span>,</span>
-<span>    write_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"WRITE_TABLE"</span><span class="op">)</span>,</span>
-<span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  dynamic_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>     <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>       group_type <span class="op">=</span> <span class="st">"param"</span>,</span>
-<span>       table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
-<span>       group_col <span class="op">=</span> <span class="st">"package"</span></span>
-<span>     <span class="op">)</span>,</span>
-<span>     <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>       group_type <span class="op">=</span> <span class="st">"choice"</span>, </span>
-<span>       table_name <span class="op">=</span> <span class="st">"config_packages_versions"</span>,</span>
-<span>       parent_table_name <span class="op">=</span> <span class="st">"config_packages"</span>,</span>
-<span>       parent_id_col <span class="op">=</span> <span class="st">"package_id"</span>,</span>
-<span>       group_col <span class="op">=</span> <span class="st">"version"</span></span>
-<span>     <span class="op">)</span>,</span>
-<span>     <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>       group_type <span class="op">=</span> <span class="st">"param"</span>,</span>
-<span>       table_name <span class="op">=</span> <span class="st">"config_source"</span>,</span>
-<span>       group_col <span class="op">=</span> <span class="st">"source"</span>, </span>
-<span>       display_col <span class="op">=</span> <span class="st">"display_text"</span></span>
-<span>     <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<p>This configuration creates a robust form that: - Tracks where users
+came from - Warns about duplicate issue reports - Provides
+package-specific version selection - Saves all responses to the
+database</p>
+</div>
+<div class="section level2">
+<h2 id="database-schema">Database Schema<a class="anchor" aria-label="anchor" href="#database-schema"></a>
+</h2>
+<p>Here’s the complete database schema for the examples above:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">-- Create the packages configuration table</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_packages (</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>    package_id SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>    <span class="kw">package</span> <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>    <span class="kw">UNIQUE</span>(<span class="kw">package</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>);</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">-- Create the package versions table with proper foreign key</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_packages_versions (</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>    version_id SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>    package_id <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>    version <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (package_id) <span class="kw">REFERENCES</span> config_packages(package_id),</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>    <span class="kw">UNIQUE</span>(package_id, version)</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>);</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">-- Create the source configuration table</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> config_source (</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>    <span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>    <span class="kw">source</span> <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">UNIQUE</span>,</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>    display_text <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>);</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">-- Create the issue reports table</span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> issue_reports (</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>    <span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>    issue_title <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">UNIQUE</span>,</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>    package_id <span class="dt">INTEGER</span> <span class="kw">REFERENCES</span> config_packages(package_id),</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>    version <span class="dt">VARCHAR</span>(<span class="dv">50</span>),</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>    description TEXT,</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>    <span class="kw">source</span> <span class="dt">VARCHAR</span>(<span class="dv">50</span>),</span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>    date_created <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>);</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">-- Insert sample data</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_packages (<span class="kw">package</span>) <span class="kw">VALUES</span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>    (<span class="st">'batchLLM'</span>),</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>    (<span class="st">'shinysurveyjs'</span>);</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_packages_versions (package_id, version)</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="kw">SELECT</span> p.package_id, v.version</span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="kw">FROM</span> config_packages p</span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="kw">CROSS</span> <span class="kw">JOIN</span> (</span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a>    <span class="kw">VALUES</span> </span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a>        (<span class="st">'batchLLM'</span>, <span class="st">'dev-github'</span>),</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a>        (<span class="st">'batchLLM'</span>, <span class="st">'CRAN-0.1.0'</span>),</span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a>        (<span class="st">'shinysurveyjs'</span>, <span class="st">'dev-github'</span>)</span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a>) <span class="kw">AS</span> v(package_name, version)</span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a><span class="kw">WHERE</span> p.<span class="kw">package</span> <span class="op">=</span> v.package_name;</span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> config_source (<span class="kw">source</span>, display_text) <span class="kw">VALUES</span></span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a>    (<span class="st">'github'</span>, <span class="st">'GitHub'</span>),</span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a>    (<span class="st">'bluesky'</span>, <span class="st">'BlueSky'</span>),</span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a>    (<span class="st">'posit'</span>, <span class="st">'posit::conf(2025)'</span>);</span></code></pre></div>
+<p>This schema supports all the examples in this vignette while
+maintaining referential integrity and tracking creation dates.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

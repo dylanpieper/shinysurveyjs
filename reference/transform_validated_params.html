@@ -9,7 +9,7 @@ looking up display text from configuration tables where applicable."></head><bod
 
     <a class="navbar-brand me-2" href="../index.html">shinysurveyjs</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,20 +50,20 @@ looking up display text from configuration tables where applicable.</p>
 
 
 <dl><dt id="arg-validated-params">validated_params<a class="anchor" aria-label="anchor" href="#arg-validated-params"></a></dt>
-<dd><p>List. Input parameters in the format:
-list(param_name = "value") or list(param_name = list(value = "value"))</p></dd>
+<dd><p>List of parameters in format <code>list(param_name = "value")</code> or
+<code>list(param_name = list(value = "value"))</code>.</p></dd>
 
 
 <dt id="arg-config-list">config_list<a class="anchor" aria-label="anchor" href="#arg-config-list"></a></dt>
-<dd><p>List. Configuration data containing tables including:</p><ul><li><p><strong>config_source</strong>: Data frame with columns 'source' and 'display_text'</p></li>
-<li><p><strong>config_packages</strong>: Data frame with package configurations</p></li>
+<dd><p>List of configuration data frames:</p><ul><li><p><code>config_source</code>: Table with 'source' and 'display_text' columns</p></li>
+<li><p><code>config_packages</code>: Table with package configurations</p></li>
 </ul></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>List. Transformed parameters in the format:
-list(param_name = list(text = "display_text", value = "value"))</p>
+    <p>List of transformed parameters in format
+<code>list(param_name = list(text = "display_text", value = "value"))</code></p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
