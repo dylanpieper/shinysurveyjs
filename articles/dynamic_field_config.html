@@ -84,16 +84,27 @@ URL query parameters</li>
 against existing database records</li>
 </ol>
 <p>Each configuration type offers distinct features:</p>
-<p><strong>Choice Configuration</strong> - Dependent fields with dynamic
-updates based on parent selections - Flexible handling of dropdown and
-radio button options - Support for both single and multi-level
-dependencies</p>
-<p><strong>Parameter Configuration</strong> - URL parameter validation
-against database tables - Optional display text mapping - Hidden field
-integration - Support for tracking referral sources</p>
-<p><strong>Unique Value Configuration</strong> - Text normalization for
-comparison - Configurable validation responses (warn or stop) - Custom
-warning messages - Integration with form submission logic</p>
+<p><strong>Choice Configuration</strong></p>
+<ul>
+<li><p>Dependent fields with dynamic updates based on parent
+selections</p></li>
+<li><p>Flexible handling of dropdown and radio button options</p></li>
+<li><p>Support for both single and multi-level dependencies</p></li>
+</ul>
+<p><strong>Parameter Configuration</strong></p>
+<ul>
+<li><p>URL parameter validation against database tables</p></li>
+<li><p>Optional display text mapping</p></li>
+<li><p>Hidden field integration</p></li>
+<li><p>Support for tracking referral sources</p></li>
+</ul>
+<p><strong>Unique Value Configuration</strong></p>
+<ul>
+<li><p>Text normalization for comparison</p></li>
+<li><p>Configurable validation responses (warn or stop)</p></li>
+<li><p>Custom warning or error messages</p></li>
+<li><p>Integration with form submission logic</p></li>
+</ul>
 <p>All types include automatic saving to the survey database and
 comprehensive error handling.</p>
 <div class="section level3">
@@ -176,16 +187,28 @@ title:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    group_type <span class="op">=</span> <span class="st">"unique"</span>,           <span class="co"># Type of configuration</span></span>
 <span>    group_col <span class="op">=</span> <span class="st">"issue_title"</span>,       <span class="co"># Column to check for uniqueness</span></span>
-<span>    result <span class="op">=</span> <span class="st">"warn"</span>,                 <span class="co"># Action on duplicate ("warn" or "stop")</span></span>
-<span>    result_field <span class="op">=</span> <span class="st">"title_warning"</span>   <span class="co"># Field to show warning message (should be hidden)</span></span>
+<span>    result <span class="op">=</span> <span class="st">"stop"</span>,                 <span class="co"># Action on duplicate ("warn" or "stop")</span></span>
+<span>    result_field <span class="op">=</span> <span class="st">"title_warning"</span>   <span class="co"># Field to show warning or error message (should be hidden)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>This configuration will: 1. Check the entered issue title against
-existing records 2. If a duplicate is found, either: - Display a warning
-message (result = “warn”) - Prevent form submission (result =
-“stop”)</p>
-<p>The validation normalizes text by: - Converting to lowercase -
-Trimming whitespace - Removing special characters</p>
+<p>This configuration will:</p>
+<ol style="list-style-type: decimal">
+<li><p>Check the entered issue title against existing records</p></li>
+<li>
+<p>If a duplicate is found, either:</p>
+<ul>
+<li><p>Display a warning message (result = “warn”)</p></li>
+<li><p>Prevent form submission and display an error message (result =
+“stop”)</p></li>
+</ul>
+</li>
+</ol>
+<p>The validation normalizes text by:</p>
+<ul>
+<li><p>Converting to lowercase</p></li>
+<li><p>Trimming whitespace</p></li>
+<li><p>Removing special characters</p></li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="complex-example-with-warning-message">Complex Example with Warning Message<a class="anchor" aria-label="anchor" href="#complex-example-with-warning-message"></a>
@@ -223,12 +246,9 @@ unique title validation:</p>
 <span>        <span class="op">)</span>,</span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"title_warning"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"error_message"</span>,</span>
 <span>          visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>          html <span class="op">=</span> <span class="st">"&lt;div style='color: orange;'&gt;</span></span>
-<span><span class="st">                   ⚠️ This issue may have been reported already. </span></span>
-<span><span class="st">                   Please check existing issues first.</span></span>
-<span><span class="st">                 &lt;/div&gt;"</span></span>
+<span>          html <span class="op">=</span> <span class="st">"⚠️ This issue has been reported already. Please check existing issues first."</span></span>
 <span>        <span class="op">)</span>,</span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
@@ -254,8 +274,8 @@ unique title validation:</p>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>      group_type <span class="op">=</span> <span class="st">"unique"</span>,</span>
 <span>      group_col <span class="op">=</span> <span class="st">"issue_title"</span>,</span>
-<span>      result <span class="op">=</span> <span class="st">"warn"</span>,</span>
-<span>      result_field <span class="op">=</span> <span class="st">"title_warning"</span></span>
+<span>      result <span class="op">=</span> <span class="st">"stop"</span>,</span>
+<span>      result_field <span class="op">=</span> <span class="st">"error_message"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -285,8 +305,8 @@ field dependencies and validations. For example, you can:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    group_type <span class="op">=</span> <span class="st">"unique"</span>,</span>
 <span>    group_col <span class="op">=</span> <span class="st">"issue_title"</span>,</span>
-<span>    result <span class="op">=</span> <span class="st">"warn"</span>,</span>
-<span>    result_field <span class="op">=</span> <span class="st">"title_warning"</span></span>
+<span>    result <span class="op">=</span> <span class="st">"stop"</span>,</span>
+<span>    result_field <span class="op">=</span> <span class="st">"error_message"</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="co"># Package selection</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -369,8 +389,6 @@ database</p>
 <span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a>    (<span class="st">'github'</span>, <span class="st">'GitHub'</span>),</span>
 <span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a>    (<span class="st">'bluesky'</span>, <span class="st">'BlueSky'</span>),</span>
 <span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a>    (<span class="st">'posit'</span>, <span class="st">'posit::conf(2025)'</span>);</span></code></pre></div>
-<p>This schema supports all the examples in this vignette while
-maintaining referential integrity and tracking creation dates.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
