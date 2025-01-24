@@ -318,8 +318,8 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
     list(
       background = "#ffffff",
       text = "#404040",
-      border = "#e0e0e0",
-      header_bg = "#f5f5f5"
+      border = "#c0c0c0",
+      header_bg = "#d5d5d5"
     )
   }
 
