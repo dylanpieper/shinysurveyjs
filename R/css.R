@@ -57,27 +57,64 @@ generate_survey_theme <- function(
     container_background <- "#f9f9f9"
   }
 
-    # Base theme CSS
-    base_css <- if (theme == "modern") {
-      # [Modern theme CSS remains unchanged]
-      sprintf(
-        "
+  # Base theme CSS
+  base_css <- if (theme == "modern") {
+    sprintf(
+      "
 .sv-root-modern {
     /* Primary colors */
     --main-color: %s;
     --main-hover-color: %s;
-    /* [Rest of modern theme variables remain the same] */
+
+    /* Text colors */
+    --text-color: %s;
+    --light-text-color: %s;
+    --disabled-text-color: rgba(64, 64, 64, 0.5);
+    --foreground-light: #909090;
+
+    /* Background colors */
+    --body-background-color: %s;
+    --body-container-background-color: %s;
+    --header-background-color: %s;
+    --answer-background-color: %s;
+    --container-background: %s;
+
+    /* Input colors */
+    --inputs-background-color: transparent;
+    --text-border-color: %s;
+    --border-color: %s;
+
+    /* Button colors */
+    --add-button-color: %s;
+    --remove-button-color: #ff1800;
+    --clean-button-color: %s;
+
+    /* Progress colors */
+    --progress-text-color: #9d9d9d;
+    --progress-buttons-color: %s;
+
+    /* State colors */
+    --disable-color: %s;
+    --disabled-label-color: rgba(64, 64, 64, 0.5);
+    --error-color: #d52901;
+    --error-background-color: rgba(213, 41, 1, 0.2);
+
+    /* Component colors */
+    --slider-color: white;
+    --disabled-slider-color: #cfcfcf;
+    --checkmark-color: %s;
+    --radio-checked-color: %s;
 }",
-        primary, primary_light, foreground, button_text_color,
-        background, hover_background, header_background,
-        sprintf("rgba(%s, 0.2)", paste(hex_to_rgb(primary), collapse = ", ")),
-        text_border, border_color, primary, primary,
-        adjust_hex(primary, 40), disabled_color,
-        button_text_color, foreground
-      )
-    } else {
-      sprintf(
-        "
+      primary, primary_light, foreground, button_text_color,
+      background, hover_background, header_background,
+      sprintf("rgba(%s, 0.2)", paste(hex_to_rgb(primary), collapse = ", ")),
+      container_background, text_border, border_color, primary, primary,
+      adjust_hex(primary, 40), disabled_color,
+      button_text_color, foreground
+    )
+  } else {
+    sprintf(
+      "
 :root {
     --primary: %s;
     --primary-light: %s;
@@ -102,15 +139,15 @@ generate_survey_theme <- function(
 .sv-components-row {
     border-top: 2px solid var(--primary) !important;
 }",
-  primary, primary_light, primary_dark, button_text_color,
-  background, foreground, input_background, border_color, hover_background, container_background,
-  button_text_color, button_text_color
-      )
-    }
+      primary, primary_light, primary_dark, button_text_color,
+      background, foreground, input_background, border_color, hover_background,
+      container_background, button_text_color, button_text_color
+    )
+  }
 
-# Base styles
-base_styles <- sprintf(
-  "
+  # Base styles
+  base_styles <- sprintf(
+    "
 /* Base styles */
 body {
     background-color: %s !important;
@@ -149,51 +186,32 @@ body[data-theme=\"dark\"] .sv-components-column {
     background-color: %s;
     color: %s;
 }",
-background, foreground,
-container_background,
-container_background,
-container_background, foreground
-)
+    background, foreground,
+    container_background,
+    container_background,
+    container_background, foreground
+  )
 
-# Container styles
-container_styles <- if (theme == "modern") {
-  # [Modern theme container styles remain unchanged]
-  sprintf(
+  # Container styles
+  container_styles <- sprintf(
     "
 /* Completed page and container styles */
 .sd-body.sd-completedpage,
 .sv-body.sv-completedpage {
-    width: 100%% !important;
+  %s
+}",
+    if (theme == "modern") {
+      "width: 100% !important;
     margin: 0 auto !important;
-    padding: 2rem !important;
+    padding-top: 12rem !important;
+    padding-bottom: 12rem !important;
     box-sizing: border-box !important;
     height: auto !important;
-    display: flex !important;
-    place-items: center !important;
-    flex-wrap: wrap;
-    flex-direction: row-reverse;
-    justify-content: space-evenly;
-    align-content: center;
-    border-top: 2px solid var(--primary) !important;
-}
-
-.sv-container-modern,
-.sv-body {
-    max-width: 1200px !important;
-    margin: 0 auto !important;
-    padding: 1rem !important;
-    box-sizing: border-box !important;
-    color: %s;
-}",
-foreground
-  )
-} else {
-  sprintf(
-    "
-/* Completed page and container styles */
-.sd-body.sd-completedpage,
-.sv-body.sv-completedpage {
-    width: 100%% !important;
+    flex-direction: column-reverse;
+    background-color: var(--container-background) !important;
+    border-top: 2px solid var(--primary) !important;"
+    } else {
+      "width: 100% !important;
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
@@ -203,7 +221,19 @@ foreground
     min-height: 32vh !important;
     flex-direction: column-reverse;
     background-color: var(--container-background) !important;
-    border-top: 2px solid var(--primary) !important;
+    border-top: 2px solid var(--primary) !important;"
+    }
+  )
+  container_styles <- paste(
+    container_styles,
+    sprintf(
+      "
+.sv-root-modern .sv-body.sv-completedpage {
+    height: auto !important;
+}
+
+.sd-completedpage__text {
+    text-align: center !important;
 }
 
 .sv-root-modern,
@@ -246,19 +276,20 @@ foreground
     max-width: 1200px !important;
     margin: 0 auto !important;
 }",
-foreground,
-container_background, border_color,
-hover_background,
-primary, hover_background,
-border_color,
-container_background
+      foreground,
+      container_background, border_color,
+      hover_background,
+      primary, hover_background,
+      border_color,
+      container_background
+    ),
+    sep = "\n"
   )
-}
 
-# Button styles
-button_styles <- if (theme == "defaultV2") {
-  sprintf(
-    "
+  # Button styles
+  button_styles <- if (theme == "defaultV2") {
+    sprintf(
+      "
 /* Default theme button styles */
 .sd-btn {
     background-color: var(--primary) !important;
@@ -311,17 +342,17 @@ button_styles <- if (theme == "defaultV2") {
     background-color: var(--primary) !important;
     color: %s !important;
 }",
-button_text_color,
-button_text_color, # Use same color for hover
-button_text_color,
-button_text_color, # Use same color for hover
-button_text_color,
-button_text_color, # Use same color for hover
-button_text_color
-  )
-} else {
-  sprintf(
-    "
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      button_text_color, # Use same color for hover
+      button_text_color
+    )
+  } else {
+    sprintf(
+      "
 /* Modern theme button styles */
 .sv-btn.sv-action-bar-item--secondary {
     color: %s !important;
@@ -362,18 +393,18 @@ button_text_color
 .sv-root-modern .sv-btn--navigation {
     min-width: 120px !important;
 }",
-button_text_color,
-primary_light,
-button_text_color, # Use same color for hover
-button_text_color,
-primary_light,
-button_text_color # Use same color for hover
-  )
-}
+      button_text_color,
+      primary_light,
+      button_text_color, # Use same color for hover
+      button_text_color,
+      primary_light,
+      button_text_color # Use same color for hover
+    )
+  }
 
-# Message container CSS
-message_css <- sprintf(
-  '
+  # Message container CSS
+  message_css <- sprintf(
+    '
 /* Message containers */
 .message-container {
     position: fixed;
@@ -488,22 +519,22 @@ message_css <- sprintf(
         padding: 12px;
     }
 }',
-foreground,
-primary,
-adjust_hex(primary, 20),
-foreground, container_background
-)
+    foreground,
+    primary,
+    adjust_hex(primary, 20),
+    foreground, container_background
+  )
 
-# Combine all CSS sections
-paste(
-  base_css,
-  base_styles,
-  button_styles,
-  container_styles,
-  message_css,
-  if (!is.null(custom_css)) {
-    custom_css
-  },
-  sep = "\n\n"
-)
+  # Combine all CSS sections
+  paste(
+    base_css,
+    base_styles,
+    button_styles,
+    container_styles,
+    message_css,
+    if (!is.null(custom_css)) {
+      custom_css
+    },
+    sep = "\n\n"
+  )
 }
