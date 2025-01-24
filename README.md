@@ -81,9 +81,7 @@ survey <- '{
 
 shinysurveyjs::survey_single(
   json = survey,
-  theme = "modern",
-  theme_color = "#00AD6E",
-  theme_mode = "dark",
+  theme = "modern",                           # only the modern theme supports star ratings
   db_config = list(
     host = Sys.getenv("HOST"),                # aws-0-us-east-2.pooler.supabase.com
     port = as.numeric(Sys.getenv("PORT")),    # 5432
