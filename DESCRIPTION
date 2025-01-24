@@ -33,5 +33,5 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-URL: https://github.com/yourusername/shinysurveyjs
-BugReports: https://github.com/yourusername/shinysurveyjs/issues
+URL: https://dylanpieper.github.io/shinysurveyjs, https://github.com/dylanpieper/shinysurveyjs
+BugReports: https://github.com/dylanpieper/shinysurveyjs/issues
