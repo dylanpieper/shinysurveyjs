@@ -95,29 +95,29 @@
 #' @importFrom future plan multisession
 #'
 #' @export
-survey_single <- function(json = NULL,
-                          list = NULL,
-                          show_response = FALSE,
-                          theme = "defaultV2",
-                          theme_color = "#003594",
-                          theme_mode = "light",
-                          shiny_config = list(
-                            host = "0.0.0.0",
-                            port = 3838
-                          ),
-                          db_config = list(
-                            host = Sys.getenv("HOST"),
-                            port = as.numeric(Sys.getenv("PORT")),
-                            db_name = Sys.getenv("DB_NAME"),
-                            user = Sys.getenv("USER"),
-                            password = Sys.getenv("PASSWORD"),
-                            write_table = Sys.getenv("WRITE_TABLE"),
-                            log_table = Sys.getenv("LOG_TABLE")
-                          ),
-                          dynamic_config = NULL,
-                          cookie_expiration_days = 7,
-                          custom_css = NULL,
-                          suppress_logs = FALSE) {
+survey <- function(json = NULL,
+                   list = NULL,
+                   show_response = FALSE,
+                   theme = "defaultV2",
+                   theme_color = "#003594",
+                   theme_mode = "light",
+                   shiny_config = list(
+                     host = "0.0.0.0",
+                     port = 3838
+                   ),
+                   db_config = list(
+                     host = Sys.getenv("HOST"),
+                     port = as.numeric(Sys.getenv("PORT")),
+                     db_name = Sys.getenv("DB_NAME"),
+                     user = Sys.getenv("USER"),
+                     password = Sys.getenv("PASSWORD"),
+                     write_table = Sys.getenv("WRITE_TABLE"),
+                     log_table = Sys.getenv("LOG_TABLE")
+                   ),
+                   dynamic_config = NULL,
+                   cookie_expiration_days = 7,
+                   custom_css = NULL,
+                   suppress_logs = FALSE) {
   if (missing(json) && missing(list)) {
     stop("Survey JSON or list is required")
   }

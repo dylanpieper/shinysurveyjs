@@ -7,9 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This package provides dynamic field configuration capabilities with flexible types and dependency chain support. This vignette explains how to use these features.
-
-## Dynamic Configuration Types
+This package provides dynamic field capabilities with flexible types and dependency chain support.
 
 The package supports three main types of dynamic configurations:
 
@@ -17,59 +15,33 @@ The package supports three main types of dynamic configurations:
 2.  **Parameter Configuration**: Validate and use data in URL query parameters
 3.  **Unique Value Configuration**: Validate field values against existing database records
 
-Each configuration type offers distinct features:
-
-**Choice Configuration**
-
--   Dependent fields with dynamic updates based on parent selections
-
--   Flexible handling of dropdown and radio button options
-
--   Support for both single and multi-level dependencies
-
-**Parameter Configuration**
-
--   URL parameter validation against database tables
-
--   Optional display text mapping
-
--   Hidden field integration
-
--   Support for tracking referral sources
-
-**Unique Value Configuration**
-
--   Text normalization for comparison
-
--   Configurable validation responses (warn or stop)
-
--   Custom warning or error messages
-
--   Integration with form submission logic
-
-All types include automatic saving to the survey database and comprehensive error handling.
-
-### Basic Structure
-
-The dynamic configuration is specified through the `dynamic_config` parameter in `survey_single()`. It accepts a list of configuration objects.
+All types include automatic saving to the survey database and error handling. The dynamic configuration is specified through the `dynamic_config` parameter in `survey()`. It accepts a list of configuration objects.
 
 ## Choice Configuration
+
+Choice Configuration provides:
+
+-   Dependent fields with dynamic updates based on parent selections
+-   Flexible handling of dropdown and radio button options
+-   Support for both single and multi-level dependencies
+
+### Example
 
 Imagine I want to develop an R package feedback survey that allows users to **select** one of my packages and a dependent version number populated from a database table:
 
 ``` r
 dynamic_config = list(
   list(
-    group_type = "choice",                   # Type of configuration
-    table_name = "config_packages",          # Database table to populate choices from
-    group_col = "package"                    # Column with the choices
+    config_type = "choice",                   # Type of configuration
+    table_name = "config_packages",           # Database table to populate choices from
+    config_col = "package"                    # Column with the choices
   ),
   list(
-    group_type = "choice",                   # Type of configuration 
-    table_name = "config_packages_versions", # Database table for dependent choices
-    parent_table_name = "config_packages",   # Parent table for dependency
-    parent_id_col = "package_id",           # Links to parent table
-    group_col = "version"                    # Column for dependent choices
+    config_type = "choice",                   # Type of configuration 
+    table_name = "config_packages_versions",  # Database table for dependent choices
+    parent_table_name = "config_packages",    # Parent table for dependency
+    parent_id_col = "package_id",             # Links to parent table
+    config_col = "version"                    # Column for dependent choices
   )
 )
 ```
@@ -78,25 +50,27 @@ This configuration creates two dependent fields where the second field's choices
 
 ## Parameter Configuration
 
-Parameter configuration allows you to:
+Parameter Configuration provides:
 
+-   URL parameter validation against database tables
+-   Optional display text mapping with hidden field integration
 -   Accept values from URL parameters
 -   Store values in hidden fields
 -   Look up display text from database tables
 
-### URL Parameter Example
+### Example
 
-I want to publish the link to my R package feedback form on my *github* profile, but I also want post it on *bluesky* and possibly present it at *posit::conf(2025)*. I can use the URL query to track where I'm receiving feedback from.
+Imagine I want to publish the link to my R package feedback form on my *github* profile, but I also want post it on *bluesky* and possibly present it at *posit::conf(2025)*. I can use the URL query to track where I'm receiving feedback from.
 
 ``` r
 # URL: http://127.0.0.1:3838/?source=github
 
 dynamic_config = list(
   list(
-    group_type = "param",              # Type of configuration
-    table_name = "config_source",      # Database table with valid parameters 
-    group_col = "source",              # Matches URL parameter name
-    display_col = "display_text"       # Optional: Show display text
+    config_type = "param",              # Type of configuration
+    table_name = "config_source",       # Database table with valid parameters 
+    config_col = "source",              # Matches URL parameter name
+    display_col = "display_text"        # Optional: Show display text
   )
 )
 ```
@@ -105,216 +79,39 @@ This feature is useful for tracking individuals, groups, or referral sources. It
 
 ## Unique Value Configuration
 
-The unique value configuration enables validation of field values against existing database records. This is useful for ensuring unique entries or providing warnings about duplicate submissions.
+Unique Value Configuration provides:
 
-### Basic Unique Value Example
+-   Text normalization for comparison
+-   Configurable validation responses (warn or stop)
+-   Custom warning or error messages
+-   Integration with form submission logic
 
-Imagine I want to ensure that each package issue report has a unique title:
+### Example
+
+Imagine I want to create a different survey to submit issues relate to my package but to prevent users from submitting the same issue if the title already exists. (Yes, I know this would never happen because we have Github.)
+
+The following configuration ensures that each package issue report has a unique title:
 
 ``` r
 dynamic_config = list(
   list(
-    group_type = "unique",           # Type of configuration
-    group_col = "issue_title",       # Column to check for uniqueness
-    result = "stop",                 # Action on duplicate ("warn" or "stop")
-    result_field = "title_warning"   # Field to show warning or error message (should be hidden)
+    config_type = "unique",           # Type of configuration
+    config_col = "issue_title",       # Column to check for uniqueness
+    result = "stop",                  # Action on duplicate ("warn" or "stop")
+    result_field = "title_error"      # Field for custom error message
   )
 )
 ```
 
 This configuration will:
 
-1.  Check the entered issue title against existing records
-
+1.  Check the entered issue title against existing records in the database
 2.  If a duplicate is found, either:
-
     -   Display a warning message (result = "warn")
-
     -   Prevent form submission and display an error message (result = "stop")
 
 The validation normalizes text by:
 
 -   Converting to lowercase
-
 -   Trimming whitespace
-
 -   Removing special characters
-
-### Complex Example with Warning Message
-
-Here's how to implement a more complex issue reporting form with unique title validation:
-
-``` r
-# Create the database tables
-sql_setup <- "
-CREATE TABLE issue_reports (
-    id SERIAL PRIMARY KEY,
-    issue_title VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insert some sample issues
-INSERT INTO issue_reports (issue_title) VALUES
-    ('Cannot install on M1 Mac'),
-    ('Error with special characters in survey');
-"
-
-# Define the survey JSON
-survey <- list(
-  title = "Package Issue Report",
-  pages = list(
-    list(
-      name = "issue",
-      elements = list(
-        list(
-          type = "text",
-          name = "issue_title",
-          title = "Issue Title:",
-          isRequired = TRUE
-        ),
-        list(
-          type = "html",
-          name = "error_message",
-          visible = FALSE,
-          html = "⚠️ This issue has been reported already. Please check existing issues first."
-        ),
-        list(
-          type = "comment",
-          name = "description",
-          title = "Describe the issue:",
-          rows = 3,
-          isRequired = TRUE
-        )
-      )
-    )
-  )
-)
-
-# Deploy the survey with unique validation
-survey_single(
-  list = survey,
-  theme = "modern",
-  db_config = list(
-    # ... database configuration ...
-    write_table = "issue_reports"
-  ),
-  dynamic_config = list(
-    list(
-      group_type = "unique",
-      group_col = "issue_title",
-      result = "stop",
-      result_field = "error_message"
-    )
-  )
-)
-```
-
-## Combining Configuration Types
-
-The dynamic field configuration can be combined to create complex field dependencies and validations. For example, you can:
-
-1.  Use URL parameters to track the source
-2.  Validate unique submission titles
-3.  Populate dependent dropdown fields from database tables
-
-Here's a complete example:
-
-``` r
-dynamic_config = list(
-  # Track referral source
-  list(
-    group_type = "param",
-    table_name = "config_source",
-    group_col = "source",
-    display_col = "display_text"
-  ),
-  # Ensure unique issue titles
-  list(
-    group_type = "unique",
-    group_col = "issue_title",
-    result = "stop",
-    result_field = "error_message"
-  ),
-  # Package selection
-  list(
-    group_type = "choice",
-    table_name = "config_packages",
-    group_col = "package"
-  ),
-  # Version selection (depends on package)
-  list(
-    group_type = "choice",
-    table_name = "config_packages_versions",
-    parent_table_name = "config_packages",
-    parent_id_col = "package_id",
-    group_col = "version"
-  )
-)
-```
-
-This configuration creates a robust form that: - Tracks where users came from - Warns about duplicate issue reports - Provides package-specific version selection - Saves all responses to the database
-
-## Database Schema
-
-Here's the complete database schema for the examples above:
-
-``` sql
--- Create the packages configuration table
-CREATE TABLE config_packages (
-    package_id SERIAL PRIMARY KEY,
-    package VARCHAR(255) NOT NULL,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(package)
-);
-
--- Create the package versions table with proper foreign key
-CREATE TABLE config_packages_versions (
-    version_id SERIAL PRIMARY KEY,
-    package_id INTEGER NOT NULL,
-    version VARCHAR(50) NOT NULL,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (package_id) REFERENCES config_packages(package_id),
-    UNIQUE(package_id, version)
-);
-
--- Create the source configuration table
-CREATE TABLE config_source (
-    id SERIAL PRIMARY KEY,
-    source VARCHAR(50) NOT NULL UNIQUE,
-    display_text VARCHAR(255) NOT NULL,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create the issue reports table
-CREATE TABLE issue_reports (
-    id SERIAL PRIMARY KEY,
-    issue_title VARCHAR(255) NOT NULL UNIQUE,
-    package_id INTEGER REFERENCES config_packages(package_id),
-    version VARCHAR(50),
-    description TEXT,
-    source VARCHAR(50),
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insert sample data
-INSERT INTO config_packages (package) VALUES
-    ('batchLLM'),
-    ('shinysurveyjs');
-
-INSERT INTO config_packages_versions (package_id, version)
-SELECT p.package_id, v.version
-FROM config_packages p
-CROSS JOIN (
-    VALUES 
-        ('batchLLM', 'dev-github'),
-        ('batchLLM', 'CRAN-0.1.0'),
-        ('shinysurveyjs', 'dev-github')
-) AS v(package_name, version)
-WHERE p.package = v.package_name;
-
-INSERT INTO config_source (source, display_text) VALUES
-    ('github', 'GitHub'),
-    ('bluesky', 'BlueSky'),
-    ('posit', 'posit::conf(2025)');
-```

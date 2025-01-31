@@ -1,14 +1,11 @@
 Package: shinysurveyjs
-Title: Create and Deploy Survey Applications Using Shiny and SurveyJS
+Title: Create and Deploy Survey Applications
 Version: 0.1.0
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: The goal of this package is to integrate the flexible frontend of the
-    'SurveyJS' library <https://surveyjs.io/> with the reactive backend of 'Shiny'
-    <https://shiny.posit.co/> to interface with a 'PostgreSQL' database
-    <https://www.postgresql.org/> and create dynamic user experiences. Whether you
-    need a simple feedback form or a complex survey system for your organization,
-    this package is designed to scale with you.
+Description: The goal of this package is to integrate 'SurveyJS' <https://surveyjs.io/> 
+    with 'Shiny' <https://shiny.posit.co/> to interface with a 'PostgreSQL' database
+    <https://www.postgresql.org/> and create dynamic user experiences.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
