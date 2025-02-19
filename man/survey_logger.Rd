@@ -2,34 +2,29 @@
 % Please edit documentation in R/logger.R
 \name{survey_logger}
 \alias{survey_logger}
-\title{Shiny App Logger Class}
+\title{Survey Logger Class}
 \description{
-Creates a new logger instance that queues messages and periodically writes them
-to a PostgreSQL database while providing immediate console feedback.
+R6 Class providing queued logging functionality for Shiny survey applications
+using the main application's database connection pool.
 }
 \details{
-An R6 class that provides queued logging functionality for Shiny
-applications. This class efficiently handles logging to a PostgreSQL
-database using a message queue and connection pooling.
-
 The logger uses a queue-based approach where messages are:
 \enumerate{
 \item Added to an in-memory queue immediately
 \item Displayed in the console (if not suppressed)
-\item Periodically processed and written to the database
+\item Periodically processed and written to the database in batches
 }
 
-This approach provides several benefits:
+Features:
 \itemize{
-\item Reliable database operations using the main connection pool
-\item Immediate console feedback for debugging
-\item Efficient batched database writes
-\item No cross-process connection issues
+\item Uses main application pool for database operations
+\item Efficient batch database writes
+\item Immediate console feedback with color coding
+\item Connection pool health monitoring
 }
 }
 \section{Message Types}{
 
-Supported message types with distinct visual styles:
 \itemize{
 \item \code{INFO}: Regular informational messages (green)
 \item \code{WARN}: Warning messages (yellow)
@@ -37,89 +32,18 @@ Supported message types with distinct visual styles:
 }
 }
 
-\section{Public Fields}{
-
-\itemize{
-\item \code{log_table}: Character. Database table name for logging
-\item \code{session_id}: Character. Unique identifier for current session
-\item \code{survey_name}: Character. Name of the survey being logged
-\item \code{suppress_logs}: Logical. Whether to suppress console output
-\item \code{queue}: data.frame. Internal message queue for batch processing
-}
-}
-
-\section{Methods}{
-
-\describe{
-\item{\code{initialize(log_table, session_id, survey_name, suppress_logs = FALSE)}}{
-Creates a new logger instance and initializes the logging table if needed.
-}
-\item{\code{log_message(message, type = "INFO", zone = "DEFAULT")}}{
-Queues a message for logging and displays it in the console.
-}
-}
-}
-
-\section{Private Methods}{
-
-\describe{
-\item{\code{process_queue()}}{
-Processes queued messages and writes them to the database.
-}
-\item{\code{start_logging_observer()}}{
-Starts the background observer that processes the queue.
-}
-}
-}
-
-\examples{
-\dontrun{
-# Initialize logger with console output
-logger <- survey_logger$new(
-  log_table = "survey_app_logs",
-  session_id = "user123",
-  survey_name = "customer_feedback"
-)
-
-# Log different types of messages
-logger$log_message("Survey started", "INFO", "initialization")
-logger$log_message("Missing optional field", "WARN", "validation")
-logger$log_message("Database error", "ERROR", "data")
-}
-
-}
-\keyword{Internal}
-\keyword{Start}
-\keyword{a}
-\keyword{background}
-\keyword{internal}
-\keyword{logging}
-\keyword{message}
-\keyword{method}
-\keyword{observer}
-\keyword{periodically}
-\keyword{process}
-\keyword{queue.}
-\keyword{starts}
-\keyword{that}
-\keyword{the}
-\keyword{to}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{log_table}}{Character string specifying the name of the PostgreSQL table where logs will be stored.}
+\item{\code{log_table}}{Character string specifying the PostgreSQL table for logs}
 
-\item{\code{session_id}}{Character string containing a unique identifier for the current Shiny session.}
+\item{\code{session_id}}{Character string containing unique session identifier}
 
-\item{\code{survey_name}}{Character string identifying which survey is being logged.}
+\item{\code{survey_name}}{Character string identifying the current survey}
 
-\item{\code{suppress_logs}}{Logical flag indicating whether to suppress console output messages.}
+\item{\code{suppress_logs}}{Logical flag to suppress console output}
 
-\item{\code{queue}}{data.frame containing queued messages waiting to be written to the database.
-Initialize a new survey logger instance
-
-Creates a new logger instance, initializes the message queue, and ensures
-the logging table exists in the database.}
+\item{\code{queue}}{data.frame containing queued messages for batch processing}
 }
 \if{html}{\out{</div>}}
 }
@@ -135,6 +59,7 @@ the logging table exists in the database.}
 \if{html}{\out{<a id="method-survey_logger-new"></a>}}
 \if{latex}{\out{\hypertarget{method-survey_logger-new}{}}}
 \subsection{Method \code{new()}}{
+Initialize a new survey logger instance
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, suppress_logs = FALSE)}\if{html}{\out{</div>}}
 }
@@ -142,9 +67,9 @@ the logging table exists in the database.}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{log_table}}{Character string specifying the name of the logging table}
+\item{\code{log_table}}{Character string specifying logging table name}
 
-\item{\code{session_id}}{Character string containing a unique session identifier}
+\item{\code{session_id}}{Character string containing session identifier}
 
 \item{\code{survey_name}}{Character string identifying the survey}
 
@@ -152,18 +77,12 @@ the logging table exists in the database.}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Returns}{
-A new survey_logger instance (invisible)
-Queue a message for logging
-
-Adds a message to the logging queue and displays it immediately in the console
-if console output is not suppressed.
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-survey_logger-log_message"></a>}}
 \if{latex}{\out{\hypertarget{method-survey_logger-log_message}{}}}
 \subsection{Method \code{log_message()}}{
+Queue a message for logging and display in console
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_message(message, type = "INFO", zone = "DEFAULT")}\if{html}{\out{</div>}}
 }
@@ -171,27 +90,16 @@ if console output is not suppressed.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{message}}{Character string containing the message to log}
+\item{\code{message}}{Character string containing message to log}
 
-\item{\code{type}}{Character string specifying message type. Must be one of:
-\itemize{
-\item "INFO": Regular informational messages (green)
-\item "WARN": Warning messages (yellow)
-\item "ERROR": Error messages (red)
-Default: "INFO"
-}}
+\item{\code{type}}{Character string specifying message type (INFO/WARN/ERROR)}
 
-\item{\code{zone}}{Character string identifying the logging zone for message
-categorization. Default: "DEFAULT"}
+\item{\code{zone}}{Character string identifying logging zone. Default: "DEFAULT"}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-NULL invisibly
-Process the message queue
-
-Internal method that processes queued messages and writes them to the database
-using the main connection pool.
+Invisible NULL
 }
 }
 \if{html}{\out{<hr>}}

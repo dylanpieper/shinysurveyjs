@@ -40,47 +40,38 @@ db_pool_open <- function(host = NULL,
   }
 }
 
-#' Close Database Pool
+#' Close Global Database Pool
 #'
-#' Closes the database connection pool and performs cleanup operations
-#' when the application is shutting down. This function ensures proper
-#' resource management by closing all open connections and removing the
-#' pool object from the global environment.
+#' Closes the global database connection pool (app_pool) during application shutdown.
+#' This function handles cleanup of the global pool and registration of cleanup handlers
+#' for Shiny sessions.
 #'
-#' @param session A Shiny session object that represents the current user session.
-#'                This is used to register the cleanup operation.
+#' @param session Shiny session object. Required to register cleanup handlers for
+#'                session shutdown.
+#' @param logger survey_logger object for tracking cleanup operations.
+#'               If NULL, uses warnings for error reporting.
 #'
 #' @details
-#' This function performs the following operations:
-#' 1. Registers a cleanup handler using shiny::onStop
-#' 2. Checks for the existence of 'app_pool' in the global environment
-#' 3. Calls cleanup_pool() on the existing pool if found
-#' 4. Removes the pool object from the global environment
+#' The function looks for a global 'app_pool' object and attempts to close it safely.
+#' It includes comprehensive error handling and logging of all cleanup operations.
+#' The cleanup process:
+#' 1. Validates the global pool exists and is valid
+#' 2. Closes the pool connection
+#' 3. Removes the pool from the global environment
+#' 4. Logs all operations and any errors that occur
 #'
-#' @note
-#' The function assumes the existence of a cleanup_pool() function and
-#' that the database pool is stored in the global environment as 'app_pool'.
-#'
-#' @examples
-#' \dontrun{
-#' # In your Shiny server function
-#' function(input, output, session) {
-#'   db_pool_close(session)
-#' }
-#' }
-#'
-#' @seealso
-#' \code{\link[shiny]{onStop}} for more information about Shiny's cleanup handlers
+#' @return Invisible NULL
 #'
 #' @importFrom shiny onStop
+#' @importFrom DBI dbIsValid
 #' @keywords internal
-db_pool_close <- function(session) {
-  shiny::onStop(function() {
-    if (exists("app_pool", envir = .GlobalEnv)) {
-      cleanup_pool(get("app_pool", envir = .GlobalEnv))
-      rm(app_pool, envir = .GlobalEnv)
-    }
-  }, session)
+db_pool_close <- function(session, logger = NULL) {
+  if (exists("app_pool", envir = .GlobalEnv)) {
+    pool <- get("app_pool", envir = .GlobalEnv)
+    pool::poolClose(pool)
+    rm("app_pool", envir = .GlobalEnv)
+    logger$log_message("Closed pool and removed object", "INFO", "DATABASE")
+  }
 }
 
 #' Database Operations Class
@@ -286,8 +277,19 @@ db_ops <- R6::R6Class(
     #' @description Create new survey data table with tracking columns
     #' @param write_table Character. Name of the table to create
     #' @param data data.frame. Data frame containing the schema for the new table
+    #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
+    #'   A nested list containing:
+    #'   \describe{
+    #'     \item{pages}{List of survey pages}
+    #'     \item{elements}{List of survey questions/elements, where each element contains:}
+    #'     \item{name}{Question identifier}
+    #'     \item{type}{Question type (e.g., "checkbox", "text", "radio")}
+    #'     \item{showOtherItem}{Logical. Whether the question has an "other" option}
+    #'   }
+    #'   Used to determine column types and handle special question features like "other" options.
+    #'   Default: NULL
     #' @return Character. The sanitized table name
-    create_survey_table = function(write_table, data) {
+    create_survey_table = function(write_table, data, survey_obj = NULL) {
       if (!is.data.frame(data) || nrow(data) == 0) {
         self$logger$log_message("Invalid data: must be a non-empty data frame", "ERROR", "DATABASE")
         stop("Invalid data format")
@@ -308,13 +310,14 @@ db_ops <- R6::R6Class(
             "ip_address INET"
           )
 
-          col_defs <- private$generate_column_definitions(data)
+          col_defs <- private$generate_column_definitions(data, survey_obj)
+
           create_query <- sprintf(
             "CREATE TABLE %s (
-              id SERIAL PRIMARY KEY,
-              %s,
-              %s
-            );",
+            id SERIAL PRIMARY KEY,
+            %s,
+            %s
+          );",
             DBI::dbQuoteIdentifier(conn, table_name),
             paste(col_defs, collapse = ", "),
             paste(tracking_cols, collapse = ", ")
@@ -324,9 +327,9 @@ db_ops <- R6::R6Class(
           # Create trigger for automatic date_updated
           trigger_query <- sprintf(
             "CREATE TRIGGER update_date_updated_%s
-             BEFORE UPDATE ON %s
-             FOR EACH ROW
-             EXECUTE FUNCTION update_date_updated();",
+           BEFORE UPDATE ON %s
+           FOR EACH ROW
+           EXECUTE FUNCTION update_date_updated();",
             table_name,
             DBI::dbQuoteIdentifier(conn, table_name)
           )
@@ -338,10 +341,10 @@ db_ops <- R6::R6Class(
             "DATABASE"
           )
         } else {
-          # Ensure tracking columns exist in existing table
+          # For existing table, ensure tracking columns
           self$ensure_tracking_columns(table_name)
 
-          # Add any missing columns from the data
+          # Add any missing columns
           cols_query <- sprintf(
             "SELECT column_name FROM information_schema.columns WHERE table_name = '%s';",
             table_name
@@ -350,7 +353,7 @@ db_ops <- R6::R6Class(
 
           for (col in names(data)) {
             if (!col %in% existing_cols) {
-              col_type <- private$get_postgres_type(data[[col]])
+              col_type <- private$get_postgres_type(data[[col]], col, survey_obj)
               alter_query <- sprintf(
                 "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
                 DBI::dbQuoteIdentifier(conn, table_name),
@@ -707,20 +710,68 @@ db_ops <- R6::R6Class(
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
-    generate_column_definitions = function(data) {
-      vapply(names(data), function(col) {
-        type <- private$get_postgres_type(data[[col]])
-        sprintf(
-          "%s %s",
-          DBI::dbQuoteIdentifier(self$pool, col),
-          type
-        )
-      }, character(1))
+    has_other_option = function(survey_obj, field_name) {
+      if (is.null(survey_obj) || is.null(field_name)) {
+        return(FALSE)
+      }
+
+      # Helper function to recursively search elements
+      search_elements <- function(elements) {
+        for (element in elements) {
+          if (!is.null(element$name) &&
+            element$name == field_name &&
+            !is.null(element$showOtherItem) &&
+            element$showOtherItem) {
+            return(TRUE)
+          }
+
+          # Check nested elements (e.g., in panels)
+          if (!is.null(element$elements)) {
+            if (search_elements(element$elements)) {
+              return(TRUE)
+            }
+          }
+        }
+        return(FALSE)
+      }
+
+      # Search through all pages
+      if (!is.null(survey_obj$pages)) {
+        for (page in survey_obj$pages) {
+          if (!is.null(page$elements)) {
+            if (search_elements(page$elements)) {
+              return(TRUE)
+            }
+          }
+        }
+      }
+
+      # Also search direct elements (if not using pages)
+      if (!is.null(survey_obj$elements)) {
+        if (search_elements(survey_obj$elements)) {
+          return(TRUE)
+        }
+      }
+
+      return(FALSE)
     },
-    get_postgres_type = function(vector) {
+    get_postgres_type = function(vector, field_name = NULL, survey_obj = NULL) {
+      # First check if field has showOtherItem enabled
+      if (!is.null(survey_obj) && !is.null(field_name)) {
+        if (private$has_other_option(survey_obj, field_name)) {
+          self$logger$log_message(
+            sprintf("Field '%s' has showOtherItem enabled, using TEXT type", field_name),
+            "INFO",
+            "DATABASE"
+          )
+          return("TEXT")
+        }
+      }
+
+      # Regular type detection for other fields
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {
-          return("INTEGER")
+          return("BIGINT")
         }
         return("NUMERIC")
       }
@@ -737,6 +788,16 @@ db_ops <- R6::R6Class(
         return("JSONB")
       }
       return("TEXT")
+    },
+    generate_column_definitions = function(data, survey_obj = NULL) {
+      vapply(names(data), function(col) {
+        type <- private$get_postgres_type(data[[col]], col, survey_obj)
+        sprintf(
+          "%s %s",
+          DBI::dbQuoteIdentifier(self$pool, col),
+          type
+        )
+      }, character(1))
     }
   )
 )

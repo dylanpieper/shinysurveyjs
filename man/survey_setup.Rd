@@ -4,7 +4,7 @@
 \alias{survey_setup}
 \title{Setup Global Survey Environment and Database Connection}
 \usage{
-survey_setup(db_config, shiny_config = NULL, workers = 2L)
+survey_setup(db_config, shiny_config = NULL)
 }
 \arguments{
 \item{db_config}{List. Database configuration parameters:
@@ -19,8 +19,6 @@ survey_setup(db_config, shiny_config = NULL, workers = 2L)
 
 \item{shiny_config}{List. Optional Shiny configuration parameters to pass to
 \code{configure_shiny()}. Applied before database initialization.}
-
-\item{workers}{Integer. Number of workers for parallel processing. Default: 3.}
 }
 \value{
 Invisibly returns the initialized database pool object
@@ -39,11 +37,6 @@ The function:
 \item Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)
 \item Applies optional Shiny settings
 \item Creates global database pool if needed
-\item Initializes future package based on OS:
-\itemize{
-\item Windows: Uses multisession
-\item macOS/Linux: Uses multicore if supported, falls back to multisession
-}
 }
 
 The database pool is stored globally as 'app_pool' and reused if it exists.

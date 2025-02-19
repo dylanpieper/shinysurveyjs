@@ -21,7 +21,7 @@ Default: "defaultV2".}
 Default: "light".}
 
 \item{custom_css}{String. Additional CSS rules to append to the theme.
-Default: \code{NULL}.}
+Default: NULL.}
 
 \item{primary_foreground}{String. Hex color code for text on primary elements.
 If not specified, automatically determined for contrast.}

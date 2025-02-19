@@ -14,7 +14,6 @@
 #'   * `write_table`: Table name for write operations
 #' @param shiny_config List. Optional Shiny configuration parameters to pass to
 #'   `configure_shiny()`. Applied before database initialization.
-#' @param workers Integer. Number of workers for parallel processing. Default: 3.
 #'
 #' @details
 #' The function:
@@ -23,9 +22,6 @@
 #' * Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)
 #' * Applies optional Shiny settings
 #' * Creates global database pool if needed
-#' * Initializes future package based on OS:
-#'   - Windows: Uses multisession
-#'   - macOS/Linux: Uses multicore if supported, falls back to multisession
 #'
 #' The database pool is stored globally as 'app_pool' and reused if it exists.
 #' Environment variables are only set if not already present.
@@ -34,10 +30,9 @@
 #'
 #' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info
 #'   cli_alert_warning
-#' @importFrom future plan multisession multicore
 #'
 #' @keywords internal
-survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
+survey_setup <- function(db_config, shiny_config = NULL) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
 
@@ -105,30 +100,6 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
     )
   } else {
     cli::cli_alert_success("Using existing database pool")
-  }
-
-  # Initialize future plan based on operating system
-  cli::cli_h2("Async Processing Setup")
-  os <- Sys.info()["sysname"]
-  cli::cli_alert_info("Configuring async processing for {.val {os}}")
-
-  if (os == "Windows") {
-    # Windows: Use multisession (fork is not available)
-    future::plan(future::multisession, workers = workers)
-    cli::cli_alert_success("Using multisession plan with {workers} workers")
-  } 
-  else {
-    # Linux/macOS: Try multicore first, fall back to multisession if not available
-    tryCatch(
-      {
-        future::plan(future::multicore, workers = workers)
-        cli::cli_alert_success("Using multicore plan with {workers} workers")
-      },
-      error = function(e) {
-        future::plan(future::multisession, workers = workers)
-        cli::cli_alert_warning("Multicore not available, falling back to multisession with {workers} workers")
-      }
-    )
   }
 
   # Return pool object invisibly
@@ -381,34 +352,39 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' Clean Up Server Session Resources
 #'
 #' Handles cleanup tasks when a Shiny session ends by logging session termination
-#' and closing database connections. Should be called within server initialization.
+#' and closing the global database pool connection. This function should be called
+#' within server initialization to ensure proper resource cleanup.
 #'
-#' @param session Shiny session object
-#' @param logger Logger object with log_message method for event recording
+#' @param session Shiny session object containing the session token.
+#' @param logger Logger object with log_message method for event recording.
 #' @param zone Character. Logging zone identifier. Default: "SURVEY"
 #'
-#' @return No return value, called for side effects
+#' @details
+#' This function:
+#' 1. Registers a session end handler using onSessionEnded
+#' 3. Cleans up the global database pool
+#' 2. Logs the session termination event
+#'
+#' The cleanup process is logged at each step to provide clear tracking of the
+#' shutdown sequence.
+#'
+#' @return Invisible NULL
 #'
 #' @examples
 #' \dontrun{
 #' server <- function(input, output, session) {
-#'   logger <- LoggerFactory$new()
+#'   logger <- survey_logger$new(...)
 #'   server_clean(session, logger)
 #' }
 #' }
 #'
-#' @importFrom shiny onSessionEnded
-#'
 #' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
-  # Register cleanup actions for session end
   session$onSessionEnded(function() {
-    # Log session end
+    db_pool_close(session = session, logger = logger)
     logger$log_message("Ended session", zone = zone)
-
-    # Close database connections
-    db_pool_close(session)
   })
+  invisible(NULL)
 }
 
 #' Parse URL Query Parameters

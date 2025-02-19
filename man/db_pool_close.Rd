@@ -2,43 +2,34 @@
 % Please edit documentation in R/db.R
 \name{db_pool_close}
 \alias{db_pool_close}
-\title{Close Database Pool}
+\title{Close Global Database Pool}
 \usage{
-db_pool_close(session)
+db_pool_close(session, logger = NULL)
 }
 \arguments{
-\item{session}{A Shiny session object that represents the current user session.
-This is used to register the cleanup operation.}
+\item{session}{Shiny session object. Required to register cleanup handlers for
+session shutdown.}
+
+\item{logger}{survey_logger object for tracking cleanup operations.
+If NULL, uses warnings for error reporting.}
+}
+\value{
+Invisible NULL
 }
 \description{
-Closes the database connection pool and performs cleanup operations
-when the application is shutting down. This function ensures proper
-resource management by closing all open connections and removing the
-pool object from the global environment.
+Closes the global database connection pool (app_pool) during application shutdown.
+This function handles cleanup of the global pool and registration of cleanup handlers
+for Shiny sessions.
 }
 \details{
-This function performs the following operations:
+The function looks for a global 'app_pool' object and attempts to close it safely.
+It includes comprehensive error handling and logging of all cleanup operations.
+The cleanup process:
 \enumerate{
-\item Registers a cleanup handler using shiny::onStop
-\item Checks for the existence of 'app_pool' in the global environment
-\item Calls cleanup_pool() on the existing pool if found
-\item Removes the pool object from the global environment
+\item Validates the global pool exists and is valid
+\item Closes the pool connection
+\item Removes the pool from the global environment
+\item Logs all operations and any errors that occur
 }
-}
-\note{
-The function assumes the existence of a cleanup_pool() function and
-that the database pool is stored in the global environment as 'app_pool'.
-}
-\examples{
-\dontrun{
-# In your Shiny server function
-function(input, output, session) {
-  db_pool_close(session)
-}
-}
-
-}
-\seealso{
-\code{\link[shiny]{onStop}} for more information about Shiny's cleanup handlers
 }
 \keyword{internal}

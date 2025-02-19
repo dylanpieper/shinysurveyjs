@@ -11,7 +11,7 @@
 #' @param mode String. Color scheme mode, either "light" or "dark".
 #'   Default: "light".
 #' @param custom_css String. Additional CSS rules to append to the theme.
-#'   Default: `NULL`.
+#'   Default: NULL.
 #'
 #' @return String containing complete CSS stylesheet for survey styling
 #'
@@ -172,11 +172,6 @@ body {
     color: var(--foreground) !important;
 }
 
-/* Component column background */
-.sv-components-column {
-    background-color: %s;
-}
-
 /* Dark mode specific styles */
 body[data-theme=\"dark\"] .sv-components-column {
     background-color: %s !important;
@@ -185,9 +180,23 @@ body[data-theme=\"dark\"] .sv-components-column {
 .sv-body {
     background-color: %s;
     color: %s;
-}",
+    height: fill !important;
+}
+
+.sd-body.sd-body--responsive {
+    height: -webkit-fill-available;
+}
+
+.container-fluid {
+    padding-right: 0px !important;
+    padding-left: 0px !important;
+}
+
+.sv-components-column{
+    display: revert !important;
+}
+",
     background, foreground,
-    container_background,
     container_background,
     container_background, foreground
   )
@@ -198,38 +207,30 @@ body[data-theme=\"dark\"] .sv-components-column {
 /* Completed page and container styles */
 .sd-body.sd-completedpage,
 .sv-body.sv-completedpage {
-  %s
-}",
-    if (theme == "modern") {
-      "width: 100% !important;
-    margin: 0 auto !important;
-    padding-top: 12rem !important;
-    padding-bottom: 12rem !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    flex-direction: column-reverse;
-    background-color: var(--container-background) !important;
-    border-top: 2px solid var(--primary) !important;"
-    } else {
-      "width: 100% !important;
+    width: 100%% !important;
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
-    height: auto !important;
+    height: -webkit-fill-available !important;
     display: flex !important;
-    place-items: center !important;
+    justify-content: center !important;
+    align-items: center !important;
     min-height: 32vh !important;
     flex-direction: column-reverse;
     background-color: var(--container-background) !important;
-    border-top: 2px solid var(--primary) !important;"
-    }
-  )
-  container_styles <- paste(
-    container_styles,
-    sprintf(
-      "
+    border-top: 2px solid var(--primary) !important;
+}
+
+.sv-container-modern,
+.sv-root-modern .sv-body {
+    border-radius: 50px; /* Adjust size as needed */
+    overflow: hidden; /* Ensures rounded corners are applied */
+}
+
 .sv-root-modern .sv-body.sv-completedpage {
     height: auto !important;
+    padding: 9rem !important;
+    display: revert !important;
 }
 
 .sd-completedpage__text {
@@ -276,14 +277,12 @@ body[data-theme=\"dark\"] .sv-components-column {
     max-width: 1200px !important;
     margin: 0 auto !important;
 }",
-      foreground,
-      container_background, border_color,
-      hover_background,
-      primary, hover_background,
-      border_color,
-      container_background
-    ),
-    sep = "\n"
+    foreground,
+    container_background, border_color,
+    hover_background,
+    primary, hover_background,
+    border_color,
+    container_background
   )
 
   # Button styles
@@ -388,10 +387,6 @@ body[data-theme=\"dark\"] .sv-components-column {
 
 .sv-root-modern .sv-footer__complete-btn {
     font-weight: 600 !important;
-}
-
-.sv-root-modern .sv-btn--navigation {
-    min-width: 120px !important;
 }",
       button_text_color,
       primary_light,
@@ -524,6 +519,32 @@ body[data-theme=\"dark\"] .sv-components-column {
     adjust_hex(primary, 20),
     foreground, container_background
   )
+
+  # For the default theme, add max width
+  if (theme == "defaultV2") {
+    additional_styles <- "
+  .sd-footer {
+    max-width: 700px !important;
+    margin: 0 auto !important;
+    padding: 2rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .sd-page {
+    max-width: 700px !important;
+    margin: 0 auto !important;
+    padding: 0 2rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .sd-element--with-frame.sd-question--error-top {
+    padding-top: 2rem;
+  }
+  "
+
+    # Append this to the existing CSS generation
+    base_css <- paste(base_css, additional_styles, sep = "\n\n")
+  }
 
   # Combine all CSS sections
   paste(

@@ -157,7 +157,8 @@ survey <- function(json = NULL,
       duration_load = NULL,
       duration_complete = NULL,
       duration_save = NULL,
-      validated_params = NULL
+      validated_params = NULL,
+      survey_def = NULL
     )
 
     server_setup(
@@ -244,6 +245,8 @@ survey <- function(json = NULL,
             } else {
               json
             }
+            
+            rv$survey_def <- survey_obj
 
             validated_params <- transform_validated_params(
               rv$validated_params, config_list_reactive()
@@ -348,7 +351,7 @@ survey <- function(json = NULL,
           return(NULL)
         }
       )
-
+      
       if (!is.null(parsed_data)) {
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
@@ -356,11 +359,20 @@ survey <- function(json = NULL,
           hide_and_show("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }
-
+        
         if (is.list(parsed_data) && !is.data.frame(parsed_data)) {
+          # Log the structure of the data before conversion
+          logger$log_message(
+            sprintf("Received data from SurveyJS: %s",
+                    jsonlite::toJSON(parsed_data, auto_unbox = TRUE)),
+            "INFO",
+            "SURVEY"
+          )
+          
+          # Convert to data frame while preserving all fields including field-other
           parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
         }
-
+        
         tryCatch(
           {
             if (is.null(db_ops)) {
@@ -368,13 +380,27 @@ survey <- function(json = NULL,
               logger$log_message(msg, type = "ERROR", zone = "DATABASE")
               stop(msg)
             }
-
+            
             parsed_data$duration_load <- rv$duration_load
             parsed_data$duration_complete <- rv$duration_complete
             parsed_data$duration_save <- as.numeric(0.1)
-
-            # First save the data normally
-            db_ops$create_survey_table(db_config$write_table, parsed_data)
+            
+            # Log the final data structure being sent to database
+            logger$log_message(
+              sprintf("Processed final data: %s",
+                      jsonlite::toJSON(parsed_data, auto_unbox = TRUE)),
+              "INFO",
+              "SURVEY"
+            )
+            
+            # First create/ensure the table exists with the correct schema
+            db_ops$create_survey_table(
+              db_config$write_table, 
+              parsed_data,
+              survey_obj = isolate(rv$survey_def)
+            )
+            
+            # Then insert the survey data
             result <- db_ops$update_survey_table(db_config$write_table, parsed_data)
 
             rv$save_time <- Sys.time()

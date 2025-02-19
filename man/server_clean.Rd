@@ -7,23 +7,35 @@
 server_clean(session, logger, zone = "SURVEY")
 }
 \arguments{
-\item{session}{Shiny session object}
+\item{session}{Shiny session object containing the session token.}
 
-\item{logger}{Logger object with log_message method for event recording}
+\item{logger}{Logger object with log_message method for event recording.}
 
 \item{zone}{Character. Logging zone identifier. Default: "SURVEY"}
 }
 \value{
-No return value, called for side effects
+Invisible NULL
 }
 \description{
 Handles cleanup tasks when a Shiny session ends by logging session termination
-and closing database connections. Should be called within server initialization.
+and closing the global database pool connection. This function should be called
+within server initialization to ensure proper resource cleanup.
+}
+\details{
+This function:
+\enumerate{
+\item Registers a session end handler using onSessionEnded
+\item Cleans up the global database pool
+\item Logs the session termination event
+}
+
+The cleanup process is logged at each step to provide clear tracking of the
+shutdown sequence.
 }
 \examples{
 \dontrun{
 server <- function(input, output, session) {
-  logger <- LoggerFactory$new()
+  logger <- survey_logger$new(...)
   server_clean(session, logger)
 }
 }

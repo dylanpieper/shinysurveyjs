@@ -122,7 +122,9 @@ function initializeSurvey(data) {
             try {
                 document.getElementById("savingDataMessage").style.display = "block";
                 Shiny.setInputValue("surveyComplete", true);
-
+        
+                console.log("Raw survey result data:", result.data);
+        
                 Promise.resolve()
                     .then(() => {
                         const responses = {};
@@ -130,18 +132,30 @@ function initializeSurvey(data) {
                             if (["data", "currentPageNo", "timestamp"].includes(key)) continue;
                             const question = survey.getQuestionByName(key);
                             if (!question) continue;
-
-                            if (question.getType() === "checkbox") {
-                                const baseName = question.name;
-                                const selectedValues = Array.isArray(value) ? value : [value];
-                                selectedValues.forEach(selectedValue => {
-                                    const normalizedKey = `${baseName}..${selectedValue}`;
-                                    responses[normalizedKey] = true;
-                                });
-                            } else {
-                                responses[key] = question._param ?? value;
+        
+                            console.log(`Processing field: ${key}`, {
+                                type: question.getType(),
+                                value: value
+                            });
+        
+                            switch (question.getType()) {
+                                case "checkbox":
+                                    const baseName = question.name;
+                                    const selectedValues = Array.isArray(value) ? value : [value];
+                                    
+                                    selectedValues.forEach(selectedValue => {
+                                        const normalizedKey = `${baseName}..${selectedValue}`;
+                                        responses[normalizedKey] = true;
+                                    });
+                                    break;
+        
+                                default:
+                                    responses[key] = question._param ?? value;
+                                    break;
                             }
                         }
+        
+                        console.log("Final processed responses:", responses);
                         return responses;
                     })
                     .then((responses) => {

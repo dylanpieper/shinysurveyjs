@@ -55,10 +55,11 @@ survey <- list(
           type = "matrix",
           name = "rating",
           title = "Please rate the shinysurveyjs 📦:",
+          isRequired = TRUE,
           columns = list(
-            list(value = "1", text = "Bad"),
-            list(value = "2", text = "Neutral"),
-            list(value = "3", text = "Good")
+            list(value = "1", text = "🙁"),
+            list(value = "2", text = "😑"),
+            list(value = "3", text = "🙂")
           ),
           rows = list(
             list(value = "UI", text = "UI Design"),
@@ -68,7 +69,8 @@ survey <- list(
         list(
           type = "comment",
           name = "feedback",
-          title = "Any other feedback?"
+          title = "Any other feedback?",
+          isRequired = TRUE
         )
       )
     )

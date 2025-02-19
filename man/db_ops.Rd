@@ -135,7 +135,7 @@ Invisible NULL
 \subsection{Method \code{create_survey_table()}}{
 Create new survey data table with tracking columns
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data, survey_obj = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -144,6 +144,18 @@ Create new survey data table with tracking columns
 \item{\code{write_table}}{Character. Name of the table to create}
 
 \item{\code{data}}{data.frame. Data frame containing the schema for the new table}
+
+\item{\code{survey_obj}}{Survey.JS definition object that contains the complete survey structure.
+A nested list containing:
+\describe{
+\item{pages}{List of survey pages}
+\item{elements}{List of survey questions/elements, where each element contains:}
+\item{name}{Question identifier}
+\item{type}{Question type (e.g., "checkbox", "text", "radio")}
+\item{showOtherItem}{Logical. Whether the question has an "other" option}
+}
+Used to determine column types and handle special question features like "other" options.
+Default: NULL}
 }
 \if{html}{\out{</div>}}
 }
