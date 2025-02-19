@@ -162,7 +162,7 @@ update date, session ID, and IP address.</p>
 <h3 id="method-create-survey-table-">Method <code>create_survey_table()</code><a class="anchor" aria-label="anchor" href="#method-create-survey-table-"></a></h3>
 <p>Create new survey data table with tracking columns</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">create_survey_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">db_ops</span><span class="op">$</span><span class="fu">create_survey_table</span><span class="op">(</span><span class="va">write_table</span>, <span class="va">data</span>, survey_obj <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -173,6 +173,28 @@ update date, session ID, and IP address.</p>
 
 <dt><code>data</code></dt>
 <dd><p>data.frame. Data frame containing the schema for the new table</p></dd>
+
+
+<dt><code>survey_obj</code></dt>
+<dd><p>Survey.JS definition object that contains the complete survey structure.
+A nested list containing:</p><dl><dt>pages</dt>
+<dd><p>List of survey pages</p></dd>
+
+<dt>elements</dt>
+<dd><p>List of survey questions/elements, where each element contains:</p></dd>
+
+<dt>name</dt>
+<dd><p>Question identifier</p></dd>
+
+<dt>type</dt>
+<dd><p>Question type (e.g., "checkbox", "text", "radio")</p></dd>
+
+<dt>showOtherItem</dt>
+<dd><p>Logical. Whether the question has an "other" option</p></dd>
+
+
+</dl><p>Used to determine column types and handle special question features like "other" options.
+Default: NULL</p></dd>
 
 
 </dl><p></p></div>

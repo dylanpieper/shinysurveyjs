@@ -51,7 +51,7 @@ settings, establishes a database connection pool, and initializes a future plan.
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">survey_setup</span><span class="op">(</span><span class="va">db_config</span>, shiny_config <span class="op">=</span> <span class="cn">NULL</span>, workers <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">survey_setup</span><span class="op">(</span><span class="va">db_config</span>, shiny_config <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -72,10 +72,6 @@ settings, establishes a database connection pool, and initializes a future plan.
 <dd><p>List. Optional Shiny configuration parameters to pass to
 <code><a href="configure_shiny.html">configure_shiny()</a></code>. Applied before database initialization.</p></dd>
 
-
-<dt id="arg-workers">workers<a class="anchor" aria-label="anchor" href="#arg-workers"></a></dt>
-<dd><p>Integer. Number of workers for parallel processing. Default: 3.</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -88,9 +84,6 @@ settings, establishes a database connection pool, and initializes a future plan.
 <li><p>Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)</p></li>
 <li><p>Applies optional Shiny settings</p></li>
 <li><p>Creates global database pool if needed</p></li>
-<li><p>Initializes future package based on OS:</p><ul><li><p>Windows: Uses multisession</p></li>
-<li><p>macOS/Linux: Uses multicore if supported, falls back to multisession</p></li>
-</ul></li>
 </ul><p>The database pool is stored globally as 'app_pool' and reused if it exists.
 Environment variables are only set if not already present.</p>
     </div>
