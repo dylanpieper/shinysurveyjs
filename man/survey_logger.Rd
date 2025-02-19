@@ -3,17 +3,29 @@
 \name{survey_logger}
 \alias{survey_logger}
 \title{Shiny App Logger Class}
-\format{
-An \link[R6:R6Class]{R6} class object.
-}
 \description{
-Creates a new logger instance for recording application messages asynchronously
-to a PostgreSQL database with visual console feedback.
+Creates a new logger instance that queues messages and periodically writes them
+to a PostgreSQL database while providing immediate console feedback.
 }
 \details{
-An R6 class that provides asynchronous logging functionality for Shiny
-application messages. This class efficiently handles logging to a PostgreSQL
-database using connection pooling and futures for non-blocking database operations.
+An R6 class that provides queued logging functionality for Shiny
+applications. This class efficiently handles logging to a PostgreSQL
+database using a message queue and connection pooling.
+
+The logger uses a queue-based approach where messages are:
+\enumerate{
+\item Added to an in-memory queue immediately
+\item Displayed in the console (if not suppressed)
+\item Periodically processed and written to the database
+}
+
+This approach provides several benefits:
+\itemize{
+\item Reliable database operations using the main connection pool
+\item Immediate console feedback for debugging
+\item Efficient batched database writes
+\item No cross-process connection issues
+}
 }
 \section{Message Types}{
 
@@ -31,8 +43,32 @@ Supported message types with distinct visual styles:
 \item \code{log_table}: Character. Database table name for logging
 \item \code{session_id}: Character. Unique identifier for current session
 \item \code{survey_name}: Character. Name of the survey being logged
-\item \code{db_params}: List. Database connection parameters
 \item \code{suppress_logs}: Logical. Whether to suppress console output
+\item \code{queue}: data.frame. Internal message queue for batch processing
+}
+}
+
+\section{Methods}{
+
+\describe{
+\item{\code{initialize(log_table, session_id, survey_name, suppress_logs = FALSE)}}{
+Creates a new logger instance and initializes the logging table if needed.
+}
+\item{\code{log_message(message, type = "INFO", zone = "DEFAULT")}}{
+Queues a message for logging and displays it in the console.
+}
+}
+}
+
+\section{Private Methods}{
+
+\describe{
+\item{\code{process_queue()}}{
+Processes queued messages and writes them to the database.
+}
+\item{\code{start_logging_observer()}}{
+Starts the background observer that processes the queue.
+}
 }
 }
 
@@ -52,6 +88,22 @@ logger$log_message("Database error", "ERROR", "data")
 }
 
 }
+\keyword{Internal}
+\keyword{Start}
+\keyword{a}
+\keyword{background}
+\keyword{internal}
+\keyword{logging}
+\keyword{message}
+\keyword{method}
+\keyword{observer}
+\keyword{periodically}
+\keyword{process}
+\keyword{queue.}
+\keyword{starts}
+\keyword{that}
+\keyword{the}
+\keyword{to}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
@@ -61,15 +113,13 @@ logger$log_message("Database error", "ERROR", "data")
 
 \item{\code{survey_name}}{Character string identifying which survey is being logged.}
 
-\item{\code{db_params}}{List containing PostgreSQL connection parameters including host, port, database name,
-username and password.}
+\item{\code{suppress_logs}}{Logical flag indicating whether to suppress console output messages.}
 
-\item{\code{suppress_logs}}{Logical flag indicating whether to suppress console output messages. When TRUE,
-messages are only logged to the database without console feedback.
+\item{\code{queue}}{data.frame containing queued messages waiting to be written to the database.
 Initialize a new survey logger instance
 
-Creates a new logger instance and ensures the logging table exists in the database.
-Connection parameters are read from environment variables if not explicitly provided.}
+Creates a new logger instance, initializes the message queue, and ensures
+the logging table exists in the database.}
 }
 \if{html}{\out{</div>}}
 }
@@ -104,11 +154,10 @@ Connection parameters are read from environment variables if not explicitly prov
 }
 \subsection{Returns}{
 A new survey_logger instance (invisible)
-Log a message asynchronously
+Queue a message for logging
 
-Records a message to the PostgreSQL database asynchronously using futures and
-provides visual console feedback based on message type. Messages are stored with
-timestamp, session ID, and zone information.
+Adds a message to the logging queue and displays it immediately in the console
+if console output is not suppressed.
 }
 }
 \if{html}{\out{<hr>}}
@@ -138,7 +187,11 @@ categorization. Default: "DEFAULT"}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-NULL invisibly. Operation happens asynchronously.
+NULL invisibly
+Process the message queue
+
+Internal method that processes queued messages and writes them to the database
+using the main connection pool.
 }
 }
 \if{html}{\out{<hr>}}

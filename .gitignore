@@ -9,4 +9,5 @@ shinysurveyjs.Rproj
 .quarto
 /doc/
 /Meta/
+/tests/
 notes.txt

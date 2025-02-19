@@ -116,7 +116,8 @@ survey_setup <- function(db_config, shiny_config = NULL, workers = 2L) {
     # Windows: Use multisession (fork is not available)
     future::plan(future::multisession, workers = workers)
     cli::cli_alert_success("Using multisession plan with {workers} workers")
-  } else {
+  } 
+  else {
     # Linux/macOS: Try multicore first, fall back to multisession if not available
     tryCatch(
       {
