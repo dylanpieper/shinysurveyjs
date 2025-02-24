@@ -1,4 +1,4 @@
-# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" alt="A hexagonal logo for the R package shinysurveyjs, styled in the traditional R package hexagon sticker format" align="right" width="200" height="200"/>
+# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" alt="A hexagonal logo for the R package shinysurveyjs, styled in the traditional R package hexagon sticker format" align="right" width="150" height="150"/>
 
 The goal of this package is to integrate [SurveyJS](https://surveyjs.io/) with [Shiny](https://shiny.posit.co/) to interface with a [PostgreSQL](https://www.postgresql.org/) database and create dynamic user experiences.
 
