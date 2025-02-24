@@ -7,7 +7,6 @@
 #' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
 #'   Default: "defaultV2".
 #' @param primary String. Hex color code for primary theme customization.
-#' @param mode String. Color mode, either "light" or "dark". Default: "light".
 #' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
 #'   Default: 7.
 #' @param custom_css String. Custom CSS rules to append to the theme.
@@ -22,7 +21,7 @@
 #' @importFrom shinyjs useShinyjs
 #'
 #' @keywords internal
-survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_css) {
+survey_ui <- function(id, theme, primary, cookie_expiration_days, custom_css) {
   css_file <- switch(theme,
     "defaultV2" = "https://unpkg.com/survey-core@1.9.116/defaultV2.min.css",
     "modern" = "https://unpkg.com/survey-core@1.9.116/modern.min.css"
@@ -37,7 +36,6 @@ survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_c
         generate_survey_theme(
           theme = theme,
           primary = primary,
-          mode = mode,
           custom_css = custom_css
         )
       )),
@@ -118,8 +116,6 @@ survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_c
 #' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
 #'   Default: "defaultV2".
 #' @param theme_color String. Hex color code for primary theme customization.
-#' @param theme_mode String. Color mode, either "light" or "dark".
-#'   Default: "light".
 #' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
 #'   Default: 7.
 #' @param custom_css String. Custom CSS rules to append to the theme.
@@ -133,10 +129,10 @@ survey_ui <- function(id, theme, primary, mode, cookie_expiration_days, custom_c
 #' @importFrom DT DTOutput
 #'
 #' @keywords internal
-survey_ui_wrapper <- function(id, theme, theme_color, theme_mode, cookie_expiration_days, custom_css) {
+survey_ui_wrapper <- function(id, theme, theme_color, cookie_expiration_days, custom_css) {
   shiny::fluidPage(
     shinyjs::useShinyjs(),
-    survey_ui(id = id, theme = theme, primary = theme_color, mode = theme_mode, cookie_expiration_days = cookie_expiration_days, custom_css = custom_css),
+    survey_ui(id = id, theme = theme, primary = theme_color, cookie_expiration_days = cookie_expiration_days, custom_css = custom_css),
     shiny::conditionalPanel(
       condition = "output.showResponseTable",
       shiny::div(

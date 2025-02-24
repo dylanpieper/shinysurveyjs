@@ -11,8 +11,6 @@
 #' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
 #'   Default: "defaultV2".
 #' @param theme_color String. Hex color code for primary theme customization.
-#' @param theme_mode String. Color mode, either "light" or "dark".
-#'   Default: "light".
 #' @param shiny_config List. Optional Shiny configuration parameters.
 #' @param db_config List. Database connection parameters. If not specified,
 #'   values are read from environment variables:
@@ -100,7 +98,6 @@ survey <- function(json = NULL,
                    show_response = FALSE,
                    theme = "defaultV2",
                    theme_color = "#003594",
-                   theme_mode = "light",
                    shiny_config = list(
                      host = "0.0.0.0",
                      port = 3838
@@ -136,7 +133,6 @@ survey <- function(json = NULL,
       id = "surveyContainer",
       theme = theme,
       theme_color = theme_color,
-      theme_mode = theme_mode,
       cookie_expiration_days = cookie_expiration_days,
       custom_css = custom_css
     )
@@ -245,7 +241,7 @@ survey <- function(json = NULL,
             } else {
               json
             }
-            
+
             rv$survey_def <- survey_obj
 
             validated_params <- transform_validated_params(
@@ -351,7 +347,7 @@ survey <- function(json = NULL,
           return(NULL)
         }
       )
-      
+
       if (!is.null(parsed_data)) {
         if (!is.data.frame(parsed_data) && !is.list(parsed_data)) {
           rv$error_message <- "Invalid data format: expected data frame or list"
@@ -359,20 +355,22 @@ survey <- function(json = NULL,
           hide_and_show("savingDataMessage", "invalidDataMessage")
           return(NULL)
         }
-        
+
         if (is.list(parsed_data) && !is.data.frame(parsed_data)) {
           # Log the structure of the data before conversion
           logger$log_message(
-            sprintf("Received data from SurveyJS: %s",
-                    jsonlite::toJSON(parsed_data, auto_unbox = TRUE)),
+            sprintf(
+              "Received data from SurveyJS: %s",
+              jsonlite::toJSON(parsed_data, auto_unbox = TRUE)
+            ),
             "INFO",
             "SURVEY"
           )
-          
+
           # Convert to data frame while preserving all fields including field-other
           parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
         }
-        
+
         tryCatch(
           {
             if (is.null(db_ops)) {
@@ -380,26 +378,28 @@ survey <- function(json = NULL,
               logger$log_message(msg, type = "ERROR", zone = "DATABASE")
               stop(msg)
             }
-            
+
             parsed_data$duration_load <- rv$duration_load
             parsed_data$duration_complete <- rv$duration_complete
             parsed_data$duration_save <- as.numeric(0.1)
-            
+
             # Log the final data structure being sent to database
             logger$log_message(
-              sprintf("Processed final data: %s",
-                      jsonlite::toJSON(parsed_data, auto_unbox = TRUE)),
+              sprintf(
+                "Processed final data: %s",
+                jsonlite::toJSON(parsed_data, auto_unbox = TRUE)
+              ),
               "INFO",
               "SURVEY"
             )
-            
+
             # First create/ensure the table exists with the correct schema
             db_ops$create_survey_table(
-              db_config$write_table, 
+              db_config$write_table,
               parsed_data,
               survey_obj = isolate(rv$survey_def)
             )
-            
+
             # Then insert the survey data
             result <- db_ops$update_survey_table(db_config$write_table, parsed_data)
 
@@ -455,7 +455,6 @@ survey <- function(json = NULL,
       output,
       rv,
       show_response = show_response,
-      theme_mode = theme_mode,
       theme_color = theme_color
     )
 

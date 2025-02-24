@@ -4,7 +4,7 @@
 \alias{survey_ui}
 \title{Create Survey UI with CSS and Message Components}
 \usage{
-survey_ui(id, theme, primary, mode, cookie_expiration_days, custom_css)
+survey_ui(id, theme, primary, cookie_expiration_days, custom_css)
 }
 \arguments{
 \item{id}{String. HTML ID for the survey container div. Default: "surveyContainer".}
@@ -13,8 +13,6 @@ survey_ui(id, theme, primary, mode, cookie_expiration_days, custom_css)
 Default: "defaultV2".}
 
 \item{primary}{String. Hex color code for primary theme customization.}
-
-\item{mode}{String. Color mode, either "light" or "dark". Default: "light".}
 
 \item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
 Default: 7.}

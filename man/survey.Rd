@@ -10,7 +10,6 @@ survey(
   show_response = FALSE,
   theme = "defaultV2",
   theme_color = "#003594",
-  theme_mode = "light",
   shiny_config = list(host = "0.0.0.0", port = 3838),
   db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
@@ -34,9 +33,6 @@ Default: \code{FALSE}.}
 Default: "defaultV2".}
 
 \item{theme_color}{String. Hex color code for primary theme customization.}
-
-\item{theme_mode}{String. Color mode, either "light" or "dark".
-Default: "light".}
 
 \item{shiny_config}{List. Optional Shiny configuration parameters.}
 

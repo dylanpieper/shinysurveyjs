@@ -4,14 +4,7 @@
 \alias{survey_ui_wrapper}
 \title{Create Survey UI Wrapper}
 \usage{
-survey_ui_wrapper(
-  id,
-  theme,
-  theme_color,
-  theme_mode,
-  cookie_expiration_days,
-  custom_css
-)
+survey_ui_wrapper(id, theme, theme_color, cookie_expiration_days, custom_css)
 }
 \arguments{
 \item{id}{String. ID for the survey div container.}
@@ -20,9 +13,6 @@ survey_ui_wrapper(
 Default: "defaultV2".}
 
 \item{theme_color}{String. Hex color code for primary theme customization.}
-
-\item{theme_mode}{String. Color mode, either "light" or "dark".
-Default: "light".}
 
 \item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
 Default: 7.}

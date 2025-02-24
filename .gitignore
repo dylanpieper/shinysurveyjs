@@ -7,7 +7,7 @@ shinysurveyjs.Rproj
 .httr-oauth
 .DS_Store
 .quarto
-/doc/
+/docs/
 /Meta/
 /tests/
 notes.txt

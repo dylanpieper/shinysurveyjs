@@ -57,9 +57,11 @@ survey <- list(
           title = "Please rate the shinysurveyjs 📦:",
           isRequired = TRUE,
           columns = list(
-            list(value = "1", text = "🙁"),
-            list(value = "2", text = "😑"),
-            list(value = "3", text = "🙂")
+            list(value = "1", text = "Very Bad"),
+            list(value = "2", text = "Bad"),
+            list(value = "3", text = "Neutral"),
+            list(value = "4", text = "Good"),
+            list(value = "5", text = "Very Good")
           ),
           rows = list(
             list(value = "UI", text = "UI Design"),

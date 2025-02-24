@@ -8,154 +8,100 @@
 #' @param primary String. Hex color code for primary theme color (e.g., "#1ab394").
 #' @param primary_foreground String. Hex color code for text on primary elements.
 #'   If not specified, automatically determined for contrast.
-#' @param mode String. Color scheme mode, either "light" or "dark".
-#'   Default: "light".
 #' @param custom_css String. Additional CSS rules to append to the theme.
 #'   Default: NULL.
 #'
 #' @return String containing complete CSS stylesheet for survey styling
 #'
+#' @importFrom glue glue
 #' @keywords internal
 generate_survey_theme <- function(
     theme = "defaultV2",
     primary = "#003594",
-    mode = "light",
     custom_css = NULL) {
-  # Validate inputs
   stopifnot(
     is.character(primary),
-    mode %in% c("light", "dark"),
     theme %in% c("defaultV2", "modern")
   )
 
-  # Calculate variant colors
   primary_light <- adjust_hex(primary, 25)
   primary_dark <- adjust_hex(primary, -25)
   button_text_color <- get_contrast_color(primary)
   button_text_color_light <- get_contrast_color(primary_light)
 
-  # Set mode-specific colors
-  if (mode == "dark") {
-    background <- "#404040"
-    foreground <- "#e0e0e0"
-    input_background <- "#404040"
-    border_color <- "#888888"
-    hover_background <- "#2a2a2a"
-    header_background <- "#2d2d2d"
-    disabled_color <- "#808080"
-    text_border <- "#404040"
-    container_background <- "#2d2d2d"
-  } else {
-    background <- "#ffffff"
-    foreground <- "#404040"
-    input_background <- "#ffffff"
-    border_color <- "#e0e0e0"
-    hover_background <- "#f5f5f5"
-    header_background <- "#e7e7e7"
-    disabled_color <- "#dbdbdb"
-    text_border <- "#d4d4d4"
-    container_background <- "#f9f9f9"
-  }
+  background <- "#ffffff"
+  foreground <- "#404040"
+  input_background <- "#ffffff"
+  border_color <- "#e0e0e0"
+  hover_background <- "#f5f5f5"
+  header_background <- "#e7e7e7"
+  disabled_color <- "#dbdbdb"
+  text_border <- "#d4d4d4"
+  container_background <- "#f9f9f9"
 
-  # Base theme CSS
   base_css <- if (theme == "modern") {
-    sprintf(
-      "
-.sv-root-modern {
-    /* Primary colors */
-    --main-color: %s;
-    --main-hover-color: %s;
-
-    /* Text colors */
-    --text-color: %s;
-    --light-text-color: %s;
+    glue::glue("
+.sv-root-modern {{
+    --main-color: {primary};
+    --main-hover-color: {primary_light};
+    --text-color: {foreground};
+    --light-text-color: {button_text_color};
     --disabled-text-color: rgba(64, 64, 64, 0.5);
     --foreground-light: #909090;
-
-    /* Background colors */
-    --body-background-color: %s;
-    --body-container-background-color: %s;
-    --header-background-color: %s;
-    --answer-background-color: %s;
-    --container-background: %s;
-
-    /* Input colors */
+    --body-background-color: {background};
+    --body-container-background-color: {hover_background};
+    --header-background-color: {header_background};
+    --answer-background-color: {sprintf('rgba(%s, 0.2)', paste(hex_to_rgb(primary), collapse = ', '))};
+    --container-background: {container_background};
     --inputs-background-color: transparent;
-    --text-border-color: %s;
-    --border-color: %s;
-
-    /* Button colors */
-    --add-button-color: %s;
+    --text-border-color: {text_border};
+    --border-color: {border_color};
+    --add-button-color: {primary};
     --remove-button-color: #ff1800;
-    --clean-button-color: %s;
-
-    /* Progress colors */
+    --clean-button-color: {primary};
     --progress-text-color: #9d9d9d;
-    --progress-buttons-color: %s;
-
-    /* State colors */
-    --disable-color: %s;
+    --progress-buttons-color: {adjust_hex(primary, 40)};
+    --disable-color: {disabled_color};
     --disabled-label-color: rgba(64, 64, 64, 0.5);
     --error-color: #d52901;
     --error-background-color: rgba(213, 41, 1, 0.2);
-
-    /* Component colors */
     --slider-color: white;
     --disabled-slider-color: #cfcfcf;
-    --checkmark-color: %s;
-    --radio-checked-color: %s;
-}",
-      primary, primary_light, foreground, button_text_color,
-      background, hover_background, header_background,
-      sprintf("rgba(%s, 0.2)", paste(hex_to_rgb(primary), collapse = ", ")),
-      container_background, text_border, border_color, primary, primary,
-      adjust_hex(primary, 40), disabled_color,
-      button_text_color, foreground
-    )
+    --checkmark-color: {button_text_color};
+    --radio-checked-color: {foreground};
+}}")
   } else {
-    sprintf(
-      "
-:root {
-    --primary: %s;
-    --primary-light: %s;
-    --primary-dark: %s;
-    --primary-foreground: %s;
-    --background: %s;
-    --foreground: %s;
-    --input-background: %s;
-    --border-color: %s;
-    --hover-background: %s;
-    --container-background: %s;
-
-    /* Component mappings for default theme */
+    glue::glue("
+:root {{
+    --primary: {primary};
+    --primary-light: {primary_light};
+    --primary-dark: {primary_dark};
+    --primary-foreground: {button_text_color};
+    --background: {background};
+    --foreground: {foreground};
+    --input-background: {input_background};
+    --border-color: {border_color};
+    --hover-background: {hover_background};
+    --container-background: {container_background};
     --sd-button-primary-background: var(--primary);
-    --sd-button-primary-text-color: %s;
+    --sd-button-primary-text-color: {button_text_color};
     --sd-navigation-button-background: var(--primary);
-    --sd-navigation-button-text-color: %s;
+    --sd-navigation-button-text-color: {button_text_color};
     --sd-navigation-button-hover: var(--primary-light);
-}
+}}
 
-/* Default theme specific styles */
-.sv-components-row {
+.sv-components-row {{
     border-top: 2px solid var(--primary) !important;
-}",
-      primary, primary_light, primary_dark, button_text_color,
-      background, foreground, input_background, border_color, hover_background,
-      container_background, button_text_color, button_text_color
-    )
+}}")
   }
 
-  # Base styles
-  base_styles <- sprintf(
-    "
-/* Base styles */
-body {
-    background-color: %s !important;
-    color: %s !important;
+  base_styles <- glue::glue("
+body {{
+    background-color: {background} !important;
+    color: {foreground} !important;
     font-size: 16px !important;
-}
+}}
 
-/* Headers */
 .sv-root-modern h1,
 .sv-root-modern h2,
 .sv-root-modern h3,
@@ -168,46 +114,33 @@ body {
 .sv-root-modern .sv-header__text h3,
 .sv-root-modern .sv-container-modern .sv-title,
 .sv-container-modern .sv-title,
-#surveyResponseContainer h3 {
+#surveyResponseContainer h3 {{
     color: var(--foreground) !important;
-}
+}}
 
-/* Dark mode specific styles */
-body[data-theme=\"dark\"] .sv-components-column {
-    background-color: %s !important;
-}
-
-.sv-body {
-    background-color: %s;
-    color: %s;
+.sv-body {{
+    background-color: {container_background};
+    color: {foreground};
     height: fill !important;
-}
+}}
 
-.sd-body.sd-body--responsive {
+.sd-body.sd-body--responsive {{
     height: -webkit-fill-available;
-}
+}}
 
-.container-fluid {
+.container-fluid {{
     padding-right: 0px !important;
     padding-left: 0px !important;
-}
+}}
 
-.sv-components-column{
+.sv-components-column{{
     display: revert !important;
-}
-",
-    background, foreground,
-    container_background,
-    container_background, foreground
-  )
+}}")
 
-  # Container styles
-  container_styles <- sprintf(
-    "
-/* Completed page and container styles */
+  container_styles <- glue::glue("
 .sd-body.sd-completedpage,
-.sv-body.sv-completedpage {
-    width: 100%% !important;
+.sv-body.sv-completedpage {{
+    width: 100% !important;
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
@@ -219,194 +152,160 @@ body[data-theme=\"dark\"] .sv-components-column {
     flex-direction: column-reverse;
     background-color: var(--container-background) !important;
     border-top: 2px solid var(--primary) !important;
-}
+}}
 
 .sv-container-modern,
-.sv-root-modern .sv-body {
-    border-radius: 50px; /* Adjust size as needed */
-    overflow: hidden; /* Ensures rounded corners are applied */
-}
+.sv-root-modern .sv-body {{
+    border-radius: 50px;
+    overflow: hidden;
+}}
 
-.sv-root-modern .sv-body.sv-completedpage {
+.sv-root-modern .sv-body.sv-completedpage {{
     height: auto !important;
     padding: 9rem !important;
     display: revert !important;
-}
+}}
 
-.sd-completedpage__text {
+.sd-completedpage__text {{
     text-align: center !important;
-}
+}}
 
 .sv-root-modern,
-.sd-root-modern {
-    width: 100%% !important;
+.sd-root-modern {{
+    width: 100% !important;
     overflow-x: hidden !important;
-}
+}}
 
 .sv-container-modern,
-.sv-body {
+.sv-body {{
     max-width: 1200px !important;
     margin: 0 auto !important;
     padding: 1rem !important;
     box-sizing: border-box !important;
-    color: %s;
-}
+    color: {foreground};
+}}
 
-.sv-question {
-    background-color: %s;
-    border: 1px solid %s;
+.sv-question {{
+    background-color: {container_background};
+    border: 1px solid {border_color};
     border-radius: 4px;
     padding: 16px;
-}
+}}
 
-.sv-question:hover {
-    background-color: %s;
-}
+.sv-question:hover {{
+    background-color: {hover_background};
+}}
 
-.sv-question.sv-question--selected {
-    border-color: %s;
-    background-color: %s;
-}
+.sv-question.sv-question--selected {{
+    border-color: {primary};
+    background-color: {hover_background};
+}}
 
-.sv-checkbox-material {
-    border-color: %s;
-}
+.sv-checkbox-material {{
+    border-color: {border_color};
+}}
 
-.sv-footer.sv-action-bar {
-    background-color: %s;
+.sv-footer.sv-action-bar {{
+    background-color: {container_background};
     max-width: 1200px !important;
     margin: 0 auto !important;
-}",
-    foreground,
-    container_background, border_color,
-    hover_background,
-    primary, hover_background,
-    border_color,
-    container_background
-  )
+}}")
 
-  # Button styles
   button_styles <- if (theme == "defaultV2") {
-    sprintf(
-      "
-/* Default theme button styles */
-.sd-btn {
+    glue::glue("
+.sd-btn {{
     background-color: var(--primary) !important;
-    color: %s !important;
+    color: {button_text_color} !important;
     border: none !important;
     transition: background-color 0.2s ease-in-out !important;
-}
+}}
 
-.sd-btn:hover {
+.sd-btn:hover {{
     background-color: var(--primary-light) !important;
-    color: %s !important;
+    color: {button_text_color} !important;
     opacity: 0.9;
-}
+}}
 
-.sd-btn:disabled {
+.sd-btn:disabled {{
     background-color: var(--border-color) !important;
     opacity: 0.6;
-}
+}}
 
-/* Navigation buttons */
 .sd-navigation__next-btn,
-.sd-navigation__prev-btn {
+.sd-navigation__prev-btn {{
     background-color: var(--primary) !important;
-    color: %s !important;
+    color: {button_text_color} !important;
     border: none !important;
     transition: background-color 0.2s ease-in-out !important;
-}
+}}
 
 .sd-navigation__next-btn:hover,
-.sd-navigation__prev-btn:hover {
+.sd-navigation__prev-btn:hover {{
     background-color: var(--primary-light) !important;
-    color: %s !important;
-}
+    color: {button_text_color} !important;
+}}
 
-/* Complete button */
-.sd-btn--action[value=\"Complete\"] {
+.sd-btn--action[value=\"Complete\"] {{
     background-color: var(--primary) !important;
-    color: %s !important;
+    color: {button_text_color} !important;
     border: none !important;
     transition: background-color 0.2s ease-in-out !important;
-}
+}}
 
-.sd-btn--action[value=\"Complete\"]:hover {
+.sd-btn--action[value=\"Complete\"]:hover {{
     background-color: var(--primary-light) !important;
-    color: %s !important;
-}
+    color: {button_text_color} !important;
+}}
 
-/* Rating items */
-.sd-rating-item--selected {
+.sd-rating-item--selected {{
     background-color: var(--primary) !important;
-    color: %s !important;
-}",
-      button_text_color,
-      button_text_color, # Use same color for hover
-      button_text_color,
-      button_text_color, # Use same color for hover
-      button_text_color,
-      button_text_color, # Use same color for hover
-      button_text_color
-    )
+    color: {button_text_color} !important;
+}}")
   } else {
-    sprintf(
-      "
-/* Modern theme button styles */
-.sv-btn.sv-action-bar-item--secondary {
-    color: %s !important;
-}
+    glue::glue("
+.sv-btn.sv-action-bar-item--secondary {{
+    color: {button_text_color} !important;
+}}
 
-.sv-btn.sv-action-bar-item--secondary:hover {
-    background-color: %s !important;
-    color: %s !important;
+.sv-btn.sv-action-bar-item--secondary:hover {{
+    background-color: {primary_light} !important;
+    color: {button_text_color} !important;
     opacity: 0.9;
-}
+}}
 
 .sv-footer__complete-btn,
-.sv-btn--navigation {
-    color: %s !important;
-}
+.sv-btn--navigation {{
+    color: {button_text_color} !important;
+}}
 
 .sv-footer__complete-btn:hover,
-.sv-btn--navigation:hover {
-    background-color: %s !important;
-    color: %s !important;
+.sv-btn--navigation:hover {{
+    background-color: {primary_light} !important;
+    color: {button_text_color} !important;
     opacity: 0.9;
-}
+}}
 
-/* Modern theme button sizes */
 .sv-root-modern .sv-btn,
 .sv-root-modern .sv-footer__complete-btn,
-.sv-root-modern .sv-nav-btn {
+.sv-root-modern .sv-nav-btn {{
     padding: 10px 25px !important;
     font-size: 2rem !important;
     min-height: 48px !important;
     line-height: 1.4 !important;
-}
+}}
 
-.sv-root-modern .sv-footer__complete-btn {
+.sv-root-modern .sv-footer__complete-btn {{
     font-weight: 600 !important;
-}",
-      button_text_color,
-      primary_light,
-      button_text_color, # Use same color for hover
-      button_text_color,
-      primary_light,
-      button_text_color # Use same color for hover
-    )
+}}")
   }
 
-  # Message container CSS
-  message_css <- sprintf(
-    '
-/* Message containers */
-.message-container {
+  message_css <- glue::glue("
+.message-container {{
     position: fixed;
-    top: 50%%;
-    left: 50%%;
-    transform: translate(-50%%, -50%%);
-    width: 90%%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
     max-width: 600px;
     min-width: 280px;
     height: auto;
@@ -417,121 +316,115 @@ body[data-theme=\"dark\"] .sv-components-column {
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", sans-serif;
     font-size: 20px;
-    color: %s;
+    color: {foreground};
     text-align: center;
     letter-spacing: -0.01em;
     transition: opacity 0.3s ease;
     padding: 24px;
     box-sizing: border-box;
     overflow-y: auto;
-}
+}}
 
-@keyframes pulse {
-    0%% {
+@keyframes pulse {{
+    0% {{
         transform: scale(0.8);
         opacity: 1;
-    }
-    50%% {
+    }}
+    50% {{
         transform: scale(1.2);
         opacity: 0.2;
-    }
-    100%% {
+    }}
+    100% {{
         transform: scale(0.8);
         opacity: 1;
-    }
-}
+    }}
+}}
 
-.loading-spinner {
+.loading-spinner {{
     width: 80px;
     height: 80px;
     position: relative;
     margin: 16px auto;
-}
+}}
 
 .loading-spinner::before,
-.loading-spinner::after {
-    content: "";
+.loading-spinner::after {{
+    content: \"\";
     position: absolute;
     inset: 0;
     border: 4px solid transparent;
-    border-radius: 50%%;
+    border-radius: 50%;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
+}}
 
-.loading-spinner::before {
-    border-color: %s;
-}
+.loading-spinner::before {{
+    border-color: {primary};
+}}
 
-.loading-spinner::after {
-    border-color: %s;
+.loading-spinner::after {{
+    border-color: {adjust_hex(primary, 20)};
     animation-delay: -1s;
-}
+}}
 
-.loading-text {
+.loading-text {{
     position: relative;
     display: inline-block;
     font-size: 24px;
-}
+}}
 
-.error-message {
+.error-message {{
     font-size: 24px;
     font-weight: 600;
-    color: %s;
+    color: {foreground};
     padding: 16px;
     border-radius: 8px;
-    background: %s;
+    background: {container_background};
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    width: 100%%;
+    width: 100%;
     word-wrap: break-word;
     overflow-wrap: break-word;
-}
+}}
 
-@media screen and (max-width: 480px) {
-    .message-container {
+@media screen and (max-width: 480px) {{
+    .message-container {{
         padding: 12px;
-        width: 95%%;
+        width: 95%;
         font-size: 16px;
-    }
+    }}
 
-    .loading-spinner {
+    .loading-spinner {{
         width: 60px;
         height: 60px;
-    }
+    }}
 
     .loading-spinner::before,
-    .loading-spinner::after {
+    .loading-spinner::after {{
         border-width: 3px;
-    }
+    }}
 
-    .loading-text {
+    .loading-text {{
         font-size: 18px;
-    }
+    }}
 
-    .error-message {
+    .error-message {{
         font-size: 18px;
         padding: 12px;
-    }
-}',
-    foreground,
-    primary,
-    adjust_hex(primary, 20),
-    foreground, container_background
-  )
+    }}
+}}")
 
-  # For the default theme, add max width
   if (theme == "defaultV2") {
     additional_styles <- "
   .sd-footer {
-    max-width: 700px !important;
+    max-width: 850px !important;
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
   }
 
   .sd-page {
-    max-width: 700px !important;
+    max-width: 850px !important;
     margin: 0 auto !important;
     padding: 0 2rem !important;
     box-sizing: border-box !important;
@@ -542,11 +435,9 @@ body[data-theme=\"dark\"] .sv-components-column {
   }
   "
 
-    # Append this to the existing CSS generation
     base_css <- paste(base_css, additional_styles, sep = "\n\n")
   }
 
-  # Combine all CSS sections
   paste(
     base_css,
     base_styles,

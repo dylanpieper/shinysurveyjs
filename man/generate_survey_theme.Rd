@@ -7,7 +7,6 @@
 generate_survey_theme(
   theme = "defaultV2",
   primary = "#003594",
-  mode = "light",
   custom_css = NULL
 )
 }
@@ -16,9 +15,6 @@ generate_survey_theme(
 Default: "defaultV2".}
 
 \item{primary}{String. Hex color code for primary theme color (e.g., "#1ab394").}
-
-\item{mode}{String. Color scheme mode, either "light" or "dark".
-Default: "light".}
 
 \item{custom_css}{String. Additional CSS rules to append to the theme.
 Default: NULL.}
