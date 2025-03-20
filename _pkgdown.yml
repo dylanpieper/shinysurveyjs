@@ -2,8 +2,10 @@ url: https://dylanpieper.github.io/shinysurveyjs/
 repo:
   url:
     home: https://github.com/dylanpieper/shinysurveyjs
+
 template:
   bootstrap: 5
+  light-switch: true
   bslib:
     bg: "#ffffff"
     fg: "#003594"
@@ -15,5 +17,19 @@ template:
     code-bg: "#f8f9fa"
     link-color: "#00AD6E"
     link-hover-color: "#003594"
+
 figures:
   dev: grfx
+
+reference:
+  - title: "Survey Setup"
+    desc: >
+      Functions for creating and deploying surveys
+    contents:
+      - survey
+  - title: "Data Management"
+    desc: >
+      Functions and classes for database operations and logging
+    contents:
+      - db_ops
+      - survey_logger
