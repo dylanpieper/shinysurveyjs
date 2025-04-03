@@ -31,7 +31,7 @@ In R & Shiny applications, developers can parse the JSON either as a raw text st
 ## Installation
 
 ``` r
-pak::pkg_install("dylanpieper/shinysurveyjs")
+pak::pak("dylanpieper/shinysurveyjs")
 ```
 
 ## Basic Usage

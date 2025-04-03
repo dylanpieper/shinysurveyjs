@@ -362,7 +362,7 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' @details
 #' This function:
 #' 1. Registers a session end handler using onSessionEnded
-#' 3. Cleans up the global database pool
+#' 3. Releases the connection from the database pool
 #' 2. Logs the session termination event
 #'
 #' The cleanup process is logged at each step to provide clear tracking of the
@@ -381,7 +381,7 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
   session$onSessionEnded(function() {
-    db_pool_close(session = session, logger = logger)
+    db_conn_release(session = session, logger = logger)
     logger$log_message("Ended session", zone = zone)
   })
   invisible(NULL)

@@ -1,6 +1,7 @@
-#' @title Open Database Pool
+#' Open Database Pool with Automatic Shutdown
 #'
-#' @description Creates and manages a global database pool connection using PostgreSQL.
+#' Creates and manages a global database pool connection using PostgreSQL.
+#' Automatically registers a shutdown handler to close the pool when the application terminates.
 #'
 #' @param host Database host
 #' @param port Database port
@@ -9,11 +10,14 @@
 #' @param password Database password
 #' @param min_size Minimum pool size (default: 1)
 #' @param max_size Maximum pool size (default: Inf)
+#' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
+#' @param logger Logger object for tracking operations (default: NULL)
 #'
 #' @return A database pool object
 #'
-#' @importFrom pool dbPool poolClose
+#' @importFrom pool dbPool poolIsValid
 #' @importFrom RPostgres Postgres
+#' @importFrom shiny onStop
 #'
 #' @keywords internal
 db_pool_open <- function(host = NULL,
@@ -22,7 +26,10 @@ db_pool_open <- function(host = NULL,
                          user = NULL,
                          password = NULL,
                          min_size = 1,
-                         max_size = Inf) {
+                         max_size = Inf,
+                         global = TRUE,
+                         logger = NULL) {
+  
   if (all(!is.null(c(host, port, db_name, user, password)))) {
     pool <- pool::dbPool(
       RPostgres::Postgres(),
@@ -34,44 +41,102 @@ db_pool_open <- function(host = NULL,
       minSize = min_size,
       maxSize = max_size
     )
+    
+    if (global) {
+      assign("app_pool", pool, envir = .GlobalEnv)
+      
+      shiny::onStop(function() {
+        db_pool_close(NULL, logger)
+      })
+      
+      if (!is.null(logger)) {
+        logger$log_message("Database pool initialized and registered for auto-cleanup", "INFO", "DATABASE")
+      }
+    }
+    
     return(pool)
   } else {
-    stop("Database connection parameters are required")
+    cli::cli_abort("Database connection parameters are required")
   }
 }
 
 #' Close Global Database Pool
 #'
 #' Closes the global database connection pool (app_pool) during application shutdown.
-#' This function handles cleanup of the global pool and registration of cleanup handlers
-#' for Shiny sessions.
+#' This function handles cleanup of the global pool and should be used when the
+#' application is completely shutting down, not for individual session disconnections.
 #'
 #' @param session Shiny session object. Required to register cleanup handlers for
 #'                session shutdown.
-#' @param logger survey_logger object for tracking cleanup operations.
-#'               If NULL, uses warnings for error reporting.
+#' @param logger Logger object for tracking cleanup operations.
+#'               If NULL, no logging is performed.
 #'
 #' @details
-#' The function looks for a global 'app_pool' object and attempts to close it safely.
-#' It includes comprehensive error handling and logging of all cleanup operations.
-#' The cleanup process:
-#' 1. Validates the global pool exists and is valid
-#' 2. Closes the pool connection
-#' 3. Removes the pool from the global environment
-#' 4. Logs all operations and any errors that occur
+#' The function looks for a global 'app_pool' object and closes it safely.
+#' Use this function only when completely shutting down the application.
+#' For managing individual connections, use `db_conn_release()` instead.
 #'
 #' @return Invisible NULL
 #'
 #' @importFrom shiny onStop
-#' @importFrom DBI dbIsValid
 #' @keywords internal
 db_pool_close <- function(session, logger = NULL) {
   if (exists("app_pool", envir = .GlobalEnv)) {
     pool <- get("app_pool", envir = .GlobalEnv)
     pool::poolClose(pool)
     rm("app_pool", envir = .GlobalEnv)
-    logger$log_message("Closed pool and removed object", "INFO", "DATABASE")
+    if (!is.null(logger)) {
+      logger$log_message("Closed pool and removed object", "INFO", "DATABASE")
+    }
   }
+  invisible(NULL)
+}
+
+#' Release Database Connection Back to Pool
+#'
+#' Returns a database connection to the connection pool when done with operations.
+#' This function should be used to release individual connections after query execution.
+#'
+#' @param conn A DBI connection object obtained from the pool. If NULL, the function
+#'             attempts to find a connection in the session.
+#' @param session Shiny session object. Used to find session-specific connections.
+#' @param logger Logger object for tracking connection operations.
+#'               If NULL, no logging is performed.
+#'
+#' @details
+#' This function safely returns a connection to the pool without closing the entire pool.
+#' It validates that the connection exists and is valid before returning it.
+#' This is the preferred method for handling connections after queries in a pool-based
+#' application.
+#'
+#' If a connection is not explicitly provided, the function will look for a connection
+#' in the session environment first, then fall back to the global environment.
+#'
+#' @return Invisible NULL
+#'
+#' @importFrom DBI dbIsValid
+#' @importFrom pool poolReturn
+#' @keywords internal
+db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
+  if (is.null(conn)) {
+    if (!is.null(session) && exists("db_conn", envir = session)) {
+      conn <- get("db_conn", envir = session)
+    } else if (exists("db_conn", envir = .GlobalEnv)) {
+      conn <- get("db_conn", envir = .GlobalEnv)
+    }
+  }
+  if (!is.null(conn) && DBI::dbIsValid(conn)) {
+    pool::poolReturn(conn)
+    if (!is.null(session) && exists("db_conn", envir = session)) {
+      rm("db_conn", envir = session)
+    } else if (exists("db_conn", envir = .GlobalEnv)) {
+      rm("db_conn", envir = .GlobalEnv)
+    }
+    if (!is.null(logger)) {
+      logger$log_message("Released connection back to pool", "INFO", "DATABASE")
+    }
+  }
+  invisible(NULL)
 }
 
 #' Database Operations Class
