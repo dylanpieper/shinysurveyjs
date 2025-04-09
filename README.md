@@ -1,4 +1,4 @@
-# shinysurveyjs![A hexagonal logo for the R package shinysurveyjs, styled in the traditional R package hexagon sticker format](man/figures/SSJS-Hex.svg){alt="A hexagonal logo for the R package shinysurveyjs, styled in the traditional R package hexagon sticker format" align="right" height="140"}
+# shinysurveyjs <img src="man/figures/SSJS-Hex.svg" align="right" width="150" height="150"/>
 
 Integrate [SurveyJS](#0) with [Shiny](#0) to interface with a [PostgreSQL](#0) database and create dynamic survey experiences.
 
