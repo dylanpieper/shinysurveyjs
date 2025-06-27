@@ -13,19 +13,14 @@ In R & Shiny applications, developers can parse the JSON either as a raw text st
 ## Basic Features
 
 -   Store data in a PostgreSQL database, including timing metadata (duration to load, duration to complete, duration to save, date created, and date updated) and tracking metadata (Shiny session ID and IP address)
-
 -   All of the database tables that the app writes to are automatically created if they don't already exist
-
 -   Automatically save survey progress as cookies and resume later
-
 -   Change the theme, primary color, and contrast mode (light or dark)
 
 ## Advanced Features
 
--   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see [Dynamic Field Configuration](https://dylanpieper.github.io/shinysurveyjs/index.html)
-
+-   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see [Dynamic Field Configuration](https://dylanpieper.github.io/shinysurveyjs/articles/dynamic_field_config.html)
 -   Log app messages, warnings, and errors in a database table
-
 -   Use [future](https://future.futureverse.org/) to update database tables without interrupting the survey
 
 ## Installation
