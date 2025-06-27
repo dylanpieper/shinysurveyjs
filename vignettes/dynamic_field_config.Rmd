@@ -88,7 +88,7 @@ Unique Value Configuration provides:
 
 ### Example
 
-Imagine I want to create a different survey to submit issues relate to my package but to prevent users from submitting the same issue if the title already exists. (Yes, I know this would never happen because we have Github.)
+Imagine I want to create a different survey for users to submit issues for my packages, but I want to prevent users from submitting the same issue if the title already exists.
 
 The following configuration ensures that each package issue report has a unique title:
 

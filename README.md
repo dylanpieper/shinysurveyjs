@@ -8,13 +8,13 @@ SurveyJS is a JavaScript library that streamlines the creation of survey applica
 
 The JSON defines every survey element, including a title, description, logo, and page layout as well as progress indicators, question types, validation rules, logic flows, visibility controls, and text piping. The library's strength lies in its backend-agnostic approach, supporting integration with any server technology.
 
-In R & Shiny applications, developers can parse the JSON either as a raw text string or by converting a list to JSON format, which then gets passed to the front-end. LLMs are great tool for converting a JSON object to a list.
+In R & Shiny applications, developers can parse the JSON either as a raw text string or by converting a list to JSON format, which then gets passed to the front-end. LLMs are great for converting a JSON object to a list.
 
 ## Basic Features
 
 -   Store data in a PostgreSQL database, including timing metadata (duration to load, duration to complete, duration to save, date created, and date updated) and tracking metadata (Shiny session ID and IP address)
 
--   All of the database tables that the app writes to are automatically created if they don't already exist.
+-   All of the database tables that the app writes to are automatically created if they don't already exist
 
 -   Automatically save survey progress as cookies and resume later
 
@@ -22,11 +22,11 @@ In R & Shiny applications, developers can parse the JSON either as a raw text st
 
 ## Advanced Features
 
--   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source; see [vignette](articles/dynamic_field_config.html))
+-   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see [Dynamic Field Configuration](https://dylanpieper.github.io/shinysurveyjs/index.html)
 
 -   Log app messages, warnings, and errors in a database table
 
--   Use [future](https://future.futureverse.org/) to update tables without interrupting the survey
+-   Use [future](https://future.futureverse.org/) to update database tables without interrupting the survey
 
 ## Installation
 
@@ -93,6 +93,6 @@ shinysurveyjs::survey(
 )
 ```
 
-By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from the `.Renviron` or your preferred method for handling environmental variables.
+By default, the database configuration looks for environmental variables (e.g., `Sys.getenv("PASSWORD")`) that can be loaded from the `.Renviron` or your preferred method for handling environmental variables (e.g., [keyring](https://keyring.r-lib.org)).
 
-Check out a more complex [gist of this form with expressions and text piping](https://gist.github.com/dylanpieper/c570dba08f03daa25445dfe5aea9ab15).
+See a more complex [gist of this form with expressions and text piping](https://gist.github.com/dylanpieper/c570dba08f03daa25445dfe5aea9ab15).
