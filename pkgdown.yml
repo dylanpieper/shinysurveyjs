@@ -3,7 +3,7 @@ pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
   dynamic_field_config: dynamic_field_config.html
-last_built: 2025-06-27T15:57Z
+last_built: 2025-06-27T16:44Z
 urls:
   reference: https://dylanpieper.github.io/shinysurveyjs/reference
   article: https://dylanpieper.github.io/shinysurveyjs/articles
