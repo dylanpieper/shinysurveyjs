@@ -29,7 +29,6 @@ db_pool_open <- function(host = NULL,
                          max_size = Inf,
                          global = TRUE,
                          logger = NULL) {
-  
   if (all(!is.null(c(host, port, db_name, user, password)))) {
     pool <- pool::dbPool(
       RPostgres::Postgres(),
@@ -39,21 +38,22 @@ db_pool_open <- function(host = NULL,
       user = user,
       password = password,
       minSize = min_size,
-      maxSize = max_size
+      maxSize = max_size,
+      gssencmode = "disable"
     )
-    
+
     if (global) {
       assign("app_pool", pool, envir = .GlobalEnv)
-      
+
       shiny::onStop(function() {
         db_pool_close(NULL, logger)
       })
-      
+
       if (!is.null(logger)) {
         logger$log_message("Database pool initialized and registered for auto-cleanup", "INFO", "DATABASE")
       }
     }
-    
+
     return(pool)
   } else {
     cli::cli_abort("Database connection parameters are required")
