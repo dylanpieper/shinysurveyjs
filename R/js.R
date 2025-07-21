@@ -28,13 +28,13 @@ survey_single_js <- function(cookie_expiration_days = 7) {
     wrapper_start = "$(document).ready(function() {",
 
     # Core files
-    js_config = read_asset(file.path(pkg_dir, "survey/js/js_config.js")),
-    cookies = read_asset(file.path(pkg_dir, "survey/js/cookies.js")),
-    save_survey_progress = read_asset(file.path(pkg_dir, "survey/js/save_survey_progress.js")),
-    set_hidden_fields_from_shiny = read_asset(file.path(pkg_dir, "survey/js/set_hidden_fields_from_shiny.js")),
-    dynamic_config = read_asset(file.path(pkg_dir, "survey/js/dynamic_config.js")),
-    init = read_asset(file.path(pkg_dir, "survey/js/init.js")),
-    load_survey = read_asset(file.path(pkg_dir, "survey/js/load_survey.js")),
+    js_config = read_asset(file.path(pkg_dir, "js_config.js")),
+    cookies = read_asset(file.path(pkg_dir, "cookies.js")),
+    save_survey_progress = read_asset(file.path(pkg_dir, "save_survey_progress.js")),
+    set_hidden_fields_from_shiny = read_asset(file.path(pkg_dir, "set_hidden_fields_from_shiny.js")),
+    dynamic_config = read_asset(file.path(pkg_dir, "dynamic_config.js")),
+    init = read_asset(file.path(pkg_dir, "init.js")),
+    load_survey = read_asset(file.path(pkg_dir, "load_survey.js")),
 
     # End wrapper
     wrapper_end = "});"
