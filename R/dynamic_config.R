@@ -12,6 +12,7 @@
 #'
 #' @return Named list of data frames. Access tables using `tables$table_name`.
 #'
+#' @noRd
 #' @keywords internal
 read_and_cache <- function(db_ops, dynamic_config) {
   # Initialize empty list to store tables
@@ -46,6 +47,7 @@ read_and_cache <- function(db_ops, dynamic_config) {
 #'   * `errors`: Character vector. Error messages for invalid parameters.
 #'   * `values`: List. Validated and cleaned parameter values.
 #'
+#' @noRd
 #' @keywords internal
 validate_url_parameters <- function(dynamic_config, config_list, query_list, survey_logger = NULL) {
   # Initialize results
@@ -153,6 +155,7 @@ validate_url_parameters <- function(dynamic_config, config_list, query_list, sur
 #'
 #' @return Character string containing the display text or original source value
 #'
+#' @noRd
 #' @keywords internal
 get_source_display_text <- function(source_value, config_source_df) {
   display_text <- config_source_df$display_text[config_source_df$source == source_value]
@@ -176,6 +179,7 @@ get_source_display_text <- function(source_value, config_source_df) {
 #' @return List of transformed parameters in format
 #'   `list(param_name = list(text = "display_text", value = "value"))`
 #'
+#' @noRd
 #' @keywords internal
 transform_validated_params <- function(validated_params, config_list) {
   lapply(names(validated_params), function(param_name) {
@@ -253,6 +257,7 @@ transform_validated_params <- function(validated_params, config_list) {
 #' )
 #' }
 #'
+#' @noRd
 #' @keywords internal
 format_choices_for_js <- function(choices,
                                   is_parent = FALSE,
@@ -345,6 +350,7 @@ format_choices_for_js <- function(choices,
 #'
 #' @return Invisible NULL, called for side effects.
 #'
+#' @noRd
 #' @keywords internal
 configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops) {
   # Initialize empty list for choices
@@ -552,6 +558,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
 #'
 #' @return Character. Normalized string value.
 #'
+#' @noRd
 #' @keywords internal
 normalize_field_value <- function(value, remove_special = TRUE) {
   if (is.null(value) || !is.character(value)) {
@@ -591,6 +598,7 @@ normalize_field_value <- function(value, remove_special = TRUE) {
 #'   * `errors`: Character. Validation error messages if any
 #'   * `cached_tables`: List. Validated and cached database tables
 #'
+#' @noRd
 #' @keywords internal
 validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_logger = NULL) {
   errors <- character()
@@ -700,6 +708,7 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
 #' @return Named list mapping field names to vectors of their existing values
 #'   in the database.
 #'
+#' @noRd
 #' @keywords internal
 get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
   if (is.null(db_ops)) {

@@ -31,6 +31,7 @@
 #' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info
 #'   cli_alert_warning
 #'
+#' @noRd
 #' @keywords internal
 survey_setup <- function(db_config, shiny_config = NULL) {
   # Start status group for setup process
@@ -130,6 +131,7 @@ survey_setup <- function(db_config, shiny_config = NULL) {
 #' )
 #' }
 #'
+#' @noRd
 #' @keywords internal
 configure_shiny <- function(..., type_handlers = list()) {
   # Default type handlers
@@ -192,6 +194,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' )
 #' }
 #'
+#' @noRd
 #' @keywords internal
 server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
   # Initialize survey app logger
@@ -276,6 +279,7 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #' @importFrom shiny req validate need reactive outputOptions
 #' @importFrom DT renderDT datatable formatStyle
 #'
+#' @noRd
 #' @keywords internal
 server_response <- function(output, rv, show_response = TRUE, theme_mode = "light", theme_color = "#003594") {
   # Get theme colors based on mode
@@ -378,6 +382,7 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' }
 #' }
 #'
+#' @noRd
 #' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
   session$onSessionEnded(function() {
@@ -408,6 +413,7 @@ server_clean <- function(session, logger, zone = "SURVEY") {
 #' }
 #' }
 #'
+#' @noRd
 #' @keywords internal
 parse_query <- function(input) {
   # Check if input is a Shiny session object
@@ -479,6 +485,7 @@ parse_query <- function(input) {
 #'
 #' @return Invisible NULL
 #'
+#' @noRd
 #' @keywords internal
 update_duration_save <- function(db_ops, db_config, session_id, duration_save, logger) {
   # Get the row ID using the existing connection

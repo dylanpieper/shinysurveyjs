@@ -14,6 +14,7 @@
 #' @return String containing complete CSS stylesheet for survey styling
 #'
 #' @importFrom glue glue
+#' @noRd
 #' @keywords internal
 generate_survey_theme <- function(
     theme = "defaultV2",

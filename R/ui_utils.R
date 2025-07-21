@@ -14,6 +14,7 @@
 #'
 #' @noRd
 #'
+#' @noRd
 #' @keywords internal
 read_asset <- function(filepath) {
   # Check file existence
@@ -43,6 +44,7 @@ read_asset <- function(filepath) {
 #'
 #' @importFrom shinyjs hide show
 #'
+#' @noRd
 #' @keywords internal
 hide_and_show <- function(hide_id, show_id) {
   shinyjs::hide(hide_id)
@@ -72,6 +74,7 @@ hide_and_show <- function(hide_id, show_id) {
 #' # Lighten blue by 20% (without leading "#")
 #' adjust_hex("0000FF", 20)
 #'
+#' @noRd
 #' @keywords internal
 adjust_hex <- function(hex, percent = 25) {
   hex <- gsub("^#", "", hex)
@@ -107,6 +110,7 @@ adjust_hex <- function(hex, percent = 25) {
 #' hex_to_rgb("#FF0000")  # Returns c(255, 0, 0)
 #' hex_to_rgb("00FF00")   # Returns c(0, 255, 0)
 #'
+#' @noRd
 #' @keywords internal
 hex_to_rgb <- function(hex) {
   hex <- sub("^#", "", hex)
@@ -129,6 +133,7 @@ hex_to_rgb <- function(hex) {
 #' @references
 #' WCAG 2.0: <https://www.w3.org/TR/WCAG20/#relativeluminancedef>
 #'
+#' @noRd
 #' @keywords internal
 calculate_luminance <- function(hex) {
   # Convert hex to RGB
@@ -165,6 +170,7 @@ calculate_luminance <- function(hex) {
 #'
 #' @return Logical. `TRUE` if color is light, `FALSE` if dark.
 #'
+#' @noRd
 #' @keywords internal
 is_light_color <- function(hex, threshold = 0.35) {
   calculate_luminance(hex) > threshold
@@ -180,6 +186,7 @@ is_light_color <- function(hex, threshold = 0.35) {
 #' @return String. Hex color code for text: "#000000" for dark text or "#FFFFFF" for
 #'   light text to ensure WCAG contrast requirements are met.
 #'
+#' @noRd
 #' @keywords internal
 get_contrast_color <- function(background_hex) {
   if (is_light_color(background_hex)) {

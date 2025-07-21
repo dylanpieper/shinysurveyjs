@@ -16,6 +16,7 @@
 #' # Custom 30-day cookie expiration
 #' js_code <- survey_single_js(cookie_expiration_days = 30)
 #'
+#' @noRd
 #' @keywords internal
 survey_single_js <- function(cookie_expiration_days = 7) {
   # Get the package installation directory

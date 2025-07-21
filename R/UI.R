@@ -20,6 +20,7 @@
 #' @importFrom DT dataTableOutput
 #' @importFrom shinyjs useShinyjs
 #'
+#' @noRd
 #' @keywords internal
 survey_ui <- function(id, theme, primary, cookie_expiration_days, custom_css) {
   css_file <- switch(theme,
@@ -128,6 +129,7 @@ survey_ui <- function(id, theme, primary, cookie_expiration_days, custom_css) {
 #' @importFrom shinycssloaders withSpinner
 #' @importFrom DT DTOutput
 #'
+#' @noRd
 #' @keywords internal
 survey_ui_wrapper <- function(id, theme, theme_color, cookie_expiration_days, custom_css) {
   shiny::fluidPage(

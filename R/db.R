@@ -19,6 +19,7 @@
 #' @importFrom RPostgres Postgres
 #' @importFrom shiny onStop
 #'
+#' @noRd
 #' @keywords internal
 db_pool_open <- function(host = NULL,
                          port = NULL,
@@ -79,6 +80,7 @@ db_pool_open <- function(host = NULL,
 #' @return Invisible NULL
 #'
 #' @importFrom shiny onStop
+#' @noRd
 #' @keywords internal
 db_pool_close <- function(session, logger = NULL) {
   if (exists("app_pool", envir = .GlobalEnv)) {
@@ -116,6 +118,7 @@ db_pool_close <- function(session, logger = NULL) {
 #'
 #' @importFrom DBI dbIsValid
 #' @importFrom pool poolReturn
+#' @noRd
 #' @keywords internal
 db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
   if (is.null(conn)) {
