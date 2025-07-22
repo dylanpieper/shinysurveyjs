@@ -726,7 +726,6 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
   }, dynamic_config)
 
   if (length(unique_configs) == 0) {
-    warning("No unique configurations found")
     return(list())
   }
 

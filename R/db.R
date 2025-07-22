@@ -517,7 +517,7 @@ db_ops <- R6::R6Class(
         )
 
         self$logger$log_message(
-          sprintf("Inserted survey data (n = %d)", nrow(data)),
+          sprintf("Inserted %d rows into '%s'", nrow(data), table_name),
           "INFO",
           "DATABASE"
         )
@@ -641,7 +641,7 @@ db_ops <- R6::R6Class(
         result <- DBI::dbGetQuery(conn, query)
 
         self$logger$log_message(
-          sprintf("Read n = %d rows from '%s'", nrow(result), sanitized_table),
+          sprintf("Read %d rows from '%s'", nrow(result), sanitized_table),
           "INFO",
           "DATABASE"
         )

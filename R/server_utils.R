@@ -39,8 +39,8 @@ survey_setup <- function(db_config, shiny_config = NULL) {
 
   # Validate write_table parameter
   if (is.null(db_config$write_table) ||
-      !is.character(db_config$write_table) ||
-      nchar(db_config$write_table) == 0) {
+    !is.character(db_config$write_table) ||
+    nchar(db_config$write_table) == 0) {
     cli::cli_alert_danger("db_config$write_table must be a non-empty character string")
     stop("Invalid write_table parameter")
   }
@@ -498,28 +498,10 @@ update_duration_save <- function(db_ops, db_config, session_id, duration_save, l
     limit = 1
   )$id
 
-  tryCatch(
-    {
-      # Perform the update using the existing db_ops instance
-      db_ops$update_by_id(
-        db_config$write_table,
-        row_id,
-        list(duration_save = duration_save)
-      )
-
-      logger$log_message(
-        sprintf("Updated duration_save for row %d", row_id),
-        "INFO",
-        "DATABASE"
-      )
-    },
-    error = function(e) {
-      logger$log_message(
-        sprintf("Failed to update duration_save: %s", e$message),
-        "ERROR",
-        "DATABASE"
-      )
-    }
+  db_ops$update_by_id(
+    db_config$write_table,
+    row_id,
+    list(duration_save = duration_save)
   )
 
   invisible(NULL)
