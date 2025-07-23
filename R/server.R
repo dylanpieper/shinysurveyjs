@@ -47,8 +47,8 @@
 #'     * `result`: Action on duplicate ("warn" or "stop")
 #'     * `result_field`: Survey field for warning message (should be hidden)
 #'   }
-#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
-#'   Default: 7.
+#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies (experimental).
+#'   Default: 0.
 #' @param custom_css String. Custom CSS rules to append to the theme.
 #' @param suppress_logs Logical. Suppress console log messages. Default: `FALSE`.
 #'
@@ -112,7 +112,7 @@ survey <- function(json = NULL,
                      log_table = Sys.getenv("LOG_TABLE")
                    ),
                    dynamic_config = NULL,
-                   cookie_expiration_days = 7,
+                   cookie_expiration_days = 0,
                    custom_css = NULL,
                    suppress_logs = FALSE) {
   if (missing(json) && missing(list)) {
