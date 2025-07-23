@@ -33,14 +33,14 @@
 #'
 #' @noRd
 #' @keywords internal
-survey_setup <- function(db_config, shiny_config = NULL) {
+survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
 
-  # Validate write_table parameter
-  if (is.null(db_config$write_table) ||
+  # Validate write_table parameter (skip for multisurvey mode)
+  if (!is_multisurvey && (is.null(db_config$write_table) ||
     !is.character(db_config$write_table) ||
-    nchar(db_config$write_table) == 0) {
+    nchar(db_config$write_table) == 0)) {
     cli::cli_alert_danger("db_config$write_table must be a non-empty character string")
     stop("Invalid write_table parameter")
   }
@@ -196,16 +196,20 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'
 #' @noRd
 #' @keywords internal
-server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs, is_multisurvey = FALSE) {
   # Initialize survey app logger
+  survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
-    survey_name = db_config$write_table,
+    survey_name = survey_name,
     suppress_logs = suppress_logs
   )
 
-  logger$log_message("Started session", zone = "SURVEY")
+  # Only log session start for single survey mode or when survey is selected
+  if (!is_multisurvey) {
+    logger$log_message("Started session", zone = "SURVEY")
+  }
 
   # Initialize database operations with error logging
   db_operations <- tryCatch(

@@ -83,6 +83,17 @@ survey_logger <- R6::R6Class(
     },
     
     #' @description
+    #' Update the survey name for this logger instance
+    #'
+    #' @param survey_name Character string identifying the new survey name
+    #'
+    #' @return Invisible NULL
+    update_survey_name = function(survey_name) {
+      self$survey_name <- survey_name
+      invisible(NULL)
+    },
+    
+    #' @description
     #' Queue a message for logging and display in console
     #'
     #' @param message Character string containing message to log

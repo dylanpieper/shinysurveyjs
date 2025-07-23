@@ -86,10 +86,10 @@
 #' )
 #' }
 #'
-#' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
+#' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp div h1 h3 h4 tags
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON toJSON
-#' @importFrom shinyjs hide show
+#' @importFrom shinyjs hide show useShinyjs
 #' @importFrom future plan multisession
 #'
 #' @export
@@ -119,27 +119,77 @@ survey <- function(json = NULL,
     stop("Survey JSON or list is required")
   }
 
-  if (!missing(list) & missing(json)) {
+  # Check if list contains multiple surveys (multisurvey mode)
+  is_multisurvey <- !missing(list) && missing(json) &&
+    is.list(list) &&
+    length(list) > 0 &&
+    !is.null(names(list)) &&
+    all(sapply(list, function(x) is.list(x) && ("title" %in% names(x) || "pages" %in% names(x))))
+
+  if (!missing(list) & missing(json) && !is_multisurvey) {
     json <- jsonlite::toJSON(list,
       pretty = TRUE,
       auto_unbox = TRUE
     )
   }
 
-  survey_setup(db_config, shiny_config)
+  survey_setup(db_config, shiny_config, is_multisurvey)
 
-  ui <- fluidPage(
-    survey_ui_wrapper(
-      id = "surveyContainer",
-      theme = theme,
-      theme_color = theme_color,
-      cookie_expiration_days = cookie_expiration_days,
-      custom_css = custom_css
+  ui <- if (is_multisurvey) {
+    # Multisurvey UI with landing page
+    fluidPage(
+      shinyjs::useShinyjs(),
+      # Landing page
+      div(
+        id = "landingPage",
+        style = "text-align: center; padding: 50px;",
+        h1("Survey Portal"),
+        div(
+          id = "surveyLinks",
+          lapply(names(list), function(survey_name) {
+            div(
+              style = "margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; display: inline-block; min-width: 200px;",
+              h4(list[[survey_name]]$title %||% survey_name),
+              tags$a(
+                href = paste0("?survey=", survey_name),
+                "Start",
+                class = "btn btn-primary",
+                style = paste0("background-color: ", theme_color, "; border-color: ", theme_color, ";")
+              )
+            )
+          })
+        )
+      ),
+      # Survey container (hidden initially)
+      div(
+        id = "surveySection",
+        style = "display: none;",
+        survey_ui_wrapper(
+          id = "surveyContainer",
+          theme = theme,
+          theme_color = theme_color,
+          cookie_expiration_days = cookie_expiration_days,
+          custom_css = custom_css
+        )
+      )
     )
-  )
+  } else {
+    # Single survey UI
+    fluidPage(
+      survey_ui_wrapper(
+        id = "surveyContainer",
+        theme = theme,
+        theme_color = theme_color,
+        cookie_expiration_days = cookie_expiration_days,
+        custom_css = custom_css
+      )
+    )
+  }
 
   server <- function(input, output, session) {
-    hide_and_show("surveyContainer", "waitingMessage")
+    if (!is_multisurvey) {
+      hide_and_show("surveyContainer", "waitingMessage")
+    }
 
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
@@ -154,7 +204,9 @@ survey <- function(json = NULL,
       duration_complete = NULL,
       duration_save = NULL,
       validated_params = NULL,
-      survey_def = NULL
+      survey_def = NULL,
+      selected_survey = NULL,
+      survey_json = NULL
     )
 
     server_setup(
@@ -163,7 +215,8 @@ survey <- function(json = NULL,
       app_pool = app_pool,
       survey_logger = survey_logger,
       db_ops = db_ops,
-      suppress_logs = suppress_logs
+      suppress_logs = suppress_logs,
+      is_multisurvey = is_multisurvey
     )
 
     config_list_reactive <- reactive({
@@ -225,6 +278,38 @@ survey <- function(json = NULL,
       tryCatch(
         {
           isolate({
+            # Handle multisurvey mode
+            if (is_multisurvey) {
+              query_list <- parse_query(session)
+              survey_param <- query_list$survey
+
+              if (is.null(survey_param) || survey_param == "") {
+                # Show landing page
+                shinyjs::show("landingPage")
+                shinyjs::hide("surveySection")
+                return()
+              } else if (!survey_param %in% names(list)) {
+                # Invalid survey name
+                hide_and_show("landingPage", "surveyNotFoundMessage")
+                return()
+              } else {
+                # Valid survey selected
+                rv$selected_survey <- survey_param
+                rv$survey_json <- jsonlite::toJSON(list[[survey_param]], pretty = TRUE, auto_unbox = TRUE)
+
+                # Update logger to use actual survey name and start logging
+                logger$update_survey_name(survey_param)
+                logger$log_message("Started session", zone = "SURVEY")
+
+                shinyjs::hide("landingPage")
+                shinyjs::show("surveySection")
+                hide_and_show("surveyContainer", "waitingMessage")
+              }
+            } else {
+              # Single survey mode - set survey_json
+              rv$survey_json <- json
+            }
+
             if (!is.null(dynamic_config)) {
               validation_result <- validate_params_reactive()
 
@@ -236,10 +321,10 @@ survey <- function(json = NULL,
               rv$validated_params <- validation_result$values
             }
 
-            survey_obj <- if (is.character(json)) {
-              jsonlite::fromJSON(json, simplifyVector = FALSE)
+            survey_obj <- if (is.character(rv$survey_json)) {
+              jsonlite::fromJSON(rv$survey_json, simplifyVector = FALSE)
             } else {
-              json
+              rv$survey_json
             }
 
             rv$survey_def <- survey_obj
@@ -255,14 +340,6 @@ survey <- function(json = NULL,
             )
 
             json <- jsonlite::toJSON(rv$validated_params)
-
-            logger$log_message(
-              sprintf(
-                "Attached JSON to survey data: %s",
-                json
-              ),
-              zone = "SURVEY"
-            )
 
             session$sendCustomMessage("loadSurvey", survey_data)
 
@@ -393,15 +470,22 @@ survey <- function(json = NULL,
               "SURVEY"
             )
 
+            # Determine table name (use survey name directly for multisurvey mode)
+            table_name <- if (is_multisurvey && !is.null(rv$selected_survey)) {
+              rv$selected_survey
+            } else {
+              db_config$write_table
+            }
+
             # First create/ensure the table exists with the correct schema
             db_ops$create_survey_table(
-              db_config$write_table,
+              table_name,
               parsed_data,
               survey_obj = isolate(rv$survey_def)
             )
 
             # Then insert the survey data
-            result <- db_ops$update_survey_table(db_config$write_table, parsed_data)
+            result <- db_ops$update_survey_table(table_name, parsed_data)
 
             rv$save_time <- Sys.time()
             rv$duration_save <- as.numeric(
@@ -432,9 +516,13 @@ survey <- function(json = NULL,
               shinyjs::hide(id = "savingDataMessage")
             }
 
+            # Update db_config for duration save with correct table name
+            duration_db_config <- db_config
+            duration_db_config$write_table <- table_name
+
             update_duration_save(
               db_ops = db_ops,
-              db_config = db_config,
+              db_config = duration_db_config,
               session_id = session$token,
               duration_save = rv$duration_save,
               logger = logger
