@@ -168,17 +168,47 @@ function setupUniqueValidation(data) {
 
 // Helper functions for dynamic configuration
 function setChoices(question, choicesData) {
-    if (!choicesData || !Array.isArray(choicesData.value)) {
-        console.warn(`Invalid choices data for ${question.name}`);
+    if (!choicesData) {
+        console.warn(`No choices data provided for ${question.name}`);
         return;
     }
 
-    const surveyChoices = choicesData.value.map((value, index) => ({
-        value: value,
-        text: choicesData.text[index]
-    }));
+    // Handle different choice data formats
+    let surveyChoices = [];
+    
+    if (Array.isArray(choicesData.value) && Array.isArray(choicesData.text)) {
+        // Standard format with parallel arrays
+        surveyChoices = choicesData.value.map((value, index) => ({
+            value: value,
+            text: choicesData.text[index] || value
+        }));
+    } else if (Array.isArray(choicesData)) {
+        // Array of choice objects
+        surveyChoices = choicesData.map(choice => ({
+            value: choice.value || choice,
+            text: choice.text || choice.value || choice
+        }));
+    } else if (choicesData.value !== undefined && choicesData.text !== undefined) {
+        // Handle single value/text pairs or non-array values by converting to arrays
+        const values = Array.isArray(choicesData.value) ? choicesData.value : [choicesData.value];
+        const texts = Array.isArray(choicesData.text) ? choicesData.text : [choicesData.text];
+        
+        surveyChoices = values.map((value, index) => ({
+            value: value,
+            text: texts[index] || value
+        }));
+    } else {
+        console.warn(`Invalid choices data format for ${question.name}:`, choicesData);
+        return;
+    }
+
+    if (surveyChoices.length === 0) {
+        console.warn(`No valid choices found for ${question.name}`);
+        return;
+    }
 
     question.choices = surveyChoices;
+    console.log(`Updated ${question.name} with ${surveyChoices.length} choices`);
 }
 
 function processChildField(fieldName, fieldData) {
@@ -315,15 +345,18 @@ function updateDynamicChoices(data) {
         // Process standalone and child fields
         Object.entries(data).forEach(([fieldName, fieldData]) => {
             if (fieldData.type === "standalone" || fieldData.type === "child") {
+                console.log(`Processing ${fieldData.type} field: ${fieldName}`, fieldData);
                 const targetQuestion = survey.getQuestionByName(fieldName);
                 if (!targetQuestion) {
                     metrics.warnings.push(`Target question not found: ${fieldName}`);
+                    console.warn(`Target question not found: ${fieldName}`);
                     return;
                 }
 
                 if (fieldData.type === "standalone") {
                     setChoices(targetQuestion, fieldData.choices);
                     metrics.processedFields.standalone++;
+                    metrics.updatedChoices++;
                 } else {
                     processChildField(fieldName, fieldData);
                     metrics.processedFields.child++;

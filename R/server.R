@@ -333,10 +333,23 @@ survey <- function(json = NULL,
               rv$validated_params, config_list_reactive()
             )
 
+            # Check if current survey has relevant dynamic configs
+            has_relevant_configs <- FALSE
+            if (!is.null(dynamic_config)) {
+              current_table <- if (is_multisurvey) rv$selected_survey else db_config$write_table
+              relevant_configs <- Filter(function(config) {
+                target_tbl <- config$target_tbl
+                # If no target_tbl specified, include the config (legacy behavior)
+                # If target_tbl matches current survey, include it
+                is.null(target_tbl) || target_tbl == current_table
+              }, dynamic_config)
+              has_relevant_configs <- length(relevant_configs) > 0
+            }
+            
             survey_data <- list(
               survey = survey_obj,
               params = validated_params,
-              dynamic_config = !is.null(dynamic_config)
+              dynamic_config = has_relevant_configs
             )
 
             json <- jsonlite::toJSON(rv$validated_params)
@@ -355,7 +368,7 @@ survey <- function(json = NULL,
                   config_list_reactive = config_list_reactive(),
                   session = session,
                   logger = logger,
-                  write_table = db_config$write_table,
+                  write_table = if (is_multisurvey) rv$selected_survey else db_config$write_table,
                   db_ops = db_ops
                 )
 

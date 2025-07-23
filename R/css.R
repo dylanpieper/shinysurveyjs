@@ -145,7 +145,6 @@ body {{
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
-    height: -webkit-fill-available !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;

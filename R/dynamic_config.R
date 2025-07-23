@@ -1,3 +1,18 @@
+#' Null Coalescing Operator
+#'
+#' Returns the first non-null value from a list of values.
+#'
+#' @param x First value to check
+#' @param y Second value to return if x is NULL
+#'
+#' @return The first non-null value
+#'
+#' @noRd
+#' @keywords internal
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
 #' Read and Cache Tables for Dynamic Fields
 #'
 #' Creates a cache of database tables for efficient access by reading tables from
@@ -7,7 +22,7 @@
 #' @param db_ops Object. Database operations object with a `read_table` method that
 #'   accepts a table name parameter.
 #' @param dynamic_config List. Table configurations. Each configuration must contain:
-#'   * `table_name`: Name of database table to read
+#'   * `source_tbl`: Name of database table to read (replaces `table_name`)
 #'   * Additional configuration fields are allowed but not used for caching
 #'
 #' @return Named list of data frames. Access tables using `tables$table_name`.
@@ -18,11 +33,12 @@ read_and_cache <- function(db_ops, dynamic_config) {
   # Initialize empty list to store tables
   tables_cache <- list()
 
-  # Read and store each table
+  # Read and store each table from both source_tbl and legacy table_name
   for (config in dynamic_config) {
-    # Check if table_name exists and is not NULL
-    if (!is.null(config$table_name)) {
-      table_name <- config$table_name
+    # Check for new source_tbl field first, fallback to legacy table_name
+    table_name <- config$source_tbl %||% config$table_name
+    
+    if (!is.null(table_name)) {
       tables_cache[[table_name]] <- db_ops$read_table(table_name)
     }
   }
@@ -356,190 +372,213 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
   # Initialize empty list for choices
   choices_data <- list()
 
-  # First pass: Process parent fields (both param and choice types)
-  for (config in dynamic_config) {
-    if (config$config_type %in% c("param", "choice")) {
-      # Check if this field is referenced as a parent
-      is_parent <- any(sapply(dynamic_config, function(other_config) {
-        !is.null(other_config$parent_table_name) &&
-          other_config$parent_table_name == config$table_name
-      }))
+  # Filter dynamic_config to only include configs relevant to the current survey
+  # In multisurvey mode, write_table contains the survey name, so we filter by target_tbl
+  relevant_configs <- if (!is.null(write_table)) {
+    Filter(function(config) {
+      target_tbl <- config$target_tbl
+      # If no target_tbl specified, include the config (legacy behavior)
+      # If target_tbl matches current survey (write_table), include it
+      is.null(target_tbl) || target_tbl == write_table
+    }, dynamic_config)
+  } else {
+    dynamic_config
+  }
+  
+  if (length(relevant_configs) == 0) {
+    logger$log_message("No dynamic configs applicable to current survey", "INFO", "SURVEY")
+    return(invisible(NULL))
+  }
+  
+  logger$log_message(
+    sprintf("Processing %d dynamic configs for survey '%s'", 
+           length(relevant_configs), write_table %||% "default"),
+    "INFO", "SURVEY"
+  )
 
-      if (is_parent) {
-        tryCatch(
-          {
-            # Get table data
-            table_data <- config_list_reactive[[config$table_name]]
-            if (is.null(table_data)) {
-              logger$log_message(sprintf("Table '%s' not found", config$table_name), "ERROR", "SURVEY")
-              next
-            }
-
-            # Find child config
-            child_config <- Find(function(other_config) {
-              !is.null(other_config$parent_table_name) &&
-                other_config$parent_table_name == config$table_name
-            }, dynamic_config)
-
-            if (is.null(child_config)) {
-              logger$log_message("No child configuration found", "ERROR", "SURVEY")
-              next
-            }
-
-            # Create parent field data
-            parent_data <- list(
-              type = if (config$config_type == "param") "param_parent" else "choice_parent",
-              childField = child_config$config_col,
-              choices = list(
-                value = table_data[[config$config_col]],
-                text = if (!is.null(config$display_col)) {
-                  table_data[[config$display_col]]
-                } else {
-                  table_data[[config$config_col]]
-                },
-                ids = table_data$package_id
-              )
-            )
-
-            choices_data[[config$config_col]] <- parent_data
-
-            logger$log_message(
-              sprintf("Created parent data for '%s'", config$config_col),
-              "INFO",
-              "SURVEY"
-            )
-          },
-          error = function(e) {
-            logger$log_message(sprintf("Error in parent processing: %s", e$message), "ERROR", "SURVEY")
-          }
-        )
-      } else if (config$config_type == "choice") {
-        # Handle standalone choice fields (no parent/child relationship)
-        tryCatch(
-          {
-            table_data <- config_list_reactive[[config$table_name]]
-            if (!is.null(table_data)) {
-              choices <- unique(table_data[[config$config_col]])
-              choices <- choices[!is.na(choices)]
-
-              if (length(choices) > 0) {
-                choices_data[[config$config_col]] <- list(
-                  type = "standalone",
-                  choices = list(
-                    value = choices,
-                    text = if (!is.null(config$display_col)) {
-                      table_data[[config$display_col]][!is.na(choices)]
-                    } else {
-                      choices
-                    }
-                  )
+  # Process each relevant dynamic config entry
+  for (config in relevant_configs) {
+    # Support both new and legacy field names
+    config_type <- config$type %||% config$config_type
+    target_col <- config$target_col %||% config$config_col
+    source_tbl <- config$source_tbl %||% config$table_name
+    
+    if (config_type == "choice") {
+      tryCatch({
+        # Get source table data
+        source_data <- config_list_reactive[[source_tbl]]
+        if (is.null(source_data)) {
+          logger$log_message(sprintf("Source table '%s' not found", source_tbl), "ERROR", "SURVEY")
+          next
+        }
+        
+        # Apply filter_source if specified
+        if (!is.null(config$filter_source)) {
+          # Parse and apply the filter (simplified SQL-like filter)
+          filter_expr <- config$filter_source
+          
+          # Handle simple equality filters like "closed == 0"
+          if (grepl("==", filter_expr)) {
+            parts <- strsplit(gsub("\\s", "", filter_expr), "==")[[1]]
+            if (length(parts) == 2) {
+              col_name <- parts[1]
+              filter_value <- as.numeric(parts[2])
+              
+              if (col_name %in% names(source_data)) {
+                source_data <- source_data[source_data[[col_name]] == filter_value, , drop = FALSE]
+                logger$log_message(
+                  sprintf("Applied filter '%s' to source table, %d rows remaining", 
+                         filter_expr, nrow(source_data)),
+                  "INFO", "SURVEY"
                 )
               }
             }
-          },
-          error = function(e) {
-            logger$log_message(
-              sprintf("Error in standalone choice processing: %s", e$message),
-              "ERROR", "SURVEY"
-            )
           }
-        )
-      }
-    }
-  }
-
-  # Second pass: Process child fields
-  for (config in dynamic_config) {
-    if (config$config_type == "choice" &&
-      !is.null(config$parent_table_name) &&
-      !is.null(config$parent_id_col)) {
-      tryCatch(
-        {
-          # Get tables
-          child_table <- config_list_reactive[[config$table_name]]
-          parent_table <- config_list_reactive[[config$parent_table_name]]
-
-          if (is.null(child_table) || is.null(parent_table)) {
-            logger$log_message("Missing required tables", "ERROR", "SURVEY")
-            next
-          }
-
-          # Create child field data
-          child_data <- list(
-            type = "child",
-            parentField = config$parent_id_col,
-            choices = list(
-              value = child_table[[config$config_col]],
-              text = child_table[[config$config_col]],
-              parentId = child_table[[config$parent_id_col]],
-              parentValue = parent_table[[config$config_col]][match(
-                child_table[[config$parent_id_col]],
-                parent_table[[config$parent_id_col]]
-              )]
-            )
-          )
-
-          choices_data[[config$config_col]] <- child_data
-
-          logger$log_message(
-            sprintf("Created child data for '%s'", config$config_col),
-            "INFO",
-            "SURVEY"
-          )
-        },
-        error = function(e) {
-          logger$log_message(sprintf("Error in child processing: %s", e$message), "ERROR", "SURVEY")
         }
-      )
+        
+        # Get choices from source data
+        source_col <- config$source_col %||% target_col
+        source_display_col <- config$source_display_col %||% source_col
+        
+        if (!source_col %in% names(source_data)) {
+          logger$log_message(sprintf("Source column '%s' not found in table '%s'", source_col, source_tbl), "ERROR", "SURVEY")
+          next
+        }
+        
+        choice_values <- source_data[[source_col]]
+        choice_texts <- if (source_display_col %in% names(source_data)) {
+          source_data[[source_display_col]]
+        } else {
+          choice_values
+        }
+        
+        # Apply filter_unique if specified
+        if (isTRUE(config$filter_unique) && !is.null(config$target_tbl)) {
+          # Check what values have already been submitted in the target table
+          # Use the target_tbl from config, which should match the survey name in multisurvey mode
+          target_tbl <- config$target_tbl
+          
+          existing_values <- tryCatch({
+            existing_data <- db_ops$read_table(target_tbl)
+            if (target_col %in% names(existing_data)) {
+              existing_data[[target_col]]
+            } else {
+              character(0)
+            }
+          }, error = function(e) {
+            logger$log_message(sprintf("Error reading target table '%s': %s", target_tbl, e$message), "WARN", "SURVEY")
+            character(0)
+          })
+          
+          # Filter out already used values
+          if (length(existing_values) > 0) {
+            keep_indices <- !choice_values %in% existing_values
+            choice_values <- choice_values[keep_indices]
+            choice_texts <- choice_texts[keep_indices]
+            
+            logger$log_message(
+              sprintf("Applied unique filter, %d choices remaining after removing %d used values", 
+                     length(choice_values), sum(!keep_indices)),
+              "INFO", "SURVEY"
+            )
+          }
+        }
+        
+        # Remove NA values and ensure we have valid choices
+        valid_indices <- !is.na(choice_values) & !is.na(choice_texts)
+        choice_values <- choice_values[valid_indices]
+        choice_texts <- choice_texts[valid_indices]
+        
+        if (length(choice_values) > 0) {
+          # Create the choice data structure - ensure values are arrays/vectors
+          choice_data <- list(
+            type = "standalone",
+            target_tbl = config$target_tbl,
+            choices = list(
+              value = as.vector(choice_values),
+              text = as.vector(choice_texts)
+            )
+          )
+          
+          choices_data[[target_col]] <- choice_data
+          
+          logger$log_message(
+            sprintf("Created choice data for '%s' with %d options", target_col, length(choice_values)),
+            "INFO", "SURVEY"
+          )
+        } else {
+          logger$log_message(
+            sprintf("No valid choices found for field '%s'", target_col),
+            "WARN", "SURVEY"
+          )
+        }
+        
+      }, error = function(e) {
+        logger$log_message(sprintf("Error processing choice config for '%s': %s", target_col, e$message), "ERROR", "SURVEY")
+      })
+      
+    } else if (config_type == "param") {
+      # Handle param type (legacy behavior)
+      tryCatch({
+        table_data <- config_list_reactive[[source_tbl]]
+        if (!is.null(table_data) && target_col %in% names(table_data)) {
+          choices <- unique(table_data[[target_col]])
+          choices <- choices[!is.na(choices)]
+          
+          if (length(choices) > 0) {
+            choices_data[[target_col]] <- list(
+              type = "param",
+              choices = list(
+                value = as.vector(choices),
+                text = as.vector(choices)
+              )
+            )
+          }
+        }
+      }, error = function(e) {
+        logger$log_message(sprintf("Error processing param config: %s", e$message), "ERROR", "SURVEY")
+      })
     }
   }
 
-  # Third pass: Process unique validation fields
-  unique_fields <- tryCatch(
-    {
-      get_unique_field_values(
-        dynamic_config = dynamic_config,
-        db_ops = db_ops,
-        write_table = write_table
-      )
-    },
-    error = function(e) {
-      logger$log_message(
-        sprintf("Error getting unique field values: %s", e$message),
-        "ERROR",
-        "SURVEY"
-      )
-      list()
-    }
-  )
+  # Process unique validation fields
+  unique_fields <- tryCatch({
+    get_unique_field_values(
+      dynamic_config = relevant_configs,
+      db_ops = db_ops,
+      write_table = write_table
+    )
+  }, error = function(e) {
+    logger$log_message(
+      sprintf("Error getting unique field values: %s", e$message),
+      "ERROR", "SURVEY"
+    )
+    list()
+  })
 
   if (length(unique_fields) > 0) {
     choices_data$unique_validation <- unique_fields
     logger$log_message(
       sprintf("Added unique validation for %d fields", length(unique_fields)),
-      "INFO",
-      "SURVEY"
+      "INFO", "SURVEY"
     )
   }
 
-  # Send data to the client if we have either choices or unique validation
-  has_data <- length(unique_fields) > 0 ||
+  # Send data to the client if we have data
+  has_data <- length(unique_fields) > 0 || 
     length(setdiff(names(choices_data), "unique_validation")) > 0
 
   if (has_data) {
-    tryCatch(
-      {
-        session$sendCustomMessage("updateDynamicChoices", as.list(choices_data))
-        logger$log_message(
-          sprintf("Sent data to frontend: %s", jsonlite::toJSON(choices_data)),
-          "INFO",
-          "SURVEY"
-        )
-      },
-      error = function(e) {
-        logger$log_message(sprintf("Error sending data: %s", e$message), "ERROR", "SURVEY")
-      }
-    )
+    tryCatch({
+      session$sendCustomMessage("updateDynamicChoices", as.list(choices_data))
+      logger$log_message(
+        sprintf("Sent data to frontend with %d field configurations", 
+               length(setdiff(names(choices_data), "unique_validation"))),
+        "INFO", "SURVEY"
+      )
+    }, error = function(e) {
+      logger$log_message(sprintf("Error sending data: %s", e$message), "ERROR", "SURVEY")
+    })
   } else {
     logger$log_message("No data to send", "WARN", "SURVEY")
   }
@@ -630,14 +669,21 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
       next
     }
 
-    # Check required fields
-    required_fields <- c("config_type", "config_col")
-    missing_fields <- required_fields[!required_fields %in% names(config)]
-    if (length(missing_fields) > 0) {
-      error_msg <- paste0(
-        prefix, "missing required fields: ",
-        paste(missing_fields, collapse = ", ")
-      )
+    # Check required fields - support both new and legacy field names
+    # New API uses 'type' and 'target_col', legacy uses 'config_type' and 'config_col'
+    config_type_field <- config$type %||% config$config_type
+    config_col_field <- config$target_col %||% config$config_col
+    
+    if (is.null(config_type_field)) {
+      error_msg <- paste0(prefix, "missing required field: 'type' (or legacy 'config_type')")
+      errors <- c(errors, error_msg)
+      if (!is.null(survey_logger)) {
+        survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
+      }
+    }
+    
+    if (is.null(config_col_field)) {
+      error_msg <- paste0(prefix, "missing required field: 'target_col' (or legacy 'config_col')")
       errors <- c(errors, error_msg)
       if (!is.null(survey_logger)) {
         survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
@@ -645,9 +691,9 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
     }
 
     # Check config_type validity
-    if ("config_type" %in% names(config)) {
-      if (!config$config_type %in% c("choice", "param", "unique")) {
-        error_msg <- paste0(prefix, "config_type must be 'choice', 'param', or 'unique'")
+    if (!is.null(config_type_field)) {
+      if (!config_type_field %in% c("choice", "param", "unique")) {
+        error_msg <- paste0(prefix, "type must be 'choice', 'param', or 'unique'")
         errors <- c(errors, error_msg)
         if (!is.null(survey_logger)) {
           survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
@@ -655,7 +701,7 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
       }
 
       # Additional validation for unique type
-      if (config$config_type == "unique") {
+      if (config_type_field == "unique") {
         # Validate required fields for unique validation
         unique_required <- c("result")
         missing_unique <- unique_required[!unique_required %in% names(config)]
@@ -722,7 +768,8 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
   }
 
   unique_configs <- Filter(function(config) {
-    isTRUE(config$config_type == "unique")
+    config_type <- config$type %||% config$config_type
+    isTRUE(config_type == "unique")
   }, dynamic_config)
 
   if (length(unique_configs) == 0) {
@@ -747,7 +794,7 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
   }
 
   values <- lapply(unique_configs, function(config) {
-    field_name <- config$config_col
+    field_name <- config$target_col %||% config$config_col
 
     existing <- tryCatch(
       {
@@ -788,7 +835,7 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
     return(NULL)
   })
 
-  names(values) <- vapply(unique_configs, function(x) x$config_col, character(1))
+  names(values) <- vapply(unique_configs, function(x) x$target_col %||% x$config_col, character(1))
 
   return(values)
 }
