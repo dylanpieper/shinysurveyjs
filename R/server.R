@@ -140,17 +140,17 @@ survey <- function(json = NULL,
     fluidPage(
       shinyjs::useShinyjs(),
       # Landing page
-      div(
+      shiny::div(
         id = "landingPage",
         style = "text-align: center; padding: 50px;",
-        h1("Survey Portal"),
-        div(
+        shiny::h1("Survey Portal"),
+        shiny::div(
           id = "surveyLinks",
           lapply(names(list), function(survey_name) {
-            div(
+            shiny::div(
               style = "margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; display: inline-block; min-width: 200px;",
-              h4(list[[survey_name]]$title %||% survey_name),
-              tags$a(
+              shiny::h4(list[[survey_name]]$title %||% survey_name),
+              shiny::tags$a(
                 href = paste0("?survey=", survey_name),
                 "Start",
                 class = "btn btn-primary",
@@ -161,7 +161,7 @@ survey <- function(json = NULL,
         )
       ),
       # Survey container (hidden initially)
-      div(
+      shiny::div(
         id = "surveySection",
         style = "display: none;",
         survey_ui_wrapper(
@@ -345,7 +345,7 @@ survey <- function(json = NULL,
               }, dynamic_config)
               has_relevant_configs <- length(relevant_configs) > 0
             }
-            
+
             survey_data <- list(
               survey = survey_obj,
               params = validated_params,

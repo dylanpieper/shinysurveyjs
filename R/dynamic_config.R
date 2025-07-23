@@ -39,7 +39,18 @@ read_and_cache <- function(db_ops, dynamic_config) {
     table_name <- config$source_tbl %||% config$table_name
     
     if (!is.null(table_name)) {
-      tables_cache[[table_name]] <- db_ops$read_table(table_name)
+      tables_cache[[table_name]] <- tryCatch({
+        db_ops$read_table(table_name)
+      }, error = function(e) {
+        # Log warning but continue - table may not exist yet in multisurvey mode
+        db_ops$logger$log_message(
+          sprintf("Warning: Unable to read table '%s' during initialization: %s", table_name, e$message),
+          "WARN",
+          "SURVEY"
+        )
+        # Return empty data frame to prevent failures downstream
+        data.frame()
+      })
     }
   }
 
@@ -580,7 +591,13 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
       logger$log_message(sprintf("Error sending data: %s", e$message), "ERROR", "SURVEY")
     })
   } else {
-    logger$log_message("No data to send", "WARN", "SURVEY")
+    logger$log_message("No valid choices found for this survey", "ERROR", "SURVEY")
+    # Use the existing hide_and_show pattern to show error message
+    tryCatch({
+      hide_and_show("waitingMessage", "surveyNotDefinedMessage")
+    }, error = function(e) {
+      logger$log_message(sprintf("Error showing error message: %s", e$message), "ERROR", "SURVEY")
+    })
   }
 
   invisible(NULL)
