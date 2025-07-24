@@ -221,14 +221,14 @@ survey <- function(json = NULL,
 
     config_list_reactive <- reactive({
       req(!is.null(dynamic_config))
-      
+
       # Determine current survey/table for optimization
       current_survey <- if (is_multisurvey) {
         rv$selected_survey
       } else {
         db_config$write_table
       }
-      
+
       read_and_cache(
         db_ops = db_ops,
         dynamic_config = dynamic_config,
@@ -380,8 +380,6 @@ survey <- function(json = NULL,
                   write_table = if (is_multisurvey) rv$selected_survey else db_config$write_table,
                   db_ops = db_ops
                 )
-
-                logger$log_message("Configured dynamic fields", zone = "SURVEY")
               },
               once = TRUE
             )

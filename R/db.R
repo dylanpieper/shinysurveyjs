@@ -709,7 +709,11 @@ db_ops <- R6::R6Class(
         }
 
         self$logger$log_message(
-          sprintf("Updated %d rows in table '%s' for id %d", rows_affected, sanitized_table, id),
+          sprintf(
+            "Updated %d rows in table '%s' for id %d: %s",
+            rows_affected, sanitized_table, id,
+            jsonlite::toJSON(list(values), auto_unbox = TRUE)
+          ),
           "INFO",
           "DATABASE"
         )
