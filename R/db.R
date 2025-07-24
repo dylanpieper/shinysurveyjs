@@ -372,10 +372,10 @@ db_ops <- R6::R6Class(
         if (!table_exists) {
           # Define tracking columns
           tracking_cols <- c(
-            "date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-            "date_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
             "session_id TEXT",
-            "ip_address INET"
+            "ip_address INET",
+            "date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+            "date_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
           )
 
           col_defs <- private$generate_column_definitions(data, survey_obj)
