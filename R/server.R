@@ -221,9 +221,18 @@ survey <- function(json = NULL,
 
     config_list_reactive <- reactive({
       req(!is.null(dynamic_config))
+      
+      # Determine current survey/table for optimization
+      current_survey <- if (is_multisurvey) {
+        rv$selected_survey
+      } else {
+        db_config$write_table
+      }
+      
       read_and_cache(
         db_ops = db_ops,
-        dynamic_config = dynamic_config
+        dynamic_config = dynamic_config,
+        target_survey = current_survey
       )
     })
 

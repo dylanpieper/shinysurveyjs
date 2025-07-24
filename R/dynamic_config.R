@@ -29,16 +29,27 @@
 #'
 #' @noRd
 #' @keywords internal
-read_and_cache <- function(db_ops, dynamic_config) {
+read_and_cache <- function(db_ops, dynamic_config, target_survey = NULL) {
   # Initialize empty list to store tables
   tables_cache <- list()
 
+  # Filter configs to only those relevant to the target survey if specified
+  relevant_configs <- if (!is.null(target_survey)) {
+    Filter(function(config) {
+      target_tbl <- config$target_tbl
+      # Include config if no target_tbl specified (legacy) or if it matches current survey
+      is.null(target_tbl) || target_tbl == target_survey
+    }, dynamic_config)
+  } else {
+    dynamic_config
+  }
+
   # Read and store each table from both source_tbl and legacy table_name
-  for (config in dynamic_config) {
+  for (config in relevant_configs) {
     # Check for new source_tbl field first, fallback to legacy table_name
     table_name <- config$source_tbl %||% config$table_name
     
-    if (!is.null(table_name)) {
+    if (!is.null(table_name) && !table_name %in% names(tables_cache)) {
       tables_cache[[table_name]] <- tryCatch({
         db_ops$read_table(table_name)
       }, error = function(e) {
@@ -470,7 +481,12 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
           target_tbl <- config$target_tbl
           
           existing_values <- tryCatch({
-            existing_data <- db_ops$read_table(target_tbl)
+            # Try to get data from cache first
+            existing_data <- config_list_reactive[[target_tbl]]
+            if (is.null(existing_data)) {
+              # Fallback to database if not in cache
+              existing_data <- db_ops$read_table(target_tbl)
+            }
             if (target_col %in% names(existing_data)) {
               existing_data[[target_col]]
             } else {
