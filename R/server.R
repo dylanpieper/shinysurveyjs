@@ -1,7 +1,7 @@
 #' Deploy a Survey Shiny Application
 #'
 #' Creates and deploys a Shiny application for a survey using SurveyJS
-#' (<https://surveyjs.io>) with PostgreSQL database integration. The application handles
+#' (<https://surveyjs.io>) with MySQL and DBI database integration. The application handles
 #' survey data collection, dynamic fields, and asynchronous logging through a future plan.
 #'
 #' @param json String. JSON survey definition or object.
@@ -212,7 +212,7 @@ survey <- function(json = NULL,
     server_setup(
       session = session,
       db_config = db_config,
-      app_pool = app_pool,
+      app_conn = app_conn,
       survey_logger = survey_logger,
       db_ops = db_ops,
       suppress_logs = suppress_logs,

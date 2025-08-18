@@ -2,7 +2,7 @@
 #'
 #' @description
 #' R6 Class providing queued logging functionality for Shiny survey applications
-#' using the main application's database connection pool.
+#' using the main application's database connection.
 #'
 #' @details
 #' The logger uses a queue-based approach where messages are:
@@ -11,10 +11,10 @@
 #' 3. Periodically processed and written to the database in batches
 #'
 #' Features:
-#' * Uses main application pool for database operations
+#' * Uses main application connection for database operations
 #' * Efficient batch database writes
 #' * Immediate console feedback with color coding
-#' * Connection pool health monitoring
+#' * Database connection health monitoring
 #'
 #' @section Message Types:
 #' * `INFO`: Regular informational messages (green)
@@ -32,7 +32,7 @@ survey_logger <- R6::R6Class(
   "survey_logger",
   
   public = list(
-    #' @field log_table Character string specifying the PostgreSQL table for logs
+    #' @field log_table Character string specifying the database table for logs
     log_table = NULL,
     
     #' @field session_id Character string containing unique session identifier
@@ -75,7 +75,7 @@ survey_logger <- R6::R6Class(
         cli::cli_alert_success("Started logger for session {.val {self$session_id}}")
       }
       
-      # Initialize logging table using global app pool
+      # Initialize logging table using global app connection
       private$initialize_table()
       
       # Start queue processing
@@ -139,18 +139,15 @@ survey_logger <- R6::R6Class(
   
   private = list(
     initialize_table = function() {
-      pool <- get("app_pool", envir = .GlobalEnv)
-      conn <- NULL
+      conn <- get("app_conn", envir = .GlobalEnv)
       tryCatch({
-        conn <- pool::poolCheckout(pool)
-        
         if (!DBI::dbExistsTable(conn, self$log_table)) {
           query <- sprintf("
             CREATE TABLE IF NOT EXISTS %s (
-              id SERIAL PRIMARY KEY,
+              id INT AUTO_INCREMENT PRIMARY KEY,
               session_id TEXT NOT NULL,
               survey_name TEXT NOT NULL,
-              timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+              timestamp TIMESTAMP NOT NULL,
               zone TEXT NOT NULL,
               message TEXT NOT NULL,
               type TEXT NOT NULL
@@ -167,26 +164,19 @@ survey_logger <- R6::R6Class(
         if (!self$suppress_logs) {
           cli::cli_alert_danger("Failed to initialize logging table: {e$message}")
         }
-      }, finally = {
-        if (!is.null(conn)) {
-          pool::poolReturn(conn)
-        }
       })
     },
     
     process_queue = function() {
       if (nrow(self$queue) == 0) return(invisible(NULL))
       
-      pool <- get("app_pool", envir = .GlobalEnv)
-      conn <- NULL
+      conn <- get("app_conn", envir = .GlobalEnv)
       tryCatch({
-        conn <- pool::poolCheckout(pool)
-        
         query <- sprintf("
           INSERT INTO %s 
             (session_id, survey_name, timestamp, zone, message, type)
           VALUES 
-            ($1, $2, $3, $4, $5, $6)",
+            (?, ?, ?, ?, ?, ?)",
                          self$log_table
         )
         
@@ -213,10 +203,6 @@ survey_logger <- R6::R6Class(
       }, error = function(e) {
         if (!self$suppress_logs) {
           cli::cli_alert_danger("Failed to process message queue: {e$message}")
-        }
-      }, finally = {
-        if (!is.null(conn)) {
-          pool::poolReturn(conn)
         }
       })
       

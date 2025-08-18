@@ -1,153 +1,121 @@
-#' Open Database Pool with Automatic Shutdown
+#' Open Database Connection
 #'
-#' Creates and manages a global database pool connection using PostgreSQL.
-#' Automatically registers a shutdown handler to close the pool when the application terminates.
+#' Creates a database connection using MySQL or other DBI-compatible drivers.
+#' Stores the connection globally and registers cleanup handler.
 #'
+#' @param driver Character string specifying the database driver ("mysql", "sqlite", "postgres")
 #' @param host Database host
 #' @param port Database port
 #' @param db_name Database name
 #' @param user Database username
 #' @param password Database password
-#' @param min_size Minimum pool size (default: 1)
-#' @param max_size Maximum pool size (default: Inf)
-#' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
+#' @param global Logical; if TRUE (default), assigns connection to .GlobalEnv as app_conn
 #' @param logger Logger object for tracking operations (default: NULL)
+#' @param ... Additional connection parameters passed to driver
 #'
-#' @return A database pool object
+#' @return A database connection object
 #'
-#' @importFrom pool dbPool poolIsValid
-#' @importFrom RPostgres Postgres
+#' @importFrom DBI dbConnect
 #' @importFrom shiny onStop
 #'
 #' @noRd
 #' @keywords internal
-db_pool_open <- function(host = NULL,
+db_conn_open <- function(driver = "mysql",
+                         host = NULL,
                          port = NULL,
                          db_name = NULL,
                          user = NULL,
                          password = NULL,
-                         min_size = 1,
-                         max_size = Inf,
                          global = TRUE,
-                         logger = NULL) {
+                         logger = NULL,
+                         ...) {
   if (all(!is.null(c(host, port, db_name, user, password)))) {
-    pool <- pool::dbPool(
-      RPostgres::Postgres(),
+    # Get the appropriate driver
+    drv <- switch(tolower(driver),
+      "mysql" = {
+        if (!requireNamespace("RMariaDB", quietly = TRUE)) {
+          stop("RMariaDB package is required for MySQL connections")
+        }
+        RMariaDB::MariaDB()
+      },
+      "sqlite" = {
+        if (!requireNamespace("RSQLite", quietly = TRUE)) {
+          stop("RSQLite package is required for SQLite connections")
+        }
+        RSQLite::SQLite()
+      },
+      "postgres" = {
+        if (!requireNamespace("RPostgres", quietly = TRUE)) {
+          stop("RPostgres package is required for PostgreSQL connections")
+        }
+        RPostgres::Postgres()
+      },
+      stop("Unsupported driver: ", driver)
+    )
+    
+    # Create connection
+    conn <- DBI::dbConnect(
+      drv,
       host = host,
       port = port,
       dbname = db_name,
       user = user,
       password = password,
-      minSize = min_size,
-      maxSize = max_size,
-      gssencmode = "disable"
+      ...
     )
 
     if (global) {
-      assign("app_pool", pool, envir = .GlobalEnv)
-
+      assign("app_conn", conn, envir = .GlobalEnv)
+      
       shiny::onStop(function() {
-        db_pool_close(NULL, logger)
+        db_conn_close(NULL, logger)
       })
 
       if (!is.null(logger)) {
-        logger$log_message("Database pool initialized and registered for auto-cleanup", "INFO", "DATABASE")
+        logger$log_message(paste("Database connection initialized for", driver), "INFO", "DATABASE")
       }
     }
-
-    return(pool)
+    
+    return(conn)
   } else {
     cli::cli_abort("Database connection parameters are required")
   }
 }
 
-#' Close Global Database Pool
+#' Close Global Database Connection
 #'
-#' Closes the global database connection pool (app_pool) during application shutdown.
-#' This function handles cleanup of the global pool and should be used when the
-#' application is completely shutting down, not for individual session disconnections.
+#' Closes the global database connection (app_conn) during application shutdown.
 #'
-#' @param session Shiny session object. Required to register cleanup handlers for
-#'                session shutdown.
+#' @param session Shiny session object (unused)
 #' @param logger Logger object for tracking cleanup operations.
 #'               If NULL, no logging is performed.
 #'
-#' @details
-#' The function looks for a global 'app_pool' object and closes it safely.
-#' Use this function only when completely shutting down the application.
-#' For managing individual connections, use `db_conn_release()` instead.
-#'
 #' @return Invisible NULL
 #'
-#' @importFrom shiny onStop
+#' @importFrom DBI dbDisconnect dbIsValid
 #' @noRd
 #' @keywords internal
-db_pool_close <- function(session, logger = NULL) {
-  if (exists("app_pool", envir = .GlobalEnv)) {
-    pool <- get("app_pool", envir = .GlobalEnv)
-    pool::poolClose(pool)
-    rm("app_pool", envir = .GlobalEnv)
+db_conn_close <- function(session, logger = NULL) {
+  if (exists("app_conn", envir = .GlobalEnv)) {
+    conn <- get("app_conn", envir = .GlobalEnv)
+    if (DBI::dbIsValid(conn)) {
+      DBI::dbDisconnect(conn)
+    }
+    rm("app_conn", envir = .GlobalEnv)
     if (!is.null(logger)) {
-      logger$log_message("Closed pool and removed object", "INFO", "DATABASE")
+      logger$log_message("Closed connection and removed object", "INFO", "DATABASE")
     }
   }
   invisible(NULL)
 }
 
-#' Release Database Connection Back to Pool
-#'
-#' Returns a database connection to the connection pool when done with operations.
-#' This function should be used to release individual connections after query execution.
-#'
-#' @param conn A DBI connection object obtained from the pool. If NULL, the function
-#'             attempts to find a connection in the session.
-#' @param session Shiny session object. Used to find session-specific connections.
-#' @param logger Logger object for tracking connection operations.
-#'               If NULL, no logging is performed.
-#'
-#' @details
-#' This function safely returns a connection to the pool without closing the entire pool.
-#' It validates that the connection exists and is valid before returning it.
-#' This is the preferred method for handling connections after queries in a pool-based
-#' application.
-#'
-#' If a connection is not explicitly provided, the function will look for a connection
-#' in the session environment first, then fall back to the global environment.
-#'
-#' @return Invisible NULL
-#'
-#' @importFrom DBI dbIsValid
-#' @importFrom pool poolReturn
-#' @noRd
-#' @keywords internal
-db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
-  if (is.null(conn)) {
-    if (!is.null(session) && exists("db_conn", envir = session)) {
-      conn <- get("db_conn", envir = session)
-    } else if (exists("db_conn", envir = .GlobalEnv)) {
-      conn <- get("db_conn", envir = .GlobalEnv)
-    }
-  }
-  if (!is.null(conn) && DBI::dbIsValid(conn)) {
-    pool::poolReturn(conn)
-    if (!is.null(session) && exists("db_conn", envir = session)) {
-      rm("db_conn", envir = session)
-    } else if (exists("db_conn", envir = .GlobalEnv)) {
-      rm("db_conn", envir = .GlobalEnv)
-    }
-    if (!is.null(logger)) {
-      logger$log_message("Released connection back to pool", "INFO", "DATABASE")
-    }
-  }
-  invisible(NULL)
-}
 
 #' Database Operations Class
 #'
 #' @description
 #' R6 Class for managing database operations related to survey data storage
-#' and retrieval using PostgreSQL. Includes automatic tracking of creation date,
-#' update date, session ID, and IP address.
+#' and retrieval using MySQL and other DBI-compatible databases. Includes automatic 
+#' tracking of creation date, update date, session ID, and IP address.
 #'
 #' @details
 #' This class handles all database interactions for survey data, including:
@@ -166,7 +134,6 @@ db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
 #' @import R6
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
 #' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
-#' @importFrom pool poolCheckout poolReturn
 #' @importFrom shiny getDefaultReactiveDomain parseQueryString
 db_ops <- R6::R6Class(
   "Database Operations",
@@ -174,26 +141,24 @@ db_ops <- R6::R6Class(
     #' @field session_id Unique identifier for the current session
     session_id = NULL,
 
-    #' @field pool Database connection pool
-    pool = NULL,
+    #' @field conn Database connection
+    conn = NULL,
 
     #' @field logger Logger instance for tracking operations
     logger = NULL,
 
     #' @description Create a new Database Operations instance
-    #' @param pool Pool object. Database connection pool
+    #' @param conn Connection object. Database connection
     #' @param session_id Character. Unique identifier for the current session
     #' @param logger survey_logger object. Logger instance for tracking operations
-    initialize = function(pool, session_id, logger) {
-      if (is.null(pool)) {
-        logger$log_message("Database pool cannot be NULL", "ERROR", "DATABASE")
-        stop("Database pool is required")
+    initialize = function(conn, session_id, logger) {
+      if (is.null(conn)) {
+        logger$log_message("Database connection cannot be NULL", "ERROR", "DATABASE")
+        stop("Database connection is required")
       }
-      self$pool <- pool
+      self$conn <- conn
       self$session_id <- session_id
       self$logger <- logger
-
-      private$init_tracking_triggers()
     },
 
     #' @description Execute a database operation with transaction handling
@@ -201,29 +166,22 @@ db_ops <- R6::R6Class(
     #' @param error_message Character. Message to display if operation fails
     #' @return Result of the operation or error message if failed
     operate = function(operation, error_message) {
-      if (is.null(self$pool)) {
-        self$logger$log_message("Database pool is not initialized", "ERROR", "DATABASE")
-        stop("Database pool not initialized")
+      if (is.null(self$conn) || !DBI::dbIsValid(self$conn)) {
+        self$logger$log_message("Database connection is not valid", "ERROR", "DATABASE")
+        stop("Database connection not valid")
       }
 
-      conn <- NULL
       tryCatch({
-        conn <- pool::poolCheckout(self$pool)
-        if (is.null(conn) || !DBI::dbIsValid(conn)) {
-          self$logger$log_message("Failed to obtain valid database connection", "ERROR", "DATABASE")
-          stop("Failed to obtain valid database connection")
-        }
-
-        DBI::dbBegin(conn)
-        result <- operation(conn)
-        DBI::dbCommit(conn)
+        DBI::dbBegin(self$conn)
+        result <- operation(self$conn)
+        DBI::dbCommit(self$conn)
 
         return(result)
       }, error = function(e) {
-        if (!is.null(conn) && DBI::dbIsValid(conn)) {
+        if (DBI::dbIsValid(self$conn)) {
           tryCatch(
             {
-              DBI::dbRollback(conn)
+              DBI::dbRollback(self$conn)
               self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
             },
             error = function(rollback_error) {
@@ -241,21 +199,6 @@ db_ops <- R6::R6Class(
           "DATABASE"
         )
         stop(sprintf("%s: %s", error_message, e$message))
-      }, finally = {
-        if (!is.null(conn)) {
-          tryCatch(
-            {
-              pool::poolReturn(conn)
-            },
-            error = function(return_error) {
-              self$logger$log_message(
-                sprintf("Error returning connection to pool: %s", return_error$message),
-                "ERROR",
-                "DATABASE"
-              )
-            }
-          )
-        }
       })
     },
 
@@ -264,21 +207,21 @@ db_ops <- R6::R6Class(
     #' @return Invisible NULL
     ensure_tracking_columns = function(table_name) {
       self$operate(function(conn) {
-        # Get existing columns
+        # Get existing columns (MySQL compatible)
         cols_query <- sprintf(
-          "SELECT column_name, data_type
+          "SELECT COLUMN_NAME as column_name, DATA_TYPE as data_type
            FROM information_schema.columns
-           WHERE table_name = '%s';",
+           WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
-        # Define tracking columns with their types
+        # Define tracking columns with their types (MySQL compatible)
         tracking_cols <- list(
-          date_created = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-          date_updated = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+          date_created = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+          date_updated = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
           session_id = "TEXT",
-          ip_address = "INET"
+          ip_address = "VARCHAR(45)"
         )
 
         # Add missing tracking columns
@@ -295,7 +238,7 @@ db_ops <- R6::R6Class(
             # For existing rows, set date_created and date_updated to current timestamp
             if (col_name %in% c("date_created", "date_updated")) {
               update_query <- sprintf(
-                "UPDATE %s SET %s = CURRENT_TIMESTAMP WHERE %s IS NULL;",
+                "UPDATE %s SET %s = NOW() WHERE %s IS NULL;",
                 DBI::dbQuoteIdentifier(conn, table_name),
                 DBI::dbQuoteIdentifier(conn, col_name),
                 DBI::dbQuoteIdentifier(conn, col_name)
@@ -311,32 +254,8 @@ db_ops <- R6::R6Class(
           }
         }
 
-        # Check if trigger exists
-        trigger_name <- paste0("update_date_updated_", table_name)
-        trigger_exists_query <- sprintf(
-          "SELECT 1 FROM pg_trigger WHERE tgname = '%s'",
-          trigger_name
-        )
-        trigger_exists <- nrow(DBI::dbGetQuery(conn, trigger_exists_query)) > 0
-
-        # Create trigger if it doesn't exist
-        if (!trigger_exists) {
-          trigger_query <- sprintf(
-            "CREATE TRIGGER %s
-             BEFORE UPDATE ON %s
-             FOR EACH ROW
-             EXECUTE FUNCTION update_date_updated();",
-            trigger_name,
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
-          DBI::dbExecute(conn, trigger_query)
-
-          self$logger$log_message(
-            sprintf("Added update trigger to table '%s'", table_name),
-            "INFO",
-            "DATABASE"
-          )
-        }
+        # MySQL uses ON UPDATE CURRENT_TIMESTAMP in column definition instead of triggers
+        # No additional trigger setup needed
 
         invisible(NULL)
       }, sprintf("Failed to ensure tracking columns for table '%s'", table_name))
@@ -370,19 +289,19 @@ db_ops <- R6::R6Class(
         table_exists <- DBI::dbExistsTable(conn, table_name)
 
         if (!table_exists) {
-          # Define tracking columns
+          # Define tracking columns (MySQL compatible)
           tracking_cols <- c(
+            "date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
             "session_id TEXT",
-            "ip_address INET",
-            "date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-            "date_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
+            "ip_address VARCHAR(45)"
           )
 
           col_defs <- private$generate_column_definitions(data, survey_obj)
 
           create_query <- sprintf(
             "CREATE TABLE %s (
-            id SERIAL PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
             %s,
             %s
           );",
@@ -392,16 +311,8 @@ db_ops <- R6::R6Class(
           )
           DBI::dbExecute(conn, create_query)
 
-          # Create trigger for automatic date_updated
-          trigger_query <- sprintf(
-            "CREATE TRIGGER update_date_updated_%s
-           BEFORE UPDATE ON %s
-           FOR EACH ROW
-           EXECUTE FUNCTION update_date_updated();",
-            table_name,
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
-          DBI::dbExecute(conn, trigger_query)
+          # MySQL uses ON UPDATE CURRENT_TIMESTAMP in column definition
+          # No trigger needed
 
           self$logger$log_message(
             sprintf("Created survey table '%s'", table_name),
@@ -412,16 +323,16 @@ db_ops <- R6::R6Class(
           # For existing table, ensure tracking columns
           self$ensure_tracking_columns(table_name)
 
-          # Add any missing columns
+          # Add any missing columns (MySQL compatible)
           cols_query <- sprintf(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = '%s';",
+            "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
             table_name
           )
           existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
           for (col in names(data)) {
             if (!col %in% existing_cols) {
-              col_type <- private$get_postgres_type(data[[col]], col, survey_obj)
+              col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
               alter_query <- sprintf(
                 "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
                 DBI::dbQuoteIdentifier(conn, table_name),
@@ -477,11 +388,11 @@ db_ops <- R6::R6Class(
         data$session_id <- self$session_id
         data$ip_address <- self$get_client_ip()
 
-        # Check for new columns
+        # Check for new columns (MySQL compatible)
         cols_query <- sprintf(
-          "SELECT column_name, data_type
+          "SELECT COLUMN_NAME as column_name, DATA_TYPE as data_type
            FROM information_schema.columns
-           WHERE table_name = '%s';",
+           WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
@@ -491,7 +402,7 @@ db_ops <- R6::R6Class(
         # Add new columns if needed
         for (col in new_cols) {
           if (!col %in% c("date_created", "date_updated", "session_id", "ip_address")) {
-            col_type <- private$get_postgres_type(data[[col]])
+            col_type <- private$get_mysql_type(data[[col]])
             alter_query <- sprintf(
               "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
               DBI::dbQuoteIdentifier(conn, table_name),
@@ -765,20 +676,6 @@ db_ops <- R6::R6Class(
     }
   ),
   private = list(
-    init_tracking_triggers = function() {
-      self$operate(function(conn) {
-        # Create trigger function for updating date_updated
-        trigger_func_query <- "
-          CREATE OR REPLACE FUNCTION update_date_updated()
-          RETURNS TRIGGER AS $$
-          BEGIN
-            NEW.date_updated = CURRENT_TIMESTAMP;
-            RETURN NEW;
-          END;
-          $$ LANGUAGE plpgsql;"
-        DBI::dbExecute(conn, trigger_func_query)
-      }, "Failed to initialize tracking triggers")
-    },
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
@@ -827,7 +724,7 @@ db_ops <- R6::R6Class(
 
       return(FALSE)
     },
-    get_postgres_type = function(vector, field_name = NULL, survey_obj = NULL) {
+    get_mysql_type = function(vector, field_name = NULL, survey_obj = NULL) {
       # First check if field has showOtherItem enabled
       if (!is.null(survey_obj) && !is.null(field_name)) {
         if (private$has_other_option(survey_obj, field_name)) {
@@ -840,33 +737,33 @@ db_ops <- R6::R6Class(
         }
       }
 
-      # Regular type detection for other fields
+      # MySQL type detection
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {
           return("BIGINT")
         }
-        return("NUMERIC")
+        return("DECIMAL(10,2)")
       }
       if (is.logical(vector)) {
         return("BOOLEAN")
       }
       if (inherits(vector, "POSIXt")) {
-        return("TIMESTAMP WITH TIME ZONE")
+        return("TIMESTAMP")
       }
       if (is.factor(vector)) {
         return("TEXT")
       }
       if (is.list(vector)) {
-        return("JSONB")
+        return("JSON")
       }
       return("TEXT")
     },
     generate_column_definitions = function(data, survey_obj = NULL) {
       vapply(names(data), function(col) {
-        type <- private$get_postgres_type(data[[col]], col, survey_obj)
+        type <- private$get_mysql_type(data[[col]], col, survey_obj)
         sprintf(
           "%s %s",
-          DBI::dbQuoteIdentifier(self$pool, col),
+          DBI::dbQuoteIdentifier(self$conn, col),
           type
         )
       }, character(1))

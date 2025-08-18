@@ -4,8 +4,8 @@ Version: 0.1.0
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
 Description: The goal of this package is to integrate 'SurveyJS' <https://surveyjs.io/> 
-    with 'Shiny' <https://shiny.posit.co/> to interface with a 'PostgreSQL' database
-    <https://www.postgresql.org/> and create dynamic user experiences.
+    with 'Shiny' <https://shiny.posit.co/> to interface with 'MySQL' and other DBI databases
+    and create dynamic user experiences.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -18,8 +18,7 @@ Imports:
     R6,
     promises,
     future,
-    pool,
-    RPostgres,
+    RMariaDB,
     DBI,
     htmltools,
     sass,
@@ -28,7 +27,9 @@ Imports:
     tools
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    RPostgres,
+    RSQLite
 VignetteBuilder: knitr
 URL: https://dylanpieper.github.io/shinysurveyjs, https://github.com/dylanpieper/shinysurveyjs
 BugReports: https://github.com/dylanpieper/shinysurveyjs/issues
