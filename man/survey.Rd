@@ -16,7 +16,7 @@ survey(
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
   dynamic_config = NULL,
-  cookie_expiration_days = 7,
+  cookie_expiration_days = 0,
   custom_css = NULL,
   suppress_logs = FALSE
 )
@@ -77,8 +77,8 @@ Validates unique entries against existing database records:
 * \code{result_field}: Survey field for warning message (should be hidden)
 }}
 
-\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
-Default: 7.}
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies (experimental).
+Default: 0.}
 
 \item{custom_css}{String. Custom CSS rules to append to the theme.}
 
@@ -89,7 +89,7 @@ A Shiny application object
 }
 \description{
 Creates and deploys a Shiny application for a survey using SurveyJS
-(\url{https://surveyjs.io}) with PostgreSQL database integration. The application handles
+(\url{https://surveyjs.io}) with MySQL and DBI database integration. The application handles
 survey data collection, dynamic fields, and asynchronous logging through a future plan.
 }
 \examples{

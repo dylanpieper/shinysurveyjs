@@ -26,9 +26,3 @@
 
 - Single survey applications continue to work unchanged
 - Existing configurations remain supported
-
----
-
-# shinysurveyjs 0.1.0
-
-* Initial release

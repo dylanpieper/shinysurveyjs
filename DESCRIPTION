@@ -16,8 +16,6 @@ Imports:
     shinycssloaders,
     DT,
     R6,
-    promises,
-    future,
     RMariaDB,
     DBI,
     htmltools,

@@ -150,7 +150,40 @@ function initializeSurvey(data) {
                                     break;
         
                                 default:
-                                    responses[key] = question._param ?? value;
+                                    // Check if this question has showOtherItem enabled
+                                    if (question.showOtherItem) {
+                                        console.log(`Processing field with showOtherItem: ${key}`, {
+                                            value: value,
+                                            valueType: typeof value,
+                                            questionComment: question.comment
+                                        });
+                                        
+                                        // Handle "other" responses separately
+                                        if (typeof value === 'object' && value !== null && 'value' in value && 'other' in value) {
+                                            // SurveyJS structure for other responses: {value: selectedChoice, other: otherText}
+                                            responses[key] = value.value;
+                                            responses[`${key}_other`] = value.other || null;
+                                        } else if (value === 'other' && question.comment) {
+                                            // Alternative structure where "other" is selected and comment contains the text
+                                            responses[key] = value;
+                                            responses[`${key}_other`] = question.comment;
+                                        } else if (typeof value === 'string' && value.startsWith('other:')) {
+                                            // Another possible structure: "other:custom text"
+                                            responses[key] = 'other';
+                                            responses[`${key}_other`] = value.substring(6); // Remove "other:" prefix
+                                        } else if (value === survey.otherValue || (typeof value === 'string' && value === 'other')) {
+                                            // User selected "other" option
+                                            responses[key] = value;
+                                            responses[`${key}_other`] = survey.getOtherValue(key) || null;
+                                        } else {
+                                            // Regular choice selection (not "other") - don't create _other field at all for non-other responses
+                                            responses[key] = question._param ?? value;
+                                            // Don't add _other field for regular responses to avoid empty objects
+                                        }
+                                    } else {
+                                        // Regular field without other option
+                                        responses[key] = question._param ?? value;
+                                    }
                                     break;
                             }
                         }

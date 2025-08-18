@@ -114,22 +114,14 @@ db_conn_close <- function(session, logger = NULL) {
 #'
 #' @description
 #' R6 Class for managing database operations related to survey data storage
-#' and retrieval using MySQL and other DBI-compatible databases. Includes automatic 
-#' tracking of creation date, update date, session ID, and IP address.
+#' and retrieval using MySQL and other DBI-compatible databases.
 #'
 #' @details
 #' This class handles all database interactions for survey data, including:
-#' * Table creation and modification with tracking columns
-#' * Data insertion with automatic timestamp management
-#' * Session and IP tracking
+#' * Table creation and modification
+#' * Data insertion and retrieval
 #' * Transaction management
 #' * Error handling and logging
-#'
-#' Tracking columns automatically added to each table:
-#' * date_created: Timestamp when record was created
-#' * date_updated: Timestamp when record was last updated
-#' * session_id: Shiny session identifier
-#' * ip_address: Client IP address
 #'
 #' @import R6
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
@@ -138,8 +130,6 @@ db_conn_close <- function(session, logger = NULL) {
 db_ops <- R6::R6Class(
   "Database Operations",
   public = list(
-    #' @field session_id Unique identifier for the current session
-    session_id = NULL,
 
     #' @field conn Database connection
     conn = NULL,
@@ -149,15 +139,13 @@ db_ops <- R6::R6Class(
 
     #' @description Create a new Database Operations instance
     #' @param conn Connection object. Database connection
-    #' @param session_id Character. Unique identifier for the current session
     #' @param logger survey_logger object. Logger instance for tracking operations
-    initialize = function(conn, session_id, logger) {
+    initialize = function(conn, logger) {
       if (is.null(conn)) {
         logger$log_message("Database connection cannot be NULL", "ERROR", "DATABASE")
         stop("Database connection is required")
       }
       self$conn <- conn
-      self$session_id <- session_id
       self$logger <- logger
     },
 
@@ -193,75 +181,21 @@ db_ops <- R6::R6Class(
             }
           )
         }
-        self$logger$log_message(
-          sprintf("%s: %s", error_message, e$message),
-          "ERROR",
-          "DATABASE"
+        # Log database errors with SQL statement if available
+        # Force log for critical operations (connection, table creation)
+        force_critical <- grepl("connection|initialize|create", error_message, ignore.case = TRUE)
+        self$logger$log_entry(
+          survey_id = NA,  # Will be set by calling function if available
+          message = sprintf("%s: %s", error_message, e$message),
+          sql_statement = self$logger$last_sql_statement,
+          force_log = force_critical
         )
         stop(sprintf("%s: %s", error_message, e$message))
       })
     },
 
-    #' @description Ensure tracking columns exist in a table
-    #' @param table_name Character. Name of the table to check/modify
-    #' @return Invisible NULL
-    ensure_tracking_columns = function(table_name) {
-      self$operate(function(conn) {
-        # Get existing columns (MySQL compatible)
-        cols_query <- sprintf(
-          "SELECT COLUMN_NAME as column_name, DATA_TYPE as data_type
-           FROM information_schema.columns
-           WHERE table_name = '%s' AND table_schema = DATABASE();",
-          table_name
-        )
-        existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
-        # Define tracking columns with their types (MySQL compatible)
-        tracking_cols <- list(
-          date_created = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-          date_updated = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-          session_id = "TEXT",
-          ip_address = "VARCHAR(45)"
-        )
-
-        # Add missing tracking columns
-        for (col_name in names(tracking_cols)) {
-          if (!col_name %in% existing_cols$column_name) {
-            alter_query <- sprintf(
-              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-              DBI::dbQuoteIdentifier(conn, table_name),
-              DBI::dbQuoteIdentifier(conn, col_name),
-              tracking_cols[[col_name]]
-            )
-            DBI::dbExecute(conn, alter_query)
-
-            # For existing rows, set date_created and date_updated to current timestamp
-            if (col_name %in% c("date_created", "date_updated")) {
-              update_query <- sprintf(
-                "UPDATE %s SET %s = NOW() WHERE %s IS NULL;",
-                DBI::dbQuoteIdentifier(conn, table_name),
-                DBI::dbQuoteIdentifier(conn, col_name),
-                DBI::dbQuoteIdentifier(conn, col_name)
-              )
-              DBI::dbExecute(conn, update_query)
-            }
-
-            self$logger$log_message(
-              sprintf("Added column '%s' to table '%s'", col_name, table_name),
-              "INFO",
-              "DATABASE"
-            )
-          }
-        }
-
-        # MySQL uses ON UPDATE CURRENT_TIMESTAMP in column definition instead of triggers
-        # No additional trigger setup needed
-
-        invisible(NULL)
-      }, sprintf("Failed to ensure tracking columns for table '%s'", table_name))
-    },
-
-    #' @description Create new survey data table with tracking columns
+    #' @description Create new survey data table
     #' @param write_table Character. Name of the table to create
     #' @param data data.frame. Data frame containing the schema for the new table
     #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
@@ -289,26 +223,17 @@ db_ops <- R6::R6Class(
         table_exists <- DBI::dbExistsTable(conn, table_name)
 
         if (!table_exists) {
-          # Define tracking columns (MySQL compatible)
-          tracking_cols <- c(
-            "date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-            "date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-            "session_id TEXT",
-            "ip_address VARCHAR(45)"
-          )
-
           col_defs <- private$generate_column_definitions(data, survey_obj)
 
           create_query <- sprintf(
             "CREATE TABLE %s (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            %s,
             %s
           );",
             DBI::dbQuoteIdentifier(conn, table_name),
-            paste(col_defs, collapse = ", "),
-            paste(tracking_cols, collapse = ", ")
+            paste(col_defs, collapse = ", ")
           )
+          self$logger$update_last_sql_statement(create_query)
           DBI::dbExecute(conn, create_query)
 
           # MySQL uses ON UPDATE CURRENT_TIMESTAMP in column definition
@@ -320,31 +245,92 @@ db_ops <- R6::R6Class(
             "DATABASE"
           )
         } else {
-          # For existing table, ensure tracking columns
-          self$ensure_tracking_columns(table_name)
+          # Table already exists, no additional setup needed
 
           # Add any missing columns (MySQL compatible)
           cols_query <- sprintf(
             "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
             table_name
           )
+          self$logger$update_last_sql_statement(cols_query)
           existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
+          # Get fresh list of existing columns for each iteration
           for (col in names(data)) {
-            if (!col %in% existing_cols) {
-              col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
-              alter_query <- sprintf(
-                "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-                DBI::dbQuoteIdentifier(conn, table_name),
-                DBI::dbQuoteIdentifier(conn, col),
-                col_type
-              )
-              DBI::dbExecute(conn, alter_query)
-              self$logger$log_message(
-                sprintf("Added column '%s' to table '%s'", col, table_name),
-                "INFO",
-                "DATABASE"
-              )
+            # Refresh existing columns list to include any columns added in previous iterations
+            fresh_cols_query <- sprintf(
+              "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
+              table_name
+            )
+            self$logger$update_last_sql_statement(fresh_cols_query)
+            current_existing_cols <- DBI::dbGetQuery(conn, fresh_cols_query)$column_name
+            
+            if (!col %in% current_existing_cols) {
+              # Check if this field has showOtherItem enabled
+              if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+                # Add main column
+                main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
+                alter_query <- sprintf(
+                  "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+                  DBI::dbQuoteIdentifier(conn, table_name),
+                  DBI::dbQuoteIdentifier(conn, col),
+                  main_type
+                )
+                self$logger$update_last_sql_statement(alter_query)
+                DBI::dbExecute(conn, alter_query)
+                self$logger$log_message(
+                  sprintf("Added main column '%s' to table '%s'", col, table_name),
+                  "INFO",
+                  "DATABASE"
+                )
+                
+                # Add _other column - check existence with direct query
+                other_col_name <- paste0(col, "_other")
+                other_exists_query <- sprintf(
+                  "SELECT COUNT(*) as count FROM information_schema.columns WHERE table_name = '%s' AND column_name = '%s' AND table_schema = DATABASE();",
+                  table_name,
+                  other_col_name
+                )
+                self$logger$update_last_sql_statement(other_exists_query)
+                other_exists_count <- DBI::dbGetQuery(conn, other_exists_query)$count
+                
+                if (other_exists_count == 0) {
+                  alter_query_other <- sprintf(
+                    "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s TEXT;",
+                    DBI::dbQuoteIdentifier(conn, table_name),
+                    DBI::dbQuoteIdentifier(conn, other_col_name)
+                  )
+                  self$logger$update_last_sql_statement(alter_query_other)
+                  DBI::dbExecute(conn, alter_query_other)
+                  self$logger$log_message(
+                    sprintf("Added other column '%s' to table '%s'", other_col_name, table_name),
+                    "INFO",
+                    "DATABASE"
+                  )
+                } else {
+                  self$logger$log_message(
+                    sprintf("Other column '%s' already exists in table '%s', skipping", other_col_name, table_name),
+                    "INFO",
+                    "DATABASE"
+                  )
+                }
+              } else {
+                # Regular field without other option
+                col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
+                alter_query <- sprintf(
+                  "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+                  DBI::dbQuoteIdentifier(conn, table_name),
+                  DBI::dbQuoteIdentifier(conn, col),
+                  col_type
+                )
+                self$logger$update_last_sql_statement(alter_query)
+                DBI::dbExecute(conn, alter_query)
+                self$logger$log_message(
+                  sprintf("Added column '%s' to table '%s'", col, table_name),
+                  "INFO",
+                  "DATABASE"
+                )
+              }
             }
           }
         }
@@ -381,12 +367,7 @@ db_ops <- R6::R6Class(
           stop(sprintf("Table '%s' does not exist", table_name))
         }
 
-        # Ensure tracking columns exist
-        self$ensure_tracking_columns(table_name)
-
-        # Add tracking data
-        data$session_id <- self$session_id
-        data$ip_address <- self$get_client_ip()
+        # Data is ready for insertion without tracking columns
 
         # Check for new columns (MySQL compatible)
         cols_query <- sprintf(
@@ -395,30 +376,52 @@ db_ops <- R6::R6Class(
            WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
+        self$logger$update_last_sql_statement(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
         new_cols <- setdiff(names(data), existing_cols$column_name)
 
         # Add new columns if needed
         for (col in new_cols) {
-          if (!col %in% c("date_created", "date_updated", "session_id", "ip_address")) {
-            col_type <- private$get_mysql_type(data[[col]])
-            alter_query <- sprintf(
-              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-              DBI::dbQuoteIdentifier(conn, table_name),
-              DBI::dbQuoteIdentifier(conn, col),
-              col_type
-            )
-            DBI::dbExecute(conn, alter_query)
-            self$logger$log_message(
-              sprintf("Added column '%s' to '%s'", col, table_name),
-              "INFO",
-              "DATABASE"
-            )
-          }
+          col_type <- private$get_mysql_type(data[[col]])
+          alter_query <- sprintf(
+            "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
+            DBI::dbQuoteIdentifier(conn, table_name),
+            DBI::dbQuoteIdentifier(conn, col),
+            col_type
+          )
+          self$logger$update_last_sql_statement(alter_query)
+          DBI::dbExecute(conn, alter_query)
+          self$logger$log_message(
+            sprintf("Added column '%s' to '%s'", col, table_name),
+            "INFO",
+            "DATABASE"
+          )
         }
 
-        # Insert data
+        # Insert data - construct actual INSERT statement for logging
+        columns <- paste(DBI::dbQuoteIdentifier(conn, names(data)), collapse = ", ")
+        values_list <- apply(data, 1, function(row) {
+          values <- vapply(row, function(val) {
+            if (is.na(val) || is.null(val)) {
+              "NULL"
+            } else if (is.character(val)) {
+              DBI::dbQuoteString(conn, val)
+            } else {
+              as.character(val)
+            }
+          }, character(1))
+          paste("(", paste(values, collapse = ", "), ")")
+        })
+        
+        insert_statement <- sprintf(
+          "INSERT INTO %s (%s) VALUES %s",
+          DBI::dbQuoteIdentifier(conn, table_name),
+          columns,
+          paste(values_list, collapse = ", ")
+        )
+        self$logger$update_last_sql_statement(insert_statement)
+        
         DBI::dbWriteTable(
           conn,
           name = table_name,
@@ -444,9 +447,10 @@ db_ops <- R6::R6Class(
     #' @param order_by Character vector. Columns to order by
     #' @param desc Logical. If TRUE, sort in descending order
     #' @param limit Numeric. Maximum number of rows to return (NULL for all rows)
+    #' @param update_last_sql Logical. If TRUE, update logger's last_sql_statement (default: TRUE)
     #' @return data.frame. The requested data
     read_table = function(table_name, columns = NULL, filters = NULL,
-                          order_by = NULL, desc = FALSE, limit = NULL) {
+                          order_by = NULL, desc = FALSE, limit = NULL, update_last_sql = TRUE) {
       if (is.null(table_name) || !is.character(table_name)) {
         self$logger$log_message(paste("Invalid table_name parameter:", table_name), "ERROR", "DATABASE")
         stop("Invalid table name")
@@ -549,6 +553,9 @@ db_ops <- R6::R6Class(
           limit_clause
         )
 
+        if (update_last_sql) {
+          self$logger$update_last_sql_statement(query)
+        }
         result <- DBI::dbGetQuery(conn, query)
 
         self$logger$log_message(
@@ -613,6 +620,7 @@ db_ops <- R6::R6Class(
           id
         )
 
+        self$logger$update_last_sql_statement(query)
         rows_affected <- DBI::dbExecute(conn, query)
 
         if (rows_affected == 0) {
@@ -631,49 +639,8 @@ db_ops <- R6::R6Class(
 
         invisible(NULL)
       }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
-    },
-
-    #' Get Client IP Address
-    #'
-    #' @description
-    #' Retrieves the client IP address from HTTP request headers in order of preference.
-    #' This method checks multiple headers to handle scenarios involving proxies and load balancers.
-    #'
-    #' @details
-    #' The method checks the following headers in order:
-    #' 1. X-Real-IP
-    #' 2. X-Forwarded-For (takes first IP if multiple are present)
-    #' 3. REMOTE_ADDR
-    #'
-    #' If no IP address is found in any header, returns "0.0.0.0" as a fallback.
-    #'
-    #' @return Character string containing the client IP address. Returns "0.0.0.0" if no IP address can be determined.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Inside a Shiny server function
-    #' server <- function(input, output, session) {
-    #'   db_ops <- db_ops$new(pool, session$token, logger)
-    #'   client_ip <- db_ops$get_client_ip()
-    #' }
-    #' }
-    #'
-    #' @importFrom shiny parseQueryString getDefaultReactiveDomain
-    get_client_ip = function() {
-      headers <- as.list(shiny::parseQueryString(shiny::getDefaultReactiveDomain()$REQUEST))
-
-      ip <- headers$`X-Real-IP` %||%
-        headers$`X-Forwarded-For` %||%
-        headers$REMOTE_ADDR %||%
-        "0.0.0.0"
-
-      # If X-Forwarded-For contains multiple IPs, get the first one
-      if (grepl(",", ip)) {
-        ip <- trimws(strsplit(ip, ",")[[1]][1])
-      }
-
-      return(ip)
     }
+
   ),
   private = list(
     sanitize_survey_table_name = function(name) {
@@ -724,20 +691,50 @@ db_ops <- R6::R6Class(
 
       return(FALSE)
     },
-    get_mysql_type = function(vector, field_name = NULL, survey_obj = NULL) {
-      # First check if field has showOtherItem enabled
-      if (!is.null(survey_obj) && !is.null(field_name)) {
-        if (private$has_other_option(survey_obj, field_name)) {
-          self$logger$log_message(
-            sprintf("Field '%s' has showOtherItem enabled, using TEXT type", field_name),
-            "INFO",
-            "DATABASE"
-          )
-          return("TEXT")
+    get_fields_with_other_option = function(survey_obj) {
+      if (is.null(survey_obj)) {
+        return(character(0))
+      }
+      
+      fields_with_other <- character(0)
+      
+      # Helper function to recursively search elements
+      search_elements <- function(elements) {
+        for (element in elements) {
+          if (!is.null(element$name) &&
+            !is.null(element$showOtherItem) &&
+            element$showOtherItem) {
+            fields_with_other <<- c(fields_with_other, element$name)
+          }
+          
+          # Check nested elements (e.g., in panels)
+          if (!is.null(element$elements)) {
+            search_elements(element$elements)
+          }
         }
       }
-
-      # MySQL type detection
+      
+      # Search through all pages
+      if (!is.null(survey_obj$pages)) {
+        for (page in survey_obj$pages) {
+          if (!is.null(page$elements)) {
+            search_elements(page$elements)
+          }
+        }
+      }
+      
+      # Also search direct elements (if not using pages)
+      if (!is.null(survey_obj$elements)) {
+        search_elements(survey_obj$elements)
+      }
+      
+      return(unique(fields_with_other))
+    },
+    get_mysql_type = function(vector, field_name = NULL, survey_obj = NULL) {
+      # Note: Fields with showOtherItem are now handled separately in generate_column_definitions
+      # This function only determines type for regular fields or when called independently
+      
+      # MySQL type detection based on data
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {
           return("BIGINT")
@@ -758,15 +755,67 @@ db_ops <- R6::R6Class(
       }
       return("TEXT")
     },
+    get_mysql_type_for_choices = function(vector, field_name = NULL, survey_obj = NULL) {
+      # For fields with showOtherItem, determine type based on expected choice values
+      # Most survey fields with choices will be numeric IDs, but check the actual data
+      if (is.numeric(vector)) {
+        if (all(vector == floor(vector), na.rm = TRUE)) {
+          return("BIGINT")
+        }
+        return("DECIMAL(10,2)")
+      }
+      # Default to TEXT for choice fields that might contain mixed types
+      return("TEXT")
+    },
     generate_column_definitions = function(data, survey_obj = NULL) {
-      vapply(names(data), function(col) {
-        type <- private$get_mysql_type(data[[col]], col, survey_obj)
-        sprintf(
-          "%s %s",
-          DBI::dbQuoteIdentifier(self$conn, col),
-          type
-        )
-      }, character(1))
+      col_defs <- c()
+      created_cols <- character(0)  # Track all created columns (main and _other)
+      
+      for (col in unique(names(data))) {  # Use unique() to prevent processing duplicate column names
+        # Skip if main column already created
+        if (col %in% created_cols) {
+          next
+        }
+        
+        # Check if this field has showOtherItem enabled
+        if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+          # Create main column with appropriate type for the choices (usually INT)
+          main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
+          col_defs <- c(col_defs, sprintf(
+            "%s %s",
+            DBI::dbQuoteIdentifier(self$conn, col),
+            main_type
+          ))
+          created_cols <- c(created_cols, col)
+          
+          # Create separate column for "other" responses - check for duplicates
+          other_col_name <- paste0(col, "_other")
+          if (!other_col_name %in% created_cols) {
+            col_defs <- c(col_defs, sprintf(
+              "%s TEXT",
+              DBI::dbQuoteIdentifier(self$conn, other_col_name)
+            ))
+            created_cols <- c(created_cols, other_col_name)
+            
+            self$logger$log_message(
+              sprintf("Field '%s' has showOtherItem enabled, creating separate '_other' column", col),
+              "INFO",
+              "DATABASE"
+            )
+          }
+        } else {
+          # Regular field without other option
+          type <- private$get_mysql_type(data[[col]], col, survey_obj)
+          col_defs <- c(col_defs, sprintf(
+            "%s %s",
+            DBI::dbQuoteIdentifier(self$conn, col),
+            type
+          ))
+          created_cols <- c(created_cols, col)
+        }
+      }
+      
+      return(col_defs)
     }
   )
 )

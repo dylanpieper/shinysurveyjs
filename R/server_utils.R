@@ -214,7 +214,7 @@ server_setup <- function(session, db_config, app_conn, survey_logger, db_ops, su
   # Initialize database operations with error logging
   db_operations <- tryCatch(
     {
-      db_ops$new(app_conn, session$token, logger)
+      db_ops$new(app_conn, logger)
     },
     error = function(e) {
       msg <- sprintf("Failed to initialize db_ops: %s", e$message)
@@ -474,55 +474,4 @@ parse_query <- function(input) {
   return(result)
 }
 
-#' Update Survey Response Duration
-#'
-#' Updates the duration_save field for a survey response identified by session ID.
-#' Records time spent completing the survey before final submission.
-#'
-#' @param db_ops Database operations object for query execution
-#' @param table_name String. Survey response data table name
-#' @param session_id String. Shiny session token identifying the response
-#' @param duration_save Numeric. Survey completion duration in seconds
-#' @param logger Logger object. Records database operations and errors
-#'
-#' @return Invisible NULL
-#'
-#' @noRd
-#' @keywords internal
-update_duration_save <- function(db_ops, table_name, session_id, duration_save, logger) {
-  # Get the row ID using the existing connection
-  row_id <- db_ops$read_table(
-    table_name,
-    columns = "id",
-    filters = list(session_id = session_id),
-    order_by = "id",
-    desc = TRUE,
-    limit = 1
-  )$id
-
-  tryCatch(
-    {
-      # Perform the update using the existing db_ops instance
-      db_ops$update_by_id(
-        table_name,
-        row_id,
-        list(duration_save = duration_save)
-      )
-
-      logger$log_message(
-        sprintf("Updated duration_save for row %d", row_id),
-        "INFO",
-        "DATABASE"
-      )
-    },
-    error = function(e) {
-      logger$log_message(
-        sprintf("Failed to update duration_save: %s", e$message),
-        "ERROR",
-        "DATABASE"
-      )
-    }
-  )
-
-  invisible(NULL)
-}
+# update_duration_save function removed - timing data now handled in log table

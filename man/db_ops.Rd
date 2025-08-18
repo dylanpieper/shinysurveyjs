@@ -5,48 +5,21 @@
 \title{Database Operations Class}
 \description{
 R6 Class for managing database operations related to survey data storage
-and retrieval using PostgreSQL. Includes automatic tracking of creation date,
-update date, session ID, and IP address.
+and retrieval using MySQL and other DBI-compatible databases.
 }
 \details{
 This class handles all database interactions for survey data, including:
 \itemize{
-\item Table creation and modification with tracking columns
-\item Data insertion with automatic timestamp management
-\item Session and IP tracking
+\item Table creation and modification
+\item Data insertion and retrieval
 \item Transaction management
 \item Error handling and logging
 }
-
-Tracking columns automatically added to each table:
-\itemize{
-\item date_created: Timestamp when record was created
-\item date_updated: Timestamp when record was last updated
-\item session_id: Shiny session identifier
-\item ip_address: Client IP address
-}
-}
-\examples{
-
-## ------------------------------------------------
-## Method `db_ops$get_client_ip`
-## ------------------------------------------------
-
-\dontrun{
-# Inside a Shiny server function
-server <- function(input, output, session) {
-  db_ops <- db_ops$new(pool, session$token, logger)
-  client_ip <- db_ops$get_client_ip()
-}
-}
-
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{session_id}}{Unique identifier for the current session}
-
-\item{\code{pool}}{Database connection pool}
+\item{\code{conn}}{Database connection}
 
 \item{\code{logger}}{Logger instance for tracking operations}
 }
@@ -57,12 +30,10 @@ server <- function(input, output, session) {
 \itemize{
 \item \href{#method-Database Operations-new}{\code{db_ops$new()}}
 \item \href{#method-Database Operations-operate}{\code{db_ops$operate()}}
-\item \href{#method-Database Operations-ensure_tracking_columns}{\code{db_ops$ensure_tracking_columns()}}
 \item \href{#method-Database Operations-create_survey_table}{\code{db_ops$create_survey_table()}}
 \item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
 \item \href{#method-Database Operations-read_table}{\code{db_ops$read_table()}}
 \item \href{#method-Database Operations-update_by_id}{\code{db_ops$update_by_id()}}
-\item \href{#method-Database Operations-get_client_ip}{\code{db_ops$get_client_ip()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
@@ -72,15 +43,13 @@ server <- function(input, output, session) {
 \subsection{Method \code{new()}}{
 Create a new Database Operations instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$new(pool, session_id, logger)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$new(conn, logger)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pool}}{Pool object. Database connection pool}
-
-\item{\code{session_id}}{Character. Unique identifier for the current session}
+\item{\code{conn}}{Connection object. Database connection}
 
 \item{\code{logger}}{survey_logger object. Logger instance for tracking operations}
 }
@@ -110,30 +79,10 @@ Result of the operation or error message if failed
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-ensure_tracking_columns"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-ensure_tracking_columns}{}}}
-\subsection{Method \code{ensure_tracking_columns()}}{
-Ensure tracking columns exist in a table
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$ensure_tracking_columns(table_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{table_name}}{Character. Name of the table to check/modify}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Invisible NULL
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-create_survey_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-create_survey_table}{}}}
 \subsection{Method \code{create_survey_table()}}{
-Create new survey data table with tracking columns
+Create new survey data table
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data, survey_obj = NULL)}\if{html}{\out{</div>}}
 }
@@ -197,7 +146,8 @@ Read data from a survey table with optional filtering
   filters = NULL,
   order_by = NULL,
   desc = FALSE,
-  limit = NULL
+  limit = NULL,
+  update_last_sql = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -215,6 +165,8 @@ Read data from a survey table with optional filtering
 \item{\code{desc}}{Logical. If TRUE, sort in descending order}
 
 \item{\code{limit}}{Numeric. Maximum number of rows to return (NULL for all rows)}
+
+\item{\code{update_last_sql}}{Logical. If TRUE, update logger's last_sql_statement (default: TRUE)}
 }
 \if{html}{\out{</div>}}
 }
@@ -244,48 +196,7 @@ Update specific columns in a table for a given row ID
 }
 \subsection{Returns}{
 Invisible(NULL)
-Get Client IP Address
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Database Operations-get_client_ip"></a>}}
-\if{latex}{\out{\hypertarget{method-Database Operations-get_client_ip}{}}}
-\subsection{Method \code{get_client_ip()}}{
-Retrieves the client IP address from HTTP request headers in order of preference.
-This method checks multiple headers to handle scenarios involving proxies and load balancers.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{db_ops$get_client_ip()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-The method checks the following headers in order:
-\enumerate{
-\item X-Real-IP
-\item X-Forwarded-For (takes first IP if multiple are present)
-\item REMOTE_ADDR
-}
-
-If no IP address is found in any header, returns "0.0.0.0" as a fallback.
-}
-
-\subsection{Returns}{
-Character string containing the client IP address. Returns "0.0.0.0" if no IP address can be determined.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-# Inside a Shiny server function
-server <- function(input, output, session) {
-  db_ops <- db_ops$new(pool, session$token, logger)
-  client_ip <- db_ops$get_client_ip()
-}
-}
-
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Database Operations-clone"></a>}}

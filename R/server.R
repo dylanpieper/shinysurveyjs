@@ -397,6 +397,9 @@ survey <- function(json = NULL,
                 logger$log_message("Loaded survey",
                   zone = "SURVEY"
                 )
+                
+                # Mark survey as loaded to enable error logging
+                logger$mark_survey_loaded()
               },
               once = TRUE
             )
@@ -464,6 +467,83 @@ survey <- function(json = NULL,
             "SURVEY"
           )
 
+          # Ensure _other fields exist for all fields with showOtherItem = TRUE
+          survey_def <- isolate(rv$survey_def)
+          if (!is.null(survey_def) && !is.null(db_ops)) {
+            # Get all field names that have showOtherItem enabled
+            # We need to create a temporary helper function since we can't access private methods
+            get_fields_with_other_option <- function(survey_obj) {
+              if (is.null(survey_obj)) {
+                return(character(0))
+              }
+              
+              fields_with_other <- character(0)
+              
+              # Helper function to recursively search elements
+              search_elements <- function(elements) {
+                for (element in elements) {
+                  if (!is.null(element$name) &&
+                    !is.null(element$showOtherItem) &&
+                    element$showOtherItem) {
+                    fields_with_other <<- c(fields_with_other, element$name)
+                  }
+                  
+                  # Check nested elements (e.g., in panels)
+                  if (!is.null(element$elements)) {
+                    search_elements(element$elements)
+                  }
+                }
+              }
+              
+              # Search through all pages
+              if (!is.null(survey_obj$pages)) {
+                for (page in survey_obj$pages) {
+                  if (!is.null(page$elements)) {
+                    search_elements(page$elements)
+                  }
+                }
+              }
+              
+              # Also search direct elements (if not using pages)
+              if (!is.null(survey_obj$elements)) {
+                search_elements(survey_obj$elements)
+              }
+              
+              return(unique(fields_with_other))
+            }
+            
+            other_fields <- get_fields_with_other_option(survey_def)
+            
+            for (field_name in other_fields) {
+              other_field_name <- paste0(field_name, "_other")
+              
+              if (field_name %in% names(parsed_data)) {
+                field_value <- parsed_data[[field_name]]
+                
+                # Check if the main field contains non-numeric text (indicating "other" was selected)
+                if (!is.na(field_value) && is.character(field_value) && 
+                    !grepl("^\\d+$", field_value)) {
+                  # Move the text to the _other column
+                  parsed_data[[other_field_name]] <- field_value
+                  # Set main field to NULL (will be stored as NULL in database)
+                  parsed_data[[field_name]] <- NA
+                  
+                  logger$log_message(
+                    sprintf("Moved 'other' text from '%s' to '%s': %s", 
+                           field_name, other_field_name, field_value),
+                    "INFO",
+                    "SURVEY"
+                  )
+                } else {
+                  # Regular choice selected, ensure _other field exists but is empty
+                  if (!other_field_name %in% names(parsed_data)) {
+                    parsed_data[[other_field_name]] <- NA_character_
+                  }
+                }
+              }
+            }
+          }
+
           # Convert to data frame while preserving all fields including field-other
           parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
         }
@@ -476,9 +556,7 @@ survey <- function(json = NULL,
               stop(msg)
             }
 
-            parsed_data$duration_load <- rv$duration_load
-            parsed_data$duration_complete <- rv$duration_complete
-            parsed_data$duration_save <- as.numeric(0.1)
+            # Remove tracking columns - these will go in the log table instead
 
             # Log the final data structure being sent to database
             logger$log_message(
@@ -506,20 +584,39 @@ survey <- function(json = NULL,
 
             # Then insert the survey data
             result <- db_ops$update_survey_table(table_name, parsed_data)
+            
+            # Get the inserted row ID for logging
+            survey_id <- tryCatch({
+              # Get the most recent insert for this survey
+              recent_row <- db_ops$read_table(
+                table_name, 
+                columns = "id", 
+                order_by = "id", 
+                desc = TRUE, 
+                limit = 1,
+                update_last_sql = FALSE
+              )
+              if (nrow(recent_row) > 0) recent_row$id else NA
+            }, error = function(e) NA)
+            
+            # Get client IP address
+            client_ip <- session$clientData$url_hostname %||% "unknown"
+            
+            # Log the successful submission with timing data
+            logger$log_entry(
+              survey_id = survey_id,
+              ip_address = client_ip,
+              duration_load = rv$duration_load,
+              duration_complete = rv$duration_complete,
+              duration_save = as.numeric(difftime(Sys.time(), rv$complete_time, units = "secs"))
+            )
 
             rv$save_time <- Sys.time()
             rv$duration_save <- as.numeric(
               difftime(rv$save_time, rv$complete_time, units = "secs")
             )
 
-            if (show_response) {
-              parsed_data$duration_load <- rv$duration_load |> round(2)
-              parsed_data$duration_complete <- rv$duration_complete |> round(2)
-              parsed_data$duration_save <- rv$duration_save |> round(2)
-              parsed_data$session_id <- session$token
-              parsed_data$ip_address <- db_ops$get_client_ip()
-              parsed_data$date_created <- Sys.Date()
-            }
+            # Tracking fields removed - timing data now in log table
 
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
@@ -536,20 +633,11 @@ survey <- function(json = NULL,
               shinyjs::hide(id = "savingDataMessage")
             }
 
-            # Update db_config for duration save with correct table name
-            duration_db_config <- db_config
-            duration_db_config$write_table <- table_name
-
-            update_duration_save(
-              db_ops = db_ops,
-              db_config = duration_db_config,
-              session_id = session$token,
-              duration_save = rv$duration_save,
-              logger = logger
-            )
+            # Duration tracking removed - timing data now logged per survey submission
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
+            # Error already logged by db_ops with SQL statement
             logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
             hide_and_show("savingDataMessage", "invalidDataMessage")
           }
