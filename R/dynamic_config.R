@@ -7,6 +7,8 @@
 #'
 #' @return The first non-null value
 #'
+#' @importFrom rlang parse_expr as_data_mask eval_tidy
+#'
 #' @noRd
 #' @keywords internal
 `%||%` <- function(x, y) {
@@ -385,14 +387,35 @@ format_choices_for_js <- function(choices,
 #' @param logger Logger. Object for operation logging.
 #' @param write_table String. Table name for unique value validation.
 #' @param db_ops DBOps. Database operations object with table reading methods.
+#' @param db_update List. Optional database update configuration for resolving target tables.
+#'   When surveys use db_update to update different tables, this helps resolve the correct
+#'   target table for uniqueness checks.
 #'
 #' @return Invisible NULL, called for side effects.
 #'
 #' @noRd
 #' @keywords internal
-configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops) {
+configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops, db_update = NULL) {
   # Initialize empty list for choices
   choices_data <- list()
+
+  # Helper function to resolve effective target table based on db_update configuration
+  resolve_target_table <- function(target_tbl) {
+    if (is.null(db_update) || is.null(target_tbl)) {
+      return(target_tbl)
+    }
+    
+    # Check if target_tbl matches any 'from' survey in db_update config
+    for (update_config in db_update) {
+      if (!is.null(update_config$from) && update_config$from == target_tbl) {
+        # Return the 'to' table as the effective target
+        return(update_config$to)
+      }
+    }
+    
+    # No mapping found, return original target_tbl
+    return(target_tbl)
+  }
 
   # Filter dynamic_config to only include configs relevant to the current survey
   # In multisurvey mode, write_table contains the survey name, so we filter by target_tbl
@@ -436,26 +459,39 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
         
         # Apply filter_source if specified
         if (!is.null(config$filter_source)) {
-          # Parse and apply the filter (simplified SQL-like filter)
           filter_expr <- config$filter_source
           
-          # Handle simple equality filters like "closed == 0"
-          if (grepl("==", filter_expr)) {
-            parts <- strsplit(gsub("\\s", "", filter_expr), "==")[[1]]
-            if (length(parts) == 2) {
-              col_name <- parts[1]
-              filter_value <- as.numeric(parts[2])
-              
-              if (col_name %in% names(source_data)) {
-                source_data <- source_data[source_data[[col_name]] == filter_value, , drop = FALSE]
-                logger$log_message(
-                  sprintf("Applied filter '%s' to source table, %d rows remaining", 
-                         filter_expr, nrow(source_data)),
-                  "INFO", "SURVEY"
-                )
-              }
+          tryCatch({
+            # Use rlang to parse and evaluate the filter expression
+            # Parse the expression string into a quosure
+            filter_quo <- rlang::parse_expr(filter_expr)
+            
+            # Create a data mask for evaluation (allows direct column references)
+            data_mask <- rlang::as_data_mask(source_data)
+            
+            # Evaluate the expression with the data as context
+            filter_result <- rlang::eval_tidy(filter_quo, data_mask)
+            
+            # Ensure we get a logical vector
+            if (!is.logical(filter_result)) {
+              stop("Filter expression must evaluate to a logical vector")
             }
-          }
+            
+            # Apply the filter
+            source_data <- source_data[filter_result & !is.na(filter_result), , drop = FALSE]
+            
+            logger$log_message(
+              sprintf("Applied filter '%s' to source table, %d rows remaining", 
+                     filter_expr, nrow(source_data)),
+              "INFO", "SURVEY"
+            )
+          }, error = function(e) {
+            logger$log_message(
+              sprintf("Error evaluating filter '%s': %s. Skipping filter.", 
+                     filter_expr, e$message),
+              "ERROR", "SURVEY"
+            )
+          })
         }
         
         # Get choices from source data
@@ -477,8 +513,8 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
         # Apply filter_unique if specified
         if (isTRUE(config$filter_unique) && !is.null(config$target_tbl)) {
           # Check what values have already been submitted in the target table
-          # Use the target_tbl from config, which should match the survey name in multisurvey mode
-          target_tbl <- config$target_tbl
+          # Resolve the effective target table (handles db_update mappings)
+          target_tbl <- resolve_target_table(config$target_tbl)
           
           existing_values <- tryCatch({
             # Try to get data from cache first

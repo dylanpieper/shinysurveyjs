@@ -289,12 +289,12 @@ survey_logger <- R6::R6Class(
                 row$survey_name,
                 if (is.na(row$survey_id) || is.null(row$survey_id)) NA else row$survey_id,
                 row$timestamp,
+                if (is.na(row$sql_statement) || is.null(row$sql_statement)) NA else row$sql_statement,
                 if (is.na(row$message) || is.null(row$message)) NA else row$message,
-                if (is.na(row$ip_address) || is.null(row$ip_address)) NA else row$ip_address,
                 if (is.na(row$duration_load) || is.null(row$duration_load)) NA else row$duration_load,
                 if (is.na(row$duration_complete) || is.null(row$duration_complete)) NA else row$duration_complete,
                 if (is.na(row$duration_save) || is.null(row$duration_save)) NA else row$duration_save,
-                if (is.na(row$sql_statement) || is.null(row$sql_statement)) NA else row$sql_statement
+                if (is.na(row$ip_address) || is.null(row$ip_address)) NA else row$ip_address
               )
             )
           }

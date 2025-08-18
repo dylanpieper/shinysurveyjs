@@ -384,7 +384,8 @@ survey <- function(json = NULL,
                   session = session,
                   logger = logger,
                   write_table = if (is_multisurvey) rv$selected_survey else db_config$write_table,
-                  db_ops = db_ops
+                  db_ops = db_ops,
+                  db_update = db_update
                 )
               },
               once = TRUE
