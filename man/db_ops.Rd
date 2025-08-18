@@ -34,6 +34,8 @@ This class handles all database interactions for survey data, including:
 \item \href{#method-Database Operations-update_survey_table}{\code{db_ops$update_survey_table()}}
 \item \href{#method-Database Operations-read_table}{\code{db_ops$read_table()}}
 \item \href{#method-Database Operations-update_by_id}{\code{db_ops$update_by_id()}}
+\item \href{#method-Database Operations-perform_survey_update}{\code{db_ops$perform_survey_update()}}
+\item \href{#method-Database Operations-get_required_columns}{\code{db_ops$get_required_columns()}}
 \item \href{#method-Database Operations-clone}{\code{db_ops$clone()}}
 }
 }
@@ -82,7 +84,7 @@ Result of the operation or error message if failed
 \if{html}{\out{<a id="method-Database Operations-create_survey_table"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-create_survey_table}{}}}
 \subsection{Method \code{create_survey_table()}}{
-Create new survey data table
+Check pre-defined survey table for required columns
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$create_survey_table(write_table, data, survey_obj = NULL)}\if{html}{\out{</div>}}
 }
@@ -90,9 +92,9 @@ Create new survey data table
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{write_table}}{Character. Name of the table to create}
+\item{\code{write_table}}{Character. Name of the pre-defined table to check}
 
-\item{\code{data}}{data.frame. Data frame containing the schema for the new table}
+\item{\code{data}}{data.frame. Data frame containing the required columns for the survey}
 
 \item{\code{survey_obj}}{Survey.JS definition object that contains the complete survey structure.
 A nested list containing:
@@ -196,6 +198,53 @@ Update specific columns in a table for a given row ID
 }
 \subsection{Returns}{
 Invisible(NULL)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-perform_survey_update"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-perform_survey_update}{}}}
+\subsection{Method \code{perform_survey_update()}}{
+Perform survey update operation using join columns
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$perform_survey_update(source_data, target_table, join_columns)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{source_data}}{data.frame. Data from the source survey to use for updates}
+
+\item{\code{target_table}}{Character. Name of the target table to update}
+
+\item{\code{join_columns}}{Named character vector. Columns to join on (source_col = target_col)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible(NULL)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Database Operations-get_required_columns"></a>}}
+\if{latex}{\out{\hypertarget{method-Database Operations-get_required_columns}{}}}
+\subsection{Method \code{get_required_columns()}}{
+Get required columns for a survey to help with pre-defined table setup
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{db_ops$get_required_columns(data, survey_obj = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{data}}{data.frame. Data frame containing the survey data structure}
+
+\item{\code{survey_obj}}{Survey.JS definition object that contains the complete survey structure.
+Used to identify fields with "other" options that need separate columns.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List containing required column names and their recommended MySQL types
 }
 }
 \if{html}{\out{<hr>}}

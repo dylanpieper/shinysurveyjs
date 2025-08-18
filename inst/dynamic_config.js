@@ -119,7 +119,10 @@ const UniqueValidation = {
 };
 
 function setupUniqueValidation(data) {
-    if (!data.unique_validation) return;
+    if (!data || !data.unique_validation || typeof data.unique_validation !== 'object') {
+        console.log("No unique validation configuration found");
+        return;
+    }
 
     const attemptSetup = () => {
         if (typeof survey === 'undefined' || survey === null) {
@@ -129,6 +132,10 @@ function setupUniqueValidation(data) {
 
         // Initialize validation for each field
         Object.entries(data.unique_validation).forEach(([fieldName, config]) => {
+            if (!config || typeof config !== 'object') {
+                console.error(`Invalid config for field ${fieldName}:`, config);
+                return;
+            }
             if (!config.result_field) {
                 console.error(`Missing result_field for ${fieldName}`);
                 return;

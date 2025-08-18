@@ -906,5 +906,8 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
 
   names(values) <- vapply(unique_configs, function(x) x$target_col %||% x$config_col, character(1))
 
+  # Filter out NULL values to prevent JavaScript errors
+  values <- values[!vapply(values, is.null, logical(1))]
+
   return(values)
 }

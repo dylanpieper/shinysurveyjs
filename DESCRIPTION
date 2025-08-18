@@ -1,11 +1,10 @@
 Package: shinysurveyjs
-Title: Create and Deploy Survey Applications
+Title: Deploy SurveyJS Survey Applications Using Shiny
 Version: 0.1.0
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: The goal of this package is to integrate 'SurveyJS' <https://surveyjs.io/> 
-    with 'Shiny' <https://shiny.posit.co/> to interface with 'MySQL' and other DBI databases
-    and create dynamic user experiences.
+Description: Deploy 'SurveyJS' <https://surveyjs.io/> survey applications using 'Shiny' <https://shiny.posit.co/> 
+    to interface with databases and create dynamic user experiences.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -22,7 +21,11 @@ Imports:
     sass,
     cli,
     jsonlite,
-    tools
+    tools,
+    future,
+    glue,
+    pool,
+    rlang
 Suggests:
     knitr,
     rmarkdown,

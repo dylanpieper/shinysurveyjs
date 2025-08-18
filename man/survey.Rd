@@ -15,6 +15,7 @@ survey(
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
+  db_update = NULL,
   dynamic_config = NULL,
   cookie_expiration_days = 0,
   custom_css = NULL,
@@ -46,6 +47,14 @@ values are read from environment variables:
 \item \code{password}: Database password (env: PASSWORD)
 \item \code{write_table}: Survey data table name (env: WRITE_TABLE)
 \item \code{log_table}: Log messages table name (env: LOG_TABLE)
+}}
+
+\item{db_update}{List. Configuration for updating existing records instead of inserting new ones.
+Each element should be a list containing:
+\itemize{
+\item \code{from}: Source survey name to update from
+\item \code{to}: Target survey name to update to
+\item \code{by}: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
 }}
 
 \item{dynamic_config}{List. Configuration for dynamic fields. Supports three types:

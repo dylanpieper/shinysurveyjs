@@ -177,9 +177,9 @@ db_ops <- R6::R6Class(
     },
 
 
-    #' @description Create new survey data table
-    #' @param write_table Character. Name of the table to create
-    #' @param data data.frame. Data frame containing the schema for the new table
+    #' @description Check pre-defined survey table for required columns
+    #' @param write_table Character. Name of the pre-defined table to check
+    #' @param data data.frame. Data frame containing the required columns for the survey
     #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
     #'   A nested list containing:
     #'   \describe{
@@ -205,154 +205,57 @@ db_ops <- R6::R6Class(
         table_exists <- DBI::dbExistsTable(conn, table_name)
 
         if (!table_exists) {
-          col_defs <- private$generate_column_definitions(data, survey_obj)
-
-          create_query <- sprintf(
-            "CREATE TABLE %s (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            %s
-          );",
-            DBI::dbQuoteIdentifier(conn, table_name),
-            paste(col_defs, collapse = ", ")
-          )
-          self$logger$update_last_sql_statement(create_query)
-          DBI::dbExecute(conn, create_query)
-
-          # MySQL uses ON UPDATE CURRENT_TIMESTAMP in column definition
-          # No trigger needed
-
           self$logger$log_message(
-            sprintf("Created survey table '%s'", table_name),
-            "INFO",
+            sprintf("Pre-defined table '%s' does not exist", table_name),
+            "ERROR",
             "DATABASE"
           )
-        } else {
-          # Table already exists, no additional setup needed
+          stop(sprintf("Pre-defined table '%s' not found. Please ensure the table exists before running the survey.", table_name))
+        }
 
-          # Add any missing columns (MySQL compatible)
-          cols_query <- sprintf(
-            "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
-            table_name
-          )
-          self$logger$update_last_sql_statement(cols_query)
-          existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
+        # Get existing columns from the pre-defined table
+        cols_query <- sprintf(
+          "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
+          table_name
+        )
+        self$logger$update_last_sql_statement(cols_query)
+        existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
-          # Get fresh list of existing columns for each iteration
-          for (col in names(data)) {
-            # Refresh existing columns list to include any columns added in previous iterations
-            fresh_cols_query <- sprintf(
-              "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
-              table_name
-            )
-            self$logger$update_last_sql_statement(fresh_cols_query)
-            current_existing_cols <- DBI::dbGetQuery(conn, fresh_cols_query)$column_name
-
-            if (!col %in% current_existing_cols) {
-              # Check if this field has showOtherItem enabled
-              if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
-                # Add main column
-                main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
-                tryCatch({
-                  alter_query <- sprintf(
-                    "ALTER TABLE %s ADD COLUMN %s %s;",
-                    DBI::dbQuoteIdentifier(conn, table_name),
-                    DBI::dbQuoteIdentifier(conn, col),
-                    main_type
-                  )
-                  self$logger$update_last_sql_statement(alter_query)
-                  DBI::dbExecute(conn, alter_query)
-                  self$logger$log_message(
-                    sprintf("Added main column '%s' to table '%s'", col, table_name),
-                    "INFO",
-                    "DATABASE"
-                  )
-                }, error = function(e) {
-                  if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
-                    self$logger$log_message(
-                      sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
-                      "INFO",
-                      "DATABASE"
-                    )
-                  } else {
-                    stop(e)
-                  }
-                })
-
-                # Add _other column - check existence with direct query
-                other_col_name <- paste0(col, "_other")
-                other_exists_query <- sprintf(
-                  "SELECT COUNT(*) as count FROM information_schema.columns WHERE table_name = '%s' AND column_name = '%s' AND table_schema = DATABASE();",
-                  table_name,
-                  other_col_name
-                )
-                self$logger$update_last_sql_statement(other_exists_query)
-                other_exists_count <- DBI::dbGetQuery(conn, other_exists_query)$count
-
-                if (other_exists_count == 0) {
-                  tryCatch({
-                    alter_query_other <- sprintf(
-                      "ALTER TABLE %s ADD COLUMN %s TEXT;",
-                      DBI::dbQuoteIdentifier(conn, table_name),
-                      DBI::dbQuoteIdentifier(conn, other_col_name)
-                    )
-                    self$logger$update_last_sql_statement(alter_query_other)
-                    DBI::dbExecute(conn, alter_query_other)
-                    self$logger$log_message(
-                      sprintf("Added other column '%s' to table '%s'", other_col_name, table_name),
-                      "INFO",
-                      "DATABASE"
-                    )
-                  }, error = function(e) {
-                    if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
-                      self$logger$log_message(
-                        sprintf("Column '%s' already exists in table '%s', skipping", other_col_name, table_name),
-                        "INFO",
-                        "DATABASE"
-                      )
-                    } else {
-                      stop(e)
-                    }
-                  })
-                } else {
-                  self$logger$log_message(
-                    sprintf("Other column '%s' already exists in table '%s', skipping", other_col_name, table_name),
-                    "INFO",
-                    "DATABASE"
-                  )
-                }
-              } else {
-                # Regular field without other option
-                col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
-                tryCatch({
-                  alter_query <- sprintf(
-                    "ALTER TABLE %s ADD COLUMN %s %s;",
-                    DBI::dbQuoteIdentifier(conn, table_name),
-                    DBI::dbQuoteIdentifier(conn, col),
-                    col_type
-                  )
-                  self$logger$update_last_sql_statement(alter_query)
-                  DBI::dbExecute(conn, alter_query)
-                  self$logger$log_message(
-                    sprintf("Added column '%s' to table '%s'", col, table_name),
-                    "INFO",
-                    "DATABASE"
-                  )
-                }, error = function(e) {
-                  if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
-                    self$logger$log_message(
-                      sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
-                      "INFO",
-                      "DATABASE"
-                    )
-                  } else {
-                    stop(e)
-                  }
-                })
+        # Check for required columns
+        missing_cols <- character(0)
+        for (col in names(data)) {
+          if (!col %in% existing_cols) {
+            # Check if this field has showOtherItem enabled and needs an _other column
+            if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+              other_col_name <- paste0(col, "_other")
+              if (!other_col_name %in% existing_cols) {
+                missing_cols <- c(missing_cols, col, other_col_name)
+              } else if (!col %in% existing_cols) {
+                missing_cols <- c(missing_cols, col)
               }
+            } else {
+              missing_cols <- c(missing_cols, col)
             }
           }
         }
-      }, "Failed to create/update survey table")
+
+        if (length(missing_cols) > 0) {
+          self$logger$log_message(
+            sprintf("Pre-defined table '%s' is missing required columns: %s", 
+                    table_name, paste(missing_cols, collapse = ", ")),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Pre-defined table '%s' is missing required columns: %s. Please add these columns to the table.", 
+                       table_name, paste(missing_cols, collapse = ", ")))
+        }
+
+        self$logger$log_message(
+          sprintf("Validated pre-defined table '%s' has all required columns", table_name),
+          "INFO",
+          "DATABASE"
+        )
+      }, "Failed to validate survey table")
 
       invisible(table_name)
     },
@@ -378,16 +281,14 @@ db_ops <- R6::R6Class(
       self$operate(function(conn) {
         if (!DBI::dbExistsTable(conn, table_name)) {
           self$logger$log_message(
-            sprintf("Table '%s' does not exist", table_name),
+            sprintf("Pre-defined table '%s' does not exist", table_name),
             "ERROR",
             "table_check"
           )
-          stop(sprintf("Table '%s' does not exist", table_name))
+          stop(sprintf("Pre-defined table '%s' does not exist", table_name))
         }
 
-        # Data is ready for insertion without tracking columns
-
-        # Check for new columns (MySQL compatible)
+        # Get existing columns from the pre-defined table
         cols_query <- sprintf(
           "SELECT COLUMN_NAME as column_name, DATA_TYPE as data_type
            FROM information_schema.columns
@@ -397,41 +298,36 @@ db_ops <- R6::R6Class(
         self$logger$update_last_sql_statement(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
-        new_cols <- setdiff(names(data), existing_cols$column_name)
-
-        # Add new columns if needed
-        for (col in new_cols) {
-          col_type <- private$get_mysql_type(data[[col]])
-          tryCatch({
-            alter_query <- sprintf(
-              "ALTER TABLE %s ADD COLUMN %s %s;",
-              DBI::dbQuoteIdentifier(conn, table_name),
-              DBI::dbQuoteIdentifier(conn, col),
-              col_type
-            )
-            self$logger$update_last_sql_statement(alter_query)
-            DBI::dbExecute(conn, alter_query)
-            self$logger$log_message(
-              sprintf("Added column '%s' to '%s'", col, table_name),
-              "INFO",
-              "DATABASE"
-            )
-          }, error = function(e) {
-            if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
-              self$logger$log_message(
-                sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
-                "INFO",
-                "DATABASE"
-              )
-            } else {
-              stop(e)
-            }
-          })
+        # Check that all required columns exist
+        missing_cols <- setdiff(names(data), existing_cols$column_name)
+        if (length(missing_cols) > 0) {
+          self$logger$log_message(
+            sprintf("Pre-defined table '%s' is missing required columns: %s", 
+                    table_name, paste(missing_cols, collapse = ", ")),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Pre-defined table '%s' is missing required columns: %s", 
+                       table_name, paste(missing_cols, collapse = ", ")))
         }
 
+        # Filter data to only include columns that exist in the table
+        available_data_cols <- intersect(names(data), existing_cols$column_name)
+        if (length(available_data_cols) == 0) {
+          self$logger$log_message(
+            sprintf("No matching columns found between data and table '%s'", table_name),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("No matching columns found between data and table '%s'", table_name))
+        }
+
+        # Select only the columns that exist in the table
+        filtered_data <- data[, available_data_cols, drop = FALSE]
+
         # Insert data - construct actual INSERT statement for logging
-        columns <- paste(DBI::dbQuoteIdentifier(conn, names(data)), collapse = ", ")
-        values_list <- apply(data, 1, function(row) {
+        columns <- paste(DBI::dbQuoteIdentifier(conn, names(filtered_data)), collapse = ", ")
+        values_list <- apply(filtered_data, 1, function(row) {
           values <- vapply(row, function(val) {
             if (is.na(val) || is.null(val)) {
               "NULL"
@@ -455,13 +351,14 @@ db_ops <- R6::R6Class(
         DBI::dbWriteTable(
           conn,
           name = table_name,
-          value = data,
+          value = filtered_data,
           append = TRUE,
           row.names = FALSE
         )
 
         self$logger$log_message(
-          sprintf("Inserted %d rows into '%s'", nrow(data), table_name),
+          sprintf("Inserted %d rows into pre-defined table '%s' using %d columns", 
+                  nrow(filtered_data), table_name, length(available_data_cols)),
           "INFO",
           "DATABASE"
         )
@@ -799,6 +696,45 @@ db_ops <- R6::R6Class(
 
         invisible(NULL)
       }, sprintf("Failed to perform survey update on table '%s'", sanitized_target))
+    },
+
+    #' @description Get required columns for a survey to help with pre-defined table setup
+    #' @param data data.frame. Data frame containing the survey data structure
+    #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
+    #'   Used to identify fields with "other" options that need separate columns.
+    #' @return List containing required column names and their recommended MySQL types
+    get_required_columns = function(data, survey_obj = NULL) {
+      if (!is.data.frame(data)) {
+        self$logger$log_message("Invalid data: must be a data frame", "ERROR", "DATABASE")
+        stop("Invalid data format")
+      }
+
+      required_cols <- list()
+      
+      for (col in names(data)) {
+        # Check if this field has showOtherItem enabled
+        if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+          # Main column for choices
+          main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
+          required_cols[[col]] <- main_type
+          
+          # Other column for free text responses
+          other_col_name <- paste0(col, "_other")
+          required_cols[[other_col_name]] <- "TEXT"
+        } else {
+          # Regular field
+          col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
+          required_cols[[col]] <- col_type
+        }
+      }
+
+      self$logger$log_message(
+        sprintf("Generated column requirements for %d fields", length(names(data))),
+        "INFO",
+        "DATABASE"
+      )
+
+      return(required_cols)
     }
   ),
   private = list(
