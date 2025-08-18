@@ -4,31 +4,43 @@
 \alias{survey_logger}
 \title{Survey Logger Class}
 \description{
-R6 Class providing queued logging functionality for Shiny survey applications
-using the main application's database connection.
+R6 Class providing dual logging functionality for Shiny survey applications:
+console messaging and database logging of survey metadata.
 }
 \details{
-The logger uses a queue-based approach where messages are:
-\enumerate{
-\item Added to an in-memory queue immediately
-\item Displayed in the console (if not suppressed)
-\item Periodically processed and written to the database in batches
+The logger provides two distinct logging mechanisms:
+
+\strong{Console Logging (\code{log_message})}:
+\itemize{
+\item Immediate color-coded console output for app messages, warnings, and errors
+\item No database persistence - console only
+\item Supports custom zones/contexts for message categorization
 }
 
-Features:
+\strong{Database Logging (\code{log_entry})}:
 \itemize{
+\item Queued logging of survey metadata to database table
+\item Tracks survey completion metrics (timing, errors, SQL statements)
+\item Uses batch processing with automatic queue management
+\item Only logs database errors after survey is loaded (conditional logging)
+}
+
+Key Features:
+\itemize{
+\item Dual-purpose logging: console messages + database survey metadata
 \item Uses main application connection for database operations
-\item Efficient batch database writes
-\item Immediate console feedback with color coding
+\item Efficient batch database writes with automatic queue processing
+\item Immediate console feedback with color coding and zone support
 \item Database connection health monitoring
+\item SQL statement tracking for database error debugging
 }
 }
-\section{Message Types}{
+\section{Console Message Types}{
 
 \itemize{
-\item \code{INFO}: Regular informational messages (green)
-\item \code{WARN}: Warning messages (yellow)
-\item \code{ERROR}: Error messages (red)
+\item \code{INFO}: Regular informational messages (green console output)
+\item \code{WARN}: Warning messages (yellow console output)
+\item \code{ERROR}: Error messages (red console output)
 }
 }
 
@@ -197,6 +209,8 @@ Helper method for simple console logging (no database)
 \item{\code{message}}{Character string containing message to log}
 
 \item{\code{type}}{Character string specifying message type (INFO/WARN/ERROR)}
+
+\item{\code{zone}}{Character string specifying the logging zone/context (default: "DEFAULT")}
 }
 \if{html}{\out{</div>}}
 }

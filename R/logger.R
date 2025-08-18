@@ -1,25 +1,35 @@
 #' Survey Logger Class
 #'
 #' @description
-#' R6 Class providing queued logging functionality for Shiny survey applications
-#' using the main application's database connection.
+#' R6 Class providing dual logging functionality for Shiny survey applications:
+#' console messaging and database logging of survey metadata.
 #'
 #' @details
-#' The logger uses a queue-based approach where messages are:
-#' 1. Added to an in-memory queue immediately
-#' 2. Displayed in the console (if not suppressed)
-#' 3. Periodically processed and written to the database in batches
+#' The logger provides two distinct logging mechanisms:
+#' 
+#' **Console Logging (`log_message`)**:
+#' * Immediate color-coded console output for app messages, warnings, and errors
+#' * No database persistence - console only
+#' * Supports custom zones/contexts for message categorization
+#' 
+#' **Database Logging (`log_entry`)**:
+#' * Queued logging of survey metadata to database table
+#' * Tracks survey completion metrics (timing, errors, SQL statements)
+#' * Uses batch processing with automatic queue management
+#' * Only logs database errors after survey is loaded (conditional logging)
 #'
-#' Features:
+#' Key Features:
+#' * Dual-purpose logging: console messages + database survey metadata
 #' * Uses main application connection for database operations
-#' * Efficient batch database writes
-#' * Immediate console feedback with color coding
+#' * Efficient batch database writes with automatic queue processing
+#' * Immediate console feedback with color coding and zone support
 #' * Database connection health monitoring
+#' * SQL statement tracking for database error debugging
 #'
-#' @section Message Types:
-#' * `INFO`: Regular informational messages (green)
-#' * `WARN`: Warning messages (yellow)
-#' * `ERROR`: Error messages (red)
+#' @section Console Message Types:
+#' * `INFO`: Regular informational messages (green console output)
+#' * `WARN`: Warning messages (yellow console output)
+#' * `ERROR`: Error messages (red console output)
 #'
 #' @import R6
 #' @importFrom DBI dbExecute dbExistsTable
@@ -192,6 +202,7 @@ survey_logger <- R6::R6Class(
     #' Helper method for simple console logging (no database)
     #' @param message Character string containing message to log
     #' @param type Character string specifying message type (INFO/WARN/ERROR)
+    #' @param zone Character string specifying the logging zone/context (default: "DEFAULT")
     #' @return Invisible NULL
     log_message = function(message, type = "INFO", zone = "DEFAULT") {
       # Only display in console if not suppressed
