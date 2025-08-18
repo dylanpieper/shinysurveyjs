@@ -81,13 +81,13 @@ survey_logger <- R6::R6Class(
       self$queue <- data.frame(
         survey_name = character(),
         survey_id = integer(),
-        timestamp = as.POSIXct(character()),
         sql_statement = character(),
         message = character(),
         duration_load = numeric(),
         duration_complete = numeric(),
         duration_save = numeric(),
         ip_address = character(),
+        created_at = as.POSIXct(character()),
         stringsAsFactors = FALSE
       )
 
@@ -173,13 +173,13 @@ survey_logger <- R6::R6Class(
       new_entry <- data.frame(
         survey_name = self$survey_name,
         survey_id = survey_id,
-        timestamp = Sys.time(),
         sql_statement = sql_statement,
         message = message,
         duration_load = duration_load,
         duration_complete = duration_complete,
         duration_save = duration_save,
         ip_address = ip_address,
+        created_at = Sys.time(),
         stringsAsFactors = FALSE
       )
 
@@ -237,13 +237,13 @@ survey_logger <- R6::R6Class(
               id INT AUTO_INCREMENT PRIMARY KEY,
               survey_name TEXT NOT NULL,
               survey_id INT,
-              timestamp TIMESTAMP NOT NULL,
               sql_statement TEXT,
               message TEXT,
               duration_load DECIMAL(10,3),
               duration_complete DECIMAL(10,3),
               duration_save DECIMAL(10,3),
-              ip_address TEXT
+              ip_address TEXT,
+              created_at created_at NOT NULL
             )",
               self$log_table
             )
@@ -272,8 +272,8 @@ survey_logger <- R6::R6Class(
           query <- sprintf(
             "
           INSERT INTO %s
-            (survey_name, survey_id, timestamp, sql_statement, message,
-             duration_load, duration_complete, duration_save, ip_address)
+            (survey_name, survey_id, sql_statement, message,
+             duration_load, duration_complete, duration_save, ip_address, created_at)
           VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             self$log_table
@@ -288,13 +288,13 @@ survey_logger <- R6::R6Class(
               params = list(
                 row$survey_name,
                 if (is.na(row$survey_id) || is.null(row$survey_id)) NA else row$survey_id,
-                row$timestamp,
                 if (is.na(row$sql_statement) || is.null(row$sql_statement)) NA else row$sql_statement,
                 if (is.na(row$message) || is.null(row$message)) NA else row$message,
                 if (is.na(row$duration_load) || is.null(row$duration_load)) NA else row$duration_load,
                 if (is.na(row$duration_complete) || is.null(row$duration_complete)) NA else row$duration_complete,
                 if (is.na(row$duration_save) || is.null(row$duration_save)) NA else row$duration_save,
-                if (is.na(row$ip_address) || is.null(row$ip_address)) NA else row$ip_address
+                if (is.na(row$ip_address) || is.null(row$ip_address)) NA else row$ip_address,
+                row$created_at
               )
             )
           }
