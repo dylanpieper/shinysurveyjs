@@ -6,12 +6,12 @@
 #'
 #' @details
 #' The logger provides two distinct logging mechanisms:
-#' 
+#'
 #' **Console Logging (`log_message`)**:
 #' * Immediate color-coded console output for app messages, warnings, and errors
 #' * No database persistence - console only
 #' * Supports custom zones/contexts for message categorization
-#' 
+#'
 #' **Database Logging (`log_entry`)**:
 #' * Queued logging of survey metadata to database table
 #' * Tracks survey completion metrics (timing, errors, SQL statements)
@@ -82,12 +82,12 @@ survey_logger <- R6::R6Class(
         survey_name = character(),
         survey_id = integer(),
         timestamp = as.POSIXct(character()),
+        sql_statement = character(),
         message = character(),
-        ip_address = character(),
         duration_load = numeric(),
         duration_complete = numeric(),
         duration_save = numeric(),
-        sql_statement = character(),
+        ip_address = character(),
         stringsAsFactors = FALSE
       )
 
@@ -160,7 +160,7 @@ survey_logger <- R6::R6Class(
       duration_load <- if (is.null(duration_load) || length(duration_load) == 0) NA else duration_load[1]
       duration_complete <- if (is.null(duration_complete) || length(duration_complete) == 0) NA else duration_complete[1]
       duration_save <- if (is.null(duration_save) || length(duration_save) == 0) NA else duration_save[1]
-      
+
       # Use provided sql_statement or fall back to last_sql_statement
       if (is.null(sql_statement) || length(sql_statement) == 0) {
         sql_statement <- self$last_sql_statement
@@ -174,12 +174,12 @@ survey_logger <- R6::R6Class(
         survey_name = self$survey_name,
         survey_id = survey_id,
         timestamp = Sys.time(),
+        sql_statement = sql_statement,
         message = message,
-        ip_address = ip_address,
         duration_load = duration_load,
         duration_complete = duration_complete,
         duration_save = duration_save,
-        sql_statement = sql_statement,
+        ip_address = ip_address,
         stringsAsFactors = FALSE
       )
 
@@ -238,8 +238,8 @@ survey_logger <- R6::R6Class(
               survey_name TEXT NOT NULL,
               survey_id INT,
               timestamp TIMESTAMP NOT NULL,
-              message TEXT,
               sql_statement TEXT,
+              message TEXT,
               duration_load DECIMAL(10,3),
               duration_complete DECIMAL(10,3),
               duration_save DECIMAL(10,3),
@@ -272,8 +272,8 @@ survey_logger <- R6::R6Class(
           query <- sprintf(
             "
           INSERT INTO %s
-            (survey_name, survey_id, timestamp, message, ip_address,
-             duration_load, duration_complete, duration_save, sql_statement)
+            (survey_name, survey_id, timestamp, sql_statement, message,
+             duration_load, duration_complete, duration_save, ip_address)
           VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             self$log_table

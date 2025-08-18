@@ -252,19 +252,31 @@ db_ops <- R6::R6Class(
               if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
                 # Add main column
                 main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
-                alter_query <- sprintf(
-                  "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-                  DBI::dbQuoteIdentifier(conn, table_name),
-                  DBI::dbQuoteIdentifier(conn, col),
-                  main_type
-                )
-                self$logger$update_last_sql_statement(alter_query)
-                DBI::dbExecute(conn, alter_query)
-                self$logger$log_message(
-                  sprintf("Added main column '%s' to table '%s'", col, table_name),
-                  "INFO",
-                  "DATABASE"
-                )
+                tryCatch({
+                  alter_query <- sprintf(
+                    "ALTER TABLE %s ADD COLUMN %s %s;",
+                    DBI::dbQuoteIdentifier(conn, table_name),
+                    DBI::dbQuoteIdentifier(conn, col),
+                    main_type
+                  )
+                  self$logger$update_last_sql_statement(alter_query)
+                  DBI::dbExecute(conn, alter_query)
+                  self$logger$log_message(
+                    sprintf("Added main column '%s' to table '%s'", col, table_name),
+                    "INFO",
+                    "DATABASE"
+                  )
+                }, error = function(e) {
+                  if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
+                    self$logger$log_message(
+                      sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
+                      "INFO",
+                      "DATABASE"
+                    )
+                  } else {
+                    stop(e)
+                  }
+                })
 
                 # Add _other column - check existence with direct query
                 other_col_name <- paste0(col, "_other")
@@ -277,18 +289,30 @@ db_ops <- R6::R6Class(
                 other_exists_count <- DBI::dbGetQuery(conn, other_exists_query)$count
 
                 if (other_exists_count == 0) {
-                  alter_query_other <- sprintf(
-                    "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s TEXT;",
-                    DBI::dbQuoteIdentifier(conn, table_name),
-                    DBI::dbQuoteIdentifier(conn, other_col_name)
-                  )
-                  self$logger$update_last_sql_statement(alter_query_other)
-                  DBI::dbExecute(conn, alter_query_other)
-                  self$logger$log_message(
-                    sprintf("Added other column '%s' to table '%s'", other_col_name, table_name),
-                    "INFO",
-                    "DATABASE"
-                  )
+                  tryCatch({
+                    alter_query_other <- sprintf(
+                      "ALTER TABLE %s ADD COLUMN %s TEXT;",
+                      DBI::dbQuoteIdentifier(conn, table_name),
+                      DBI::dbQuoteIdentifier(conn, other_col_name)
+                    )
+                    self$logger$update_last_sql_statement(alter_query_other)
+                    DBI::dbExecute(conn, alter_query_other)
+                    self$logger$log_message(
+                      sprintf("Added other column '%s' to table '%s'", other_col_name, table_name),
+                      "INFO",
+                      "DATABASE"
+                    )
+                  }, error = function(e) {
+                    if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
+                      self$logger$log_message(
+                        sprintf("Column '%s' already exists in table '%s', skipping", other_col_name, table_name),
+                        "INFO",
+                        "DATABASE"
+                      )
+                    } else {
+                      stop(e)
+                    }
+                  })
                 } else {
                   self$logger$log_message(
                     sprintf("Other column '%s' already exists in table '%s', skipping", other_col_name, table_name),
@@ -299,19 +323,31 @@ db_ops <- R6::R6Class(
               } else {
                 # Regular field without other option
                 col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
-                alter_query <- sprintf(
-                  "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-                  DBI::dbQuoteIdentifier(conn, table_name),
-                  DBI::dbQuoteIdentifier(conn, col),
-                  col_type
-                )
-                self$logger$update_last_sql_statement(alter_query)
-                DBI::dbExecute(conn, alter_query)
-                self$logger$log_message(
-                  sprintf("Added column '%s' to table '%s'", col, table_name),
-                  "INFO",
-                  "DATABASE"
-                )
+                tryCatch({
+                  alter_query <- sprintf(
+                    "ALTER TABLE %s ADD COLUMN %s %s;",
+                    DBI::dbQuoteIdentifier(conn, table_name),
+                    DBI::dbQuoteIdentifier(conn, col),
+                    col_type
+                  )
+                  self$logger$update_last_sql_statement(alter_query)
+                  DBI::dbExecute(conn, alter_query)
+                  self$logger$log_message(
+                    sprintf("Added column '%s' to table '%s'", col, table_name),
+                    "INFO",
+                    "DATABASE"
+                  )
+                }, error = function(e) {
+                  if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
+                    self$logger$log_message(
+                      sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
+                      "INFO",
+                      "DATABASE"
+                    )
+                  } else {
+                    stop(e)
+                  }
+                })
               }
             }
           }
@@ -366,19 +402,31 @@ db_ops <- R6::R6Class(
         # Add new columns if needed
         for (col in new_cols) {
           col_type <- private$get_mysql_type(data[[col]])
-          alter_query <- sprintf(
-            "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-            DBI::dbQuoteIdentifier(conn, table_name),
-            DBI::dbQuoteIdentifier(conn, col),
-            col_type
-          )
-          self$logger$update_last_sql_statement(alter_query)
-          DBI::dbExecute(conn, alter_query)
-          self$logger$log_message(
-            sprintf("Added column '%s' to '%s'", col, table_name),
-            "INFO",
-            "DATABASE"
-          )
+          tryCatch({
+            alter_query <- sprintf(
+              "ALTER TABLE %s ADD COLUMN %s %s;",
+              DBI::dbQuoteIdentifier(conn, table_name),
+              DBI::dbQuoteIdentifier(conn, col),
+              col_type
+            )
+            self$logger$update_last_sql_statement(alter_query)
+            DBI::dbExecute(conn, alter_query)
+            self$logger$log_message(
+              sprintf("Added column '%s' to '%s'", col, table_name),
+              "INFO",
+              "DATABASE"
+            )
+          }, error = function(e) {
+            if (grepl("Duplicate column name", e$message, ignore.case = TRUE)) {
+              self$logger$log_message(
+                sprintf("Column '%s' already exists in table '%s', skipping", col, table_name),
+                "INFO",
+                "DATABASE"
+              )
+            } else {
+              stop(e)
+            }
+          })
         }
 
         # Insert data - construct actual INSERT statement for logging
@@ -621,6 +669,136 @@ db_ops <- R6::R6Class(
 
         invisible(NULL)
       }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
+    },
+
+    #' @description Perform survey update operation using join columns
+    #' @param source_data data.frame. Data from the source survey to use for updates
+    #' @param target_table Character. Name of the target table to update
+    #' @param join_columns Named character vector. Columns to join on (source_col = target_col)
+    #' @return Invisible(NULL)
+    perform_survey_update = function(source_data, target_table, join_columns) {
+      if (!is.data.frame(source_data) || nrow(source_data) == 0) {
+        self$logger$log_message("Invalid source_data: must be a non-empty data frame", "ERROR", "DATABASE")
+        stop("Invalid source data format")
+      }
+
+      if (is.null(target_table) || !is.character(target_table)) {
+        self$logger$log_message("Invalid target_table parameter", "ERROR", "DATABASE")
+        stop("Invalid target table name")
+      }
+
+      if (is.null(join_columns) || !is.character(join_columns) || length(join_columns) == 0) {
+        self$logger$log_message("Invalid join_columns: must be a named character vector", "ERROR", "DATABASE")
+        stop("Invalid join columns")
+      }
+
+      sanitized_target <- private$sanitize_survey_table_name(target_table)
+
+      self$operate(function(conn) {
+        if (!DBI::dbExistsTable(conn, sanitized_target)) {
+          self$logger$log_message(
+            sprintf("Target table '%s' does not exist", sanitized_target),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Target table '%s' does not exist", sanitized_target))
+        }
+
+        # Extract join values from source data
+        source_col <- names(join_columns)[1]  # e.g., "grant_drops_id"
+        target_col <- join_columns[1]         # e.g., "id"
+        
+        if (!source_col %in% names(source_data)) {
+          self$logger$log_message(
+            sprintf("Join column '%s' not found in source data", source_col),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Join column '%s' not found in source data", source_col))
+        }
+
+        join_value <- source_data[[source_col]]
+        if (is.na(join_value) || is.null(join_value)) {
+          self$logger$log_message(
+            sprintf("Join value for column '%s' is NA or NULL", source_col),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Join value for column '%s' is NA or NULL", source_col))
+        }
+
+        # Prepare update data (exclude the join column from updates)
+        update_data <- source_data[!names(source_data) %in% source_col]
+
+        if (ncol(update_data) == 0) {
+          self$logger$log_message("No columns to update after excluding join column", "WARNING", "DATABASE")
+          return(invisible(NULL))
+        }
+
+        # Check if target record exists
+        check_query <- sprintf(
+          "SELECT COUNT(*) as count FROM %s WHERE %s = %s",
+          DBI::dbQuoteIdentifier(conn, sanitized_target),
+          DBI::dbQuoteIdentifier(conn, target_col),
+          if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
+        )
+        self$logger$update_last_sql_statement(check_query)
+        record_count <- DBI::dbGetQuery(conn, check_query)$count
+
+        if (record_count == 0) {
+          self$logger$log_message(
+            sprintf("No record found in '%s' with %s = %s", sanitized_target, target_col, join_value),
+            "WARNING",
+            "DATABASE"
+          )
+          return(invisible(NULL))
+        }
+
+        # Build SET clause for UPDATE
+        set_parts <- vapply(names(update_data), function(col) {
+          value <- update_data[[col]]
+          if (is.na(value) || is.null(value)) {
+            sprintf("%s = NULL", DBI::dbQuoteIdentifier(conn, col))
+          } else if (is.character(value)) {
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              DBI::dbQuoteString(conn, value)
+            )
+          } else {
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              value
+            )
+          }
+        }, character(1))
+
+        set_clause <- paste(set_parts, collapse = ", ")
+
+        # Build and execute UPDATE query
+        update_query <- sprintf(
+          "UPDATE %s SET %s WHERE %s = %s",
+          DBI::dbQuoteIdentifier(conn, sanitized_target),
+          set_clause,
+          DBI::dbQuoteIdentifier(conn, target_col),
+          if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
+        )
+
+        self$logger$update_last_sql_statement(update_query)
+        rows_affected <- DBI::dbExecute(conn, update_query)
+
+        self$logger$log_message(
+          sprintf(
+            "Updated %d rows in table '%s' using join %s = %s",
+            rows_affected, sanitized_target, target_col, join_value
+          ),
+          "INFO",
+          "DATABASE"
+        )
+
+        invisible(NULL)
+      }, sprintf("Failed to perform survey update on table '%s'", sanitized_target))
     }
   ),
   private = list(

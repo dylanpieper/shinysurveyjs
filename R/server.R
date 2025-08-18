@@ -21,6 +21,11 @@
 #'   * `password`: Database password (env: PASSWORD)
 #'   * `write_table`: Survey data table name (env: WRITE_TABLE)
 #'   * `log_table`: Log messages table name (env: LOG_TABLE)
+#' @param db_update List. Configuration for updating existing records instead of inserting new ones.
+#'   Each element should be a list containing:
+#'   * `from`: Source survey name to update from
+#'   * `to`: Target survey name to update to
+#'   * `by`: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
 #' @param dynamic_config List. Configuration for dynamic fields. Supports three types:
 #'   \subsection{Choice Configuration}{
 #'     Populates dropdown or radio button choices from database tables:
@@ -111,6 +116,7 @@ survey <- function(json = NULL,
                      write_table = Sys.getenv("WRITE_TABLE"),
                      log_table = Sys.getenv("LOG_TABLE")
                    ),
+                   db_update = NULL,
                    dynamic_config = NULL,
                    cookie_expiration_days = 0,
                    custom_css = NULL,
@@ -575,28 +581,83 @@ survey <- function(json = NULL,
               db_config$write_table
             }
 
-            # First create/ensure the table exists with the correct schema
-            db_ops$create_survey_table(
-              table_name,
-              parsed_data,
-              survey_obj = isolate(rv$survey_def)
-            )
-
-            # Then insert the survey data
-            result <- db_ops$update_survey_table(table_name, parsed_data)
+            # Check if this is a db_update operation
+            is_update_operation <- FALSE
+            update_config <- NULL
             
-            # Get the inserted row ID for logging
-            survey_id <- tryCatch({
-              # Get the most recent insert for this survey
-              recent_row <- db_ops$read_table(
-                table_name, 
-                columns = "id", 
-                order_by = "id", 
-                desc = TRUE, 
-                limit = 1,
-                update_last_sql = FALSE
+            if (!is.null(db_update) && is_multisurvey && !is.null(rv$selected_survey)) {
+              # Find matching update configuration
+              for (config in db_update) {
+                if (!is.null(config$from) && config$from == rv$selected_survey) {
+                  is_update_operation <- TRUE
+                  update_config <- config
+                  break
+                }
+              }
+            }
+
+            if (is_update_operation) {
+              # Handle update operation
+              target_table <- update_config$to
+              join_columns <- update_config$by
+              
+              # Remove join column from data for table creation (we don't want to add it as a new column)
+              join_col_name <- names(join_columns)[1]  # e.g., "grant_drops_id"
+              schema_data <- parsed_data[!names(parsed_data) %in% join_col_name]
+              
+              # First create/ensure the target table exists with the correct schema (excluding join column)
+              if (ncol(schema_data) > 0) {
+                db_ops$create_survey_table(
+                  target_table,
+                  schema_data,
+                  survey_obj = isolate(rv$survey_def)
+                )
+              }
+              
+              # Perform update instead of insert
+              result <- db_ops$perform_survey_update(
+                source_data = parsed_data,
+                target_table = target_table,
+                join_columns = join_columns
               )
-              if (nrow(recent_row) > 0) recent_row$id else NA
+            } else {
+              # Regular insert operation
+              # First create/ensure the table exists with the correct schema
+              db_ops$create_survey_table(
+                table_name,
+                parsed_data,
+                survey_obj = isolate(rv$survey_def)
+              )
+
+              # Then insert the survey data
+              result <- db_ops$update_survey_table(table_name, parsed_data)
+            }
+            
+            # Get the survey ID for logging
+            survey_id <- tryCatch({
+              if (is_update_operation) {
+                # For updates, get the ID from the target table using the join value
+                join_value <- parsed_data[[names(update_config$by)[1]]]
+                target_row <- db_ops$read_table(
+                  update_config$to,
+                  columns = "id",
+                  filters = setNames(list(join_value), update_config$by[1]),
+                  limit = 1,
+                  update_last_sql = FALSE
+                )
+                if (nrow(target_row) > 0) target_row$id else NA
+              } else {
+                # For inserts, get the most recent insert for this survey
+                recent_row <- db_ops$read_table(
+                  table_name, 
+                  columns = "id", 
+                  order_by = "id", 
+                  desc = TRUE, 
+                  limit = 1,
+                  update_last_sql = FALSE
+                )
+                if (nrow(recent_row) > 0) recent_row$id else NA
+              }
             }, error = function(e) NA)
             
             # Get client IP address
