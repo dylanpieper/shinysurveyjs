@@ -3,9 +3,9 @@
 #' Creates a database connection using MySQL or other DBI-compatible drivers.
 #' Stores the connection globally and registers cleanup handler.
 #'
-#' @param driver Character string specifying the database driver ("mysql", "sqlite", "postgres")
+#' @param driver Name of database to match to a driver (default: "mysql")
 #' @param host Database host
-#' @param port Database port
+#' @param port Database port (default: 3306)
 #' @param db_name Database name
 #' @param user Database username
 #' @param password Database password
@@ -20,42 +20,21 @@
 #'
 #' @noRd
 #' @keywords internal
-db_conn_open <- function(driver = "mysql",
-                         host = NULL,
-                         port = NULL,
-                         db_name = NULL,
-                         user = NULL,
-                         password = NULL,
-                         global = TRUE,
-                         logger = NULL,
-                         ...) {
-  if (all(!is.null(c(host, port, db_name, user, password)))) {
-    # Get the appropriate driver
-    drv <- switch(tolower(driver),
-      "mysql" = {
-        if (!requireNamespace("RMariaDB", quietly = TRUE)) {
-          stop("RMariaDB package is required for MySQL connections")
-        }
-        RMariaDB::MariaDB()
-      },
-      "sqlite" = {
-        if (!requireNamespace("RSQLite", quietly = TRUE)) {
-          stop("RSQLite package is required for SQLite connections")
-        }
-        RSQLite::SQLite()
-      },
-      "postgres" = {
-        if (!requireNamespace("RPostgres", quietly = TRUE)) {
-          stop("RPostgres package is required for PostgreSQL connections")
-        }
-        RPostgres::Postgres()
-      },
-      stop("Unsupported driver: ", driver)
-    )
-    
-    # Create connection
+db_conn_open <- function(
+    driver = "mysql",
+    host = NULL,
+    port = 3306,
+    db_name = NULL,
+    user = NULL,
+    password = NULL,
+    global = TRUE,
+    logger = NULL,
+    ...) {
+  if (all(!is.null(c(driver, host, port, db_name, user, password)))) {
     conn <- DBI::dbConnect(
-      drv,
+      switch(driver,
+        "mysql" = RMariaDB::MariaDB()
+      ),
       host = host,
       port = port,
       dbname = db_name,
@@ -66,7 +45,7 @@ db_conn_open <- function(driver = "mysql",
 
     if (global) {
       assign("app_conn", conn, envir = .GlobalEnv)
-      
+
       shiny::onStop(function() {
         db_conn_close(NULL, logger)
       })
@@ -75,7 +54,7 @@ db_conn_open <- function(driver = "mysql",
         logger$log_message(paste("Database connection initialized for", driver), "INFO", "DATABASE")
       }
     }
-    
+
     return(conn)
   } else {
     cli::cli_abort("Database connection parameters are required")
@@ -159,39 +138,42 @@ db_ops <- R6::R6Class(
         stop("Database connection not valid")
       }
 
-      tryCatch({
-        DBI::dbBegin(self$conn)
-        result <- operation(self$conn)
-        DBI::dbCommit(self$conn)
+      tryCatch(
+        {
+          DBI::dbBegin(self$conn)
+          result <- operation(self$conn)
+          DBI::dbCommit(self$conn)
 
-        return(result)
-      }, error = function(e) {
-        if (DBI::dbIsValid(self$conn)) {
-          tryCatch(
-            {
-              DBI::dbRollback(self$conn)
-              self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
-            },
-            error = function(rollback_error) {
-              self$logger$log_message(
-                sprintf("Rollback error: %s", rollback_error$message),
-                "ERROR",
-                "DATABASE"
-              )
-            }
+          return(result)
+        },
+        error = function(e) {
+          if (DBI::dbIsValid(self$conn)) {
+            tryCatch(
+              {
+                DBI::dbRollback(self$conn)
+                self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
+              },
+              error = function(rollback_error) {
+                self$logger$log_message(
+                  sprintf("Rollback error: %s", rollback_error$message),
+                  "ERROR",
+                  "DATABASE"
+                )
+              }
+            )
+          }
+          # Log database errors with SQL statement if available
+          # Force log for critical operations (connection, table creation)
+          force_critical <- grepl("connection|initialize|create", error_message, ignore.case = TRUE)
+          self$logger$log_entry(
+            survey_id = NA, # Will be set by calling function if available
+            message = sprintf("%s: %s", error_message, e$message),
+            sql_statement = self$logger$last_sql_statement,
+            force_log = force_critical
           )
+          stop(sprintf("%s: %s", error_message, e$message))
         }
-        # Log database errors with SQL statement if available
-        # Force log for critical operations (connection, table creation)
-        force_critical <- grepl("connection|initialize|create", error_message, ignore.case = TRUE)
-        self$logger$log_entry(
-          survey_id = NA,  # Will be set by calling function if available
-          message = sprintf("%s: %s", error_message, e$message),
-          sql_statement = self$logger$last_sql_statement,
-          force_log = force_critical
-        )
-        stop(sprintf("%s: %s", error_message, e$message))
-      })
+      )
     },
 
 
@@ -264,7 +246,7 @@ db_ops <- R6::R6Class(
             )
             self$logger$update_last_sql_statement(fresh_cols_query)
             current_existing_cols <- DBI::dbGetQuery(conn, fresh_cols_query)$column_name
-            
+
             if (!col %in% current_existing_cols) {
               # Check if this field has showOtherItem enabled
               if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
@@ -283,7 +265,7 @@ db_ops <- R6::R6Class(
                   "INFO",
                   "DATABASE"
                 )
-                
+
                 # Add _other column - check existence with direct query
                 other_col_name <- paste0(col, "_other")
                 other_exists_query <- sprintf(
@@ -293,7 +275,7 @@ db_ops <- R6::R6Class(
                 )
                 self$logger$update_last_sql_statement(other_exists_query)
                 other_exists_count <- DBI::dbGetQuery(conn, other_exists_query)$count
-                
+
                 if (other_exists_count == 0) {
                   alter_query_other <- sprintf(
                     "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s TEXT;",
@@ -413,7 +395,7 @@ db_ops <- R6::R6Class(
           }, character(1))
           paste("(", paste(values, collapse = ", "), ")")
         })
-        
+
         insert_statement <- sprintf(
           "INSERT INTO %s (%s) VALUES %s",
           DBI::dbQuoteIdentifier(conn, table_name),
@@ -421,7 +403,7 @@ db_ops <- R6::R6Class(
           paste(values_list, collapse = ", ")
         )
         self$logger$update_last_sql_statement(insert_statement)
-        
+
         DBI::dbWriteTable(
           conn,
           name = table_name,
@@ -640,7 +622,6 @@ db_ops <- R6::R6Class(
         invisible(NULL)
       }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
     }
-
   ),
   private = list(
     sanitize_survey_table_name = function(name) {
@@ -695,9 +676,9 @@ db_ops <- R6::R6Class(
       if (is.null(survey_obj)) {
         return(character(0))
       }
-      
+
       fields_with_other <- character(0)
-      
+
       # Helper function to recursively search elements
       search_elements <- function(elements) {
         for (element in elements) {
@@ -706,14 +687,14 @@ db_ops <- R6::R6Class(
             element$showOtherItem) {
             fields_with_other <<- c(fields_with_other, element$name)
           }
-          
+
           # Check nested elements (e.g., in panels)
           if (!is.null(element$elements)) {
             search_elements(element$elements)
           }
         }
       }
-      
+
       # Search through all pages
       if (!is.null(survey_obj$pages)) {
         for (page in survey_obj$pages) {
@@ -722,18 +703,18 @@ db_ops <- R6::R6Class(
           }
         }
       }
-      
+
       # Also search direct elements (if not using pages)
       if (!is.null(survey_obj$elements)) {
         search_elements(survey_obj$elements)
       }
-      
+
       return(unique(fields_with_other))
     },
     get_mysql_type = function(vector, field_name = NULL, survey_obj = NULL) {
       # Note: Fields with showOtherItem are now handled separately in generate_column_definitions
       # This function only determines type for regular fields or when called independently
-      
+
       # MySQL type detection based on data
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {
@@ -769,14 +750,14 @@ db_ops <- R6::R6Class(
     },
     generate_column_definitions = function(data, survey_obj = NULL) {
       col_defs <- c()
-      created_cols <- character(0)  # Track all created columns (main and _other)
-      
-      for (col in unique(names(data))) {  # Use unique() to prevent processing duplicate column names
+      created_cols <- character(0) # Track all created columns (main and _other)
+
+      for (col in unique(names(data))) { # Use unique() to prevent processing duplicate column names
         # Skip if main column already created
         if (col %in% created_cols) {
           next
         }
-        
+
         # Check if this field has showOtherItem enabled
         if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
           # Create main column with appropriate type for the choices (usually INT)
@@ -787,7 +768,7 @@ db_ops <- R6::R6Class(
             main_type
           ))
           created_cols <- c(created_cols, col)
-          
+
           # Create separate column for "other" responses - check for duplicates
           other_col_name <- paste0(col, "_other")
           if (!other_col_name %in% created_cols) {
@@ -796,7 +777,7 @@ db_ops <- R6::R6Class(
               DBI::dbQuoteIdentifier(self$conn, other_col_name)
             ))
             created_cols <- c(created_cols, other_col_name)
-            
+
             self$logger$log_message(
               sprintf("Field '%s' has showOtherItem enabled, creating separate '_other' column", col),
               "INFO",
@@ -814,7 +795,7 @@ db_ops <- R6::R6Class(
           created_cols <- c(created_cols, col)
         }
       }
-      
+
       return(col_defs)
     }
   )
