@@ -28,6 +28,18 @@ This example shows a portion of two grant management surveys where researchers f
 ``` r
 library(shinysurveyjs)
 
+# Database configuration (reused across examples)
+db_config <- list(
+  driver = RMariaDB::MariaDB(),
+  host = "database.example.com",
+  port = 3306,
+  db_name = "research_db",
+  user = "db_user",
+  password = keyring::key_get("db_pass", "research_db"),
+  log_table = "survey_logs",
+  pool_size = 10
+)
+
 # Define the first survey: Grant opportunity drop tracking
 grant_drops <- list(
   title = "Opportunity Drop",
@@ -97,16 +109,7 @@ survey(
     host = "0.0.0.0",
     port = 3838
   ),
-  db_config = list(
-    driver = RMariaDB::MariaDB(),
-    host = "database.example.com",
-    port = 3306,
-    db_name = "research_db",
-    user = "db_user",
-    password = keyring::key_get("db_pass", "research_db"),
-    log_table = "survey_logs",
-    pool_size = 10
-  ),
+  db_config = db_config,
   
   # Update grant_drops table when concept model is submitted
   db_update = list(
@@ -153,6 +156,64 @@ survey(
   )
 )
 ```
+
+## Single survey usage
+
+For simple single-survey applications, pass your survey definition directly:
+
+``` r
+library(shinysurveyjs)
+
+# Database configuration (reused across examples)
+db_config <- list(
+  driver = RMariaDB::MariaDB(),
+  host = "localhost",
+  db_name = "survey_db", 
+  user = "user",
+  password = "pass",
+  write_table = "responses", # Required for single surveys
+  log_table = "survey_logs"
+)
+
+# Example survey definition
+feedback_survey <- list(
+  title = "Feedback Survey",
+  pages = list(
+    list(
+      name = "feedback",
+      elements = list(
+        list(
+          type = "rating",
+          name = "satisfaction",
+          title = "How satisfied are you with our service?",
+          rateMin = 1,
+          rateMax = 5,
+          isRequired = TRUE
+        ),
+        list(
+          type = "comment",
+          name = "comments",
+          title = "Additional comments"
+        )
+      )
+    )
+  )
+)
+
+# Using JSON definition
+survey(
+  json = '{"title": "Quick Poll", "pages": [{"name": "poll", "elements": [{"type": "text", "name": "response", "title": "What do you think?", "isRequired": true}]}]}',
+  db_config = db_config
+)
+
+# Using list definition  
+survey(
+  list = feedback_survey,
+  db_config = db_config
+)
+```
+
+Use `write_table` in `db_config` when deploying single surveys or unnamed survey lists. For named survey lists (multi-survey apps), table names are derived from the list names.
 
 ## Key features
 
@@ -208,8 +269,21 @@ list(
 ### Advanced configuration
 
 ``` r
+# Database configuration
+db_config <- list(
+  driver = RMariaDB::MariaDB(),
+  host = "database.example.com",
+  port = 3306,
+  db_name = "survey_db",
+  user = "db_user",
+  password = keyring::key_get("db_pass", "survey_db"),
+  log_table = "survey_logs",
+  pool_size = 10
+)
+
 survey(
   list = my_surveys,
+  db_config = db_config,
   
   # Shiny server configuration
   shiny_config = list(
@@ -261,7 +335,7 @@ library(keyring)
 # Store credentials securely
 keyring::key_set("db_pass", username = "research_db")
 
-# Use in survey configuration
+# Database configuration with secure credentials
 db_config <- list(
   driver = RMariaDB::MariaDB(),
   host = "database.example.com",
@@ -272,4 +346,7 @@ db_config <- list(
   log_table = "survey_logs",
   pool_size = 10
 )
+
+# Use in survey
+survey(list = my_surveys, db_config = db_config)
 ```
