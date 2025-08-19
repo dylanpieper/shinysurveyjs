@@ -6,12 +6,11 @@ Deploy survey applications using [SurveyJS](https://surveyjs.io) and [Shiny](htt
 
 shinysurveyjs bridges the gap between SurveyJS's frontend for survey creation and Shiny's backend for data plumbing, enabling individuals and organizations to deploy survey applications with:
 
--   **Bring Your Own Database**: Setup your own database and survey tables for full control
--   **Multisurvey applications**: URL-based routing to share multiple surveys in one application
+-   **Bring your own database**: Connect to your own database, and create your survey tables for full control
+-   **Multisurvey applications**: Use URL-based routing to share multiple surveys in one application
 -   **Many-to-one mapping**: Map multiple surveys to a single table
--   **Database logic for survey fields**: Choice population and validation from database sources
--   **Dual logging system**: Console logging for development, and database logging for production
--   **Enterprise features**: Custom survey themes, and metadata collection
+-   **Database logic for survey fields**: Populate field choices and validate fields from database sources
+-   **Dual logging system**: Log operation messages to console for development, and log errors and metadata to database for production
 
 ## Installation
 
