@@ -1,9 +1,9 @@
 Package: shinysurveyjs
-Title: Deploy SurveyJS Survey Applications Using Shiny
+Title: Deploy SurveyJS Survey Applications Using R Shiny
 Version: 0.1.0
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: Deploy 'SurveyJS' <https://surveyjs.io/> survey applications using 'Shiny' <https://shiny.posit.co/> 
+Description: Deploy 'SurveyJS' <https://surveyjs.io/> survey applications using R 'Shiny' <https://shiny.posit.co/> 
     to interface with databases and create dynamic user experiences.
 License: MIT + file LICENSE
 Encoding: UTF-8

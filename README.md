@@ -1,6 +1,6 @@
-# shinysurveyjs <img src="man/figures/SSJS-Hex.svg" align="right" width="150" height="150"/>
+# shinysurveyjs ![](man/figures/ssjs-hex.svg){align="right" width="150" height="150"}
 
-Integrate [SurveyJS](#0) with [Shiny](#0) to interface with a [PostgreSQL](#0) database and create dynamic survey experiences.
+Deploy [SurveyJS](https://surveyjs.io) survey applications using [Shiny](https://shiny.posit.co) for R to interface with databases and create custom user experiences.
 
 ## SurveyJS
 
@@ -19,9 +19,8 @@ In R & Shiny applications, developers can parse the JSON either as a raw text st
 
 ## Advanced Features
 
--   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see [Dynamic Field Configuration](https://dylanpieper.github.io/shinysurveyjs/articles/dynamic_field_config.html)
+-   Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see [Database Logic Configuration](https://dylanpieper.github.io/shinysurveyjs/articles/db_logic_config.html)
 -   Log app messages, warnings, and errors in a database table
--   Use [future](https://future.futureverse.org/) to update database tables without interrupting the survey
 
 ## Installation
 

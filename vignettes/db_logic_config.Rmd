@@ -1,21 +1,21 @@
 ---
-title: "Dynamic Field Configuration"
+title: "Database Logic Configuration"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{dynamic_field_config}
+  %\VignetteIndexEntry{db_logic_config}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-This package provides dynamic field capabilities with flexible types and dependency chain support.
+This package provides database logic capabilities with flexible types and dependency chain support.
 
-The package supports three main types of dynamic configurations:
+The package supports three main types of database logic configurations:
 
 1.  **Choice Configuration**: Populate dropdown and radio button choices
 2.  **Parameter Configuration**: Validate and use data in URL query parameters
 3.  **Unique Value Configuration**: Validate field values against existing database records
 
-All types include automatic saving to the survey database and error handling. The dynamic configuration is specified through the `dynamic_config` parameter in `survey()`. It accepts a list of configuration objects.
+All types include automatic saving to the survey database and error handling. The database logic configuration is specified through the `db_logic` parameter in `survey()`. It accepts a list of configuration objects.
 
 ## Choice Configuration
 
@@ -30,7 +30,7 @@ Choice Configuration provides:
 Imagine I want to develop an R package feedback survey that allows users to **select** one of my packages and a dependent version number populated from a database table:
 
 ``` r
-dynamic_config = list(
+db_logic = list(
   list(
     config_type = "choice",                   # Type of configuration
     table_name = "config_packages",           # Database table to populate choices from
@@ -65,7 +65,7 @@ Imagine I want to publish the link to my R package feedback form on my *github* 
 ``` r
 # URL: http://127.0.0.1:3838/?source=github
 
-dynamic_config = list(
+db_logic = list(
   list(
     config_type = "param",              # Type of configuration
     table_name = "config_source",       # Database table with valid parameters 
@@ -93,7 +93,7 @@ Imagine I want to create a different survey for users to submit issues for my pa
 The following configuration ensures that each package issue report has a unique title:
 
 ``` r
-dynamic_config = list(
+db_logic = list(
   list(
     config_type = "unique",           # Type of configuration
     config_col = "issue_title",       # Column to check for uniqueness

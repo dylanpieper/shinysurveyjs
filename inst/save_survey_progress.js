@@ -17,7 +17,7 @@ function saveSurveyProgress(survey) {
        // Handle dynamic child choices
        if (survey.parentConfig) {
            // Add parent config metadata to storage
-           dataToStore._dynamicConfig = {
+           dataToStore._dbLogicConfig = {
                parentFields: {},
                childChoices: {}
            };
@@ -26,7 +26,7 @@ function saveSurveyProgress(survey) {
                const parentValue = survey.data[parentField];
                if (parentValue) {
                    // Store parent field configuration
-                   dataToStore._dynamicConfig.parentFields[parentField] = {
+                   dataToStore._dbLogicConfig.parentFields[parentField] = {
                        value: parentValue,
                        childField: null,
                        choices: []
@@ -37,12 +37,12 @@ function saveSurveyProgress(survey) {
                    if (parentIndex !== -1) {
                        const childField = config.choices.childField[parentIndex];
                        if (childField) {
-                           dataToStore._dynamicConfig.parentFields[parentField].childField = childField;
+                           dataToStore._dbLogicConfig.parentFields[parentField].childField = childField;
 
                            // Get the child question and its current choices
                            const childQuestion = survey.getQuestionByName(childField);
                            if (childQuestion && childQuestion.choices) {
-                               dataToStore._dynamicConfig.childChoices[childField] = {
+                               dataToStore._dbLogicConfig.childChoices[childField] = {
                                    choices: childQuestion.choices,
                                    parentField: parentField,
                                    value: childQuestion.value

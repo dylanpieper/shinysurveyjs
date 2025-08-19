@@ -173,7 +173,7 @@ function setupUniqueValidation(data) {
     attemptSetup();
 }
 
-// Helper functions for dynamic configuration
+// Helper functions for database logic configuration
 function setChoices(question, choicesData) {
     if (!choicesData) {
         console.warn(`No choices data provided for ${question.name}`);
@@ -321,8 +321,8 @@ function updateChildFieldsFromParents() {
     });
 }
 
-// Update dynamic choices based on incoming data
-function updateDynamicChoices(data) {
+// Update database logic choices based on incoming data
+function updateDbLogicChoices(data) {
     const metrics = {
         processedFields: {
             standalone: 0,
@@ -347,7 +347,7 @@ function updateDynamicChoices(data) {
             return;
         }
 
-        survey.dynamicConfig = data;
+        survey.dbLogicConfig = data;
 
         // Process standalone and child fields
         Object.entries(data).forEach(([fieldName, fieldData]) => {
@@ -399,9 +399,9 @@ function updateDynamicChoices(data) {
                 setupUniqueValidation(data);
             }
 
-            // Signal that dynamic configuration is complete
-            console.log("Dynamic configuration complete");
-            Shiny.setInputValue("dynamicConfigComplete", true);
+            // Signal that database logic configuration is complete
+            console.log("Database logic configuration complete");
+            Shiny.setInputValue("dbLogicConfigComplete", true);
 
             // Now show the survey container and hide the loading message
             document.getElementById("surveyContainer").style.display = "block";
@@ -410,7 +410,7 @@ function updateDynamicChoices(data) {
         }, CHOICE_UPDATE_DELAY);
 
         // Log final summary
-        console.log("Dynamic choices update summary:", {
+        console.log("Database logic choices update summary:", {
             ...metrics,
             totalProcessedFields: Object.values(metrics.processedFields).reduce((a, b) => a + b, 0),
             totalWarnings: metrics.warnings.length,
@@ -423,7 +423,7 @@ function updateDynamicChoices(data) {
 }
 
 // Handler registration
-Shiny.addCustomMessageHandler("updateDynamicChoices", updateDynamicChoices);
+Shiny.addCustomMessageHandler("updateDbLogicChoices", updateDbLogicChoices);
 
 // Cookie handling functions remain the same
 function saveSurveyProgress(survey) {
@@ -434,8 +434,8 @@ function saveSurveyProgress(survey) {
 
         const dataToStore = { ...survey.data };
 
-        if (survey.dynamicConfig) {
-            dataToStore._dynamicConfig = {
+        if (survey.dbLogicConfig) {
+            dataToStore._dbLogicConfig = {
                 parentFields: {},
                 childChoices: {}
             };
@@ -470,13 +470,13 @@ function saveSurveyProgress(survey) {
     }
 }
 
-function restoreDynamicChoices(survey, savedData) {
+function restoreDbLogicChoices(survey, savedData) {
     try {
-        if (!savedData || !savedData._dynamicConfig) {
+        if (!savedData || !savedData._dbLogicConfig) {
             return;
         }
 
-        const { parentFields, childChoices } = savedData._dynamicConfig;
+        const { parentFields, childChoices } = savedData._dbLogicConfig;
 
         Object.entries(parentFields).forEach(([parentField, config]) => {
             const parentQuestion = survey.getQuestionByName(parentField);
@@ -503,15 +503,15 @@ function restoreDynamicChoices(survey, savedData) {
             }
         });
     } catch (error) {
-        console.error("Error restoring dynamic choices:", error);
+        console.error("Error restoring database logic choices:", error);
     }
 }
 
-function restoreDynamicChoices(survey, savedData) {
-    if (!savedData || !savedData._dynamicConfig) return;
+function restoreDbLogicChoices(survey, savedData) {
+    if (!savedData || !savedData._dbLogicConfig) return;
 
-    console.log("Restoring dynamic choices:", savedData._dynamicConfig);
-    const { parentFields, childChoices } = savedData._dynamicConfig;
+    console.log("Restoring database logic choices:", savedData._dbLogicConfig);
+    const { parentFields, childChoices } = savedData._dbLogicConfig;
 
     // First restore parent values
     Object.entries(parentFields).forEach(([parentField, config]) => {

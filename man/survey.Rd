@@ -16,7 +16,7 @@ survey(
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
   db_update = NULL,
-  dynamic_config = NULL,
+  db_logic = NULL,
   cookie_expiration_days = 0,
   custom_css = NULL,
   suppress_logs = FALSE
@@ -57,7 +57,7 @@ Each element should be a list containing:
 \item \code{by}: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
 }}
 
-\item{dynamic_config}{List. Configuration for dynamic fields. Supports three types:
+\item{db_logic}{List. Configuration for database logic. Supports three types:
 \subsection{Choice Configuration}{
 Populates dropdown or radio button choices from database tables:
 * \code{config_type}: Set to "choice"
@@ -99,12 +99,12 @@ A Shiny application object
 \description{
 Creates and deploys a Shiny application for a survey using SurveyJS
 (\url{https://surveyjs.io}) with MySQL and DBI database integration. The application handles
-survey data collection, dynamic fields, and asynchronous logging through a future plan.
+survey data collection, database logic, and asynchronous logging through a future plan.
 }
 \examples{
 \dontrun{
 # Choice configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "choice",
     table_name = "packages",
@@ -113,7 +113,7 @@ dynamic_config <- list(
 )
 
 # Parameter configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "param",
     table_name = "sources",
@@ -123,7 +123,7 @@ dynamic_config <- list(
 )
 
 # Unique value configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "unique",
     config_col = "title",

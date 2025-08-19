@@ -26,7 +26,7 @@
 #'   * `from`: Source survey name to update from
 #'   * `to`: Target survey name to update to
 #'   * `by`: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
-#' @param dynamic_config List. Configuration for dynamic fields. Supports three types:
+#' @param db_logic List. Configuration for database logic. Supports three types:
 #'   \subsection{Choice Configuration}{
 #'     Populates dropdown or radio button choices from database tables:
 #'     * `config_type`: Set to "choice"
@@ -62,7 +62,7 @@
 #' @examples
 #' \dontrun{
 #' # Choice configuration example
-#' dynamic_config <- list(
+#' db_logic <- list(
 #'   list(
 #'     config_type = "choice",
 #'     table_name = "packages",
@@ -71,7 +71,7 @@
 #' )
 #'
 #' # Parameter configuration example
-#' dynamic_config <- list(
+#' db_logic <- list(
 #'   list(
 #'     config_type = "param",
 #'     table_name = "sources",
@@ -81,7 +81,7 @@
 #' )
 #'
 #' # Unique value configuration example
-#' dynamic_config <- list(
+#' db_logic <- list(
 #'   list(
 #'     config_type = "unique",
 #'     config_col = "title",
@@ -117,7 +117,7 @@ survey <- function(json = NULL,
                      log_table = Sys.getenv("LOG_TABLE")
                    ),
                    db_update = NULL,
-                   dynamic_config = NULL,
+                   db_logic = NULL,
                    cookie_expiration_days = 0,
                    custom_css = NULL,
                    suppress_logs = FALSE) {
@@ -226,7 +226,7 @@ survey <- function(json = NULL,
     )
 
     config_list_reactive <- reactive({
-      req(!is.null(dynamic_config))
+      req(!is.null(db_logic))
 
       # Determine current survey/table for optimization
       current_survey <- if (is_multisurvey) {
@@ -237,18 +237,18 @@ survey <- function(json = NULL,
 
       read_and_cache(
         db_ops = db_ops,
-        dynamic_config = dynamic_config,
+        db_logic = db_logic,
         target_survey = current_survey
       )
     })
 
     validate_params_reactive <- reactive({
-      req(!is.null(dynamic_config))
+      req(!is.null(db_logic))
 
       config_list <- config_list_reactive()
 
-      config_validation <- validate_dynamic_config(
-        dynamic_config = dynamic_config,
+      config_validation <- validate_db_logic(
+        db_logic = db_logic,
         config_list = config_list,
         survey_logger = logger
       )
@@ -265,7 +265,7 @@ survey <- function(json = NULL,
       query_list <- parse_query(session)
 
       param_validation <- validate_url_parameters(
-        dynamic_config = dynamic_config,
+        db_logic = db_logic,
         config_list = config_list,
         query_list = query_list,
         survey_logger = logger
@@ -325,7 +325,7 @@ survey <- function(json = NULL,
               rv$survey_json <- json
             }
 
-            if (!is.null(dynamic_config)) {
+            if (!is.null(db_logic)) {
               validation_result <- validate_params_reactive()
 
               if (!validation_result$valid) {
@@ -348,38 +348,38 @@ survey <- function(json = NULL,
               rv$validated_params, config_list_reactive()
             )
 
-            # Check if current survey has relevant dynamic configs
+            # Check if current survey has relevant database logic configs
             has_relevant_configs <- FALSE
-            if (!is.null(dynamic_config)) {
+            if (!is.null(db_logic)) {
               current_table <- if (is_multisurvey) rv$selected_survey else db_config$write_table
               relevant_configs <- Filter(function(config) {
                 target_tbl <- config$target_tbl
                 # If no target_tbl specified, include the config (legacy behavior)
                 # If target_tbl matches current survey, include it
                 is.null(target_tbl) || target_tbl == current_table
-              }, dynamic_config)
+              }, db_logic)
               has_relevant_configs <- length(relevant_configs) > 0
             }
 
             survey_data <- list(
               survey = survey_obj,
               params = validated_params,
-              dynamic_config = has_relevant_configs
+              db_logic = has_relevant_configs
             )
 
             json <- jsonlite::toJSON(rv$validated_params)
 
             session$sendCustomMessage("loadSurvey", survey_data)
 
-            # Keep loading spinner visible until dynamic config is complete
+            # Keep loading spinner visible until database logic config is complete
             observeEvent(input$surveyReady,
               {
                 req(session)
-                req(dynamic_config)
+                req(db_logic)
                 req(db_ops)
 
-                configure_dynamic_fields(
-                  dynamic_config = dynamic_config,
+                configure_db_logic(
+                  db_logic = db_logic,
                   config_list_reactive = config_list_reactive(),
                   session = session,
                   logger = logger,
@@ -391,8 +391,8 @@ survey <- function(json = NULL,
               once = TRUE
             )
 
-            # Only hide loading spinner after dynamic config is complete
-            observeEvent(input$dynamicConfigComplete,
+            # Only hide loading spinner after database logic config is complete
+            observeEvent(input$dbLogicConfigComplete,
               {
                 hide_and_show("waitingMessage", "surveyContainer")
 

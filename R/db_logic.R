@@ -15,15 +15,15 @@
   if (is.null(x)) y else x
 }
 
-#' Read and Cache Tables for Dynamic Fields
+#' Read and Cache Tables for Database Logic
 #'
 #' Creates a cache of database tables for efficient access by reading tables from
 #' the database and storing them in a list. This prevents redundant database reads
-#' during dynamic field population.
+#' during database logic processing.
 #'
 #' @param db_ops Object. Database operations object with a `read_table` method that
 #'   accepts a table name parameter.
-#' @param dynamic_config List. Table configurations. Each configuration must contain:
+#' @param db_logic List. Table configurations. Each configuration must contain:
 #'   * `source_tbl`: Name of database table to read (replaces `table_name`)
 #'   * Additional configuration fields are allowed but not used for caching
 #'
@@ -31,7 +31,7 @@
 #'
 #' @noRd
 #' @keywords internal
-read_and_cache <- function(db_ops, dynamic_config, target_survey = NULL) {
+read_and_cache <- function(db_ops, db_logic, target_survey = NULL) {
   # Initialize empty list to store tables
   tables_cache <- list()
 
@@ -41,9 +41,9 @@ read_and_cache <- function(db_ops, dynamic_config, target_survey = NULL) {
       target_tbl <- config$target_tbl
       # Include config if no target_tbl specified (legacy) or if it matches current survey
       is.null(target_tbl) || target_tbl == target_survey
-    }, dynamic_config)
+    }, db_logic)
   } else {
-    dynamic_config
+    db_logic
   }
 
   # Read and store each table from both source_tbl and legacy table_name
@@ -77,7 +77,7 @@ read_and_cache <- function(db_ops, dynamic_config, target_survey = NULL) {
 #' "param" type. Ensures parameter values exist in the corresponding reference
 #' tables.
 #'
-#' @param dynamic_config List. Configuration entries defining parameter validation rules.
+#' @param db_logic List. Configuration entries defining parameter validation rules.
 #' @param config_list List. Cached configuration tables from read_and_cache().
 #' @param query_list List. Parsed URL query parameters from parse_query().
 #' @param survey_logger Logger. Object for recording validation results and errors.
@@ -89,7 +89,7 @@ read_and_cache <- function(db_ops, dynamic_config, target_survey = NULL) {
 #'
 #' @noRd
 #' @keywords internal
-validate_url_parameters <- function(dynamic_config, config_list, query_list, survey_logger = NULL) {
+validate_url_parameters <- function(db_logic, config_list, query_list, survey_logger = NULL) {
   # Initialize results
   errors <- character()
   validated_values <- list()
@@ -100,7 +100,7 @@ validate_url_parameters <- function(dynamic_config, config_list, query_list, sur
   }
 
   # Loop through config entries with group_type = "param"
-  param_configs <- Filter(function(x) x$group_type == "param", dynamic_config)
+  param_configs <- Filter(function(x) x$group_type == "param", db_logic)
 
   for (config in param_configs) {
     param_name <- config$group_col
@@ -367,12 +367,12 @@ format_choices_for_js <- function(choices,
 
 #' Configure Dynamic Fields for Survey
 #'
-#' Configures dynamic fields in a survey based on provided configuration parameters.
+#' Configures database logic in a survey based on provided configuration parameters.
 #' Handles choice population from database tables, parent-child field relationships,
 #' parameter-based field values, and unique value validation. Sends formatted field
 #' configurations to the client via custom messages.
 #'
-#' @param dynamic_config List. Configuration entries, where each entry contains:
+#' @param db_logic List. Configuration entries, where each entry contains:
 #'   \describe{
 #'     \item{config_type}{String. Field type: "choice", "param", or "unique"}
 #'     \item{config_col}{String. Column name containing choice values}
@@ -395,7 +395,7 @@ format_choices_for_js <- function(choices,
 #'
 #' @noRd
 #' @keywords internal
-configure_dynamic_fields <- function(dynamic_config, config_list_reactive, session, logger, write_table, db_ops, db_update = NULL) {
+configure_db_logic <- function(db_logic, config_list_reactive, session, logger, write_table, db_ops, db_update = NULL) {
   # Initialize empty list for choices
   choices_data <- list()
 
@@ -417,7 +417,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
     return(target_tbl)
   }
 
-  # Filter dynamic_config to only include configs relevant to the current survey
+  # Filter db_logic to only include configs relevant to the current survey
   # In multisurvey mode, write_table contains the survey name, so we filter by target_tbl
   relevant_configs <- if (!is.null(write_table)) {
     Filter(function(config) {
@@ -425,23 +425,23 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
       # If no target_tbl specified, include the config (legacy behavior)
       # If target_tbl matches current survey (write_table), include it
       is.null(target_tbl) || target_tbl == write_table
-    }, dynamic_config)
+    }, db_logic)
   } else {
-    dynamic_config
+    db_logic
   }
   
   if (length(relevant_configs) == 0) {
-    logger$log_message("No dynamic configs applicable to current survey", "INFO", "SURVEY")
+    logger$log_message("No database logic configs applicable to current survey", "INFO", "SURVEY")
     return(invisible(NULL))
   }
   
   logger$log_message(
-    sprintf("Processing %d dynamic configs for survey '%s'", 
+    sprintf("Processing %d database logic configs for survey '%s'", 
            length(relevant_configs), write_table %||% "default"),
     "INFO", "SURVEY"
   )
 
-  # Process each relevant dynamic config entry
+  # Process each relevant database logic config entry
   for (config in relevant_configs) {
     # Support both new and legacy field names
     config_type <- config$type %||% config$config_type
@@ -607,7 +607,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
   # Process unique validation fields
   unique_fields <- tryCatch({
     get_unique_field_values(
-      dynamic_config = relevant_configs,
+      db_logic = relevant_configs,
       db_ops = db_ops,
       write_table = write_table
     )
@@ -633,7 +633,7 @@ configure_dynamic_fields <- function(dynamic_config, config_list_reactive, sessi
 
   if (has_data) {
     tryCatch({
-      session$sendCustomMessage("updateDynamicChoices", as.list(choices_data))
+      session$sendCustomMessage("updateDbLogicChoices", as.list(choices_data))
       logger$log_message(
         sprintf("Sent data to frontend with %d field configurations", 
                length(setdiff(names(choices_data), "unique_validation"))),
@@ -689,11 +689,11 @@ normalize_field_value <- function(value, remove_special = TRUE) {
 
 #' Validate Dynamic Configuration
 #'
-#' Validates survey field dynamic configuration structure, checking configuration types,
+#' Validates survey field database logic configuration structure, checking configuration types,
 #' required parameters, and database table references. Provides detailed validation
 #' results and caches validated tables.
 #'
-#' @param dynamic_config List. Dynamic field configurations to validate with required
+#' @param db_logic List. Dynamic field configurations to validate with required
 #'   elements:
 #'   * `config_type`: Configuration type ("choice", "param", or "unique")
 #'   * Additional type-specific parameters as defined in survey documentation
@@ -708,12 +708,12 @@ normalize_field_value <- function(value, remove_special = TRUE) {
 #'
 #' @noRd
 #' @keywords internal
-validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_logger = NULL) {
+validate_db_logic <- function(db_logic, config_list = NULL, survey_logger = NULL) {
   errors <- character()
 
-  # Check if dynamic_config is a list
-  if (!is.list(dynamic_config)) {
-    error_msg <- "dynamic_config must be a list"
+  # Check if db_logic is a list
+  if (!is.list(db_logic)) {
+    error_msg <- "db_logic must be a list"
     if (!is.null(survey_logger)) {
       survey_logger$log_message(error_msg, type = "ERROR", zone = "SURVEY")
     }
@@ -724,8 +724,8 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
   }
 
   # Check each configuration entry
-  for (i in seq_along(dynamic_config)) {
-    config <- dynamic_config[[i]]
+  for (i in seq_along(db_logic)) {
+    config <- db_logic[[i]]
     prefix <- sprintf("Configuration entry %d: ", i)
 
     # Check if config is a list
@@ -811,9 +811,9 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
 #' Get Existing Values for Unique Fields
 #'
 #' Retrieves existing values from the database for fields that require uniqueness
-#' validation according to a dynamic configuration.
+#' validation according to a database logic configuration.
 #'
-#' @param dynamic_config List. Configuration specifying fields requiring unique values.
+#' @param db_logic List. Configuration specifying fields requiring unique values.
 #'   Each entry should contain:
 #'   * `config_type`: Must be "unique"
 #'   * `config_col`: Column to check for uniqueness
@@ -825,7 +825,7 @@ validate_dynamic_config <- function(dynamic_config, config_list = NULL, survey_l
 #'
 #' @noRd
 #' @keywords internal
-get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
+get_unique_field_values <- function(db_logic, db_ops, write_table) {
   if (is.null(db_ops)) {
     warning("Database operations not initialized")
     return(list())
@@ -839,7 +839,7 @@ get_unique_field_values <- function(dynamic_config, db_ops, write_table) {
   unique_configs <- Filter(function(config) {
     config_type <- config$type %||% config$config_type
     isTRUE(config_type == "unique")
-  }, dynamic_config)
+  }, db_logic)
 
   if (length(unique_configs) == 0) {
     return(list())

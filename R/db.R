@@ -1,9 +1,9 @@
 #' Open Database Connection
 #'
-#' Creates a database connection using MySQL or other DBI-compatible drivers.
+#' Creates a database connection using DBI-compatible database drivers.
 #' Stores the connection globally and registers cleanup handler.
 #'
-#' @param driver Name of database to match to a driver (default: "mysql")
+#' @param driver Name of database to match to a tested driver (only "mysql" currently)
 #' @param host Database host
 #' @param port Database port (default: 3306)
 #' @param db_name Database name
@@ -87,7 +87,6 @@ db_conn_close <- function(session, logger = NULL) {
   }
   invisible(NULL)
 }
-
 
 #' Database Operations Class
 #'
@@ -241,13 +240,17 @@ db_ops <- R6::R6Class(
 
         if (length(missing_cols) > 0) {
           self$logger$log_message(
-            sprintf("Pre-defined table '%s' is missing required columns: %s", 
-                    table_name, paste(missing_cols, collapse = ", ")),
+            sprintf(
+              "Pre-defined table '%s' is missing required columns: %s",
+              table_name, paste(missing_cols, collapse = ", ")
+            ),
             "ERROR",
             "DATABASE"
           )
-          stop(sprintf("Pre-defined table '%s' is missing required columns: %s. Please add these columns to the table.", 
-                       table_name, paste(missing_cols, collapse = ", ")))
+          stop(sprintf(
+            "Pre-defined table '%s' is missing required columns: %s. Please add these columns to the table.",
+            table_name, paste(missing_cols, collapse = ", ")
+          ))
         }
 
         self$logger$log_message(
@@ -302,13 +305,17 @@ db_ops <- R6::R6Class(
         missing_cols <- setdiff(names(data), existing_cols$column_name)
         if (length(missing_cols) > 0) {
           self$logger$log_message(
-            sprintf("Pre-defined table '%s' is missing required columns: %s", 
-                    table_name, paste(missing_cols, collapse = ", ")),
+            sprintf(
+              "Pre-defined table '%s' is missing required columns: %s",
+              table_name, paste(missing_cols, collapse = ", ")
+            ),
             "ERROR",
             "DATABASE"
           )
-          stop(sprintf("Pre-defined table '%s' is missing required columns: %s", 
-                       table_name, paste(missing_cols, collapse = ", ")))
+          stop(sprintf(
+            "Pre-defined table '%s' is missing required columns: %s",
+            table_name, paste(missing_cols, collapse = ", ")
+          ))
         }
 
         # Filter data to only include columns that exist in the table
@@ -357,8 +364,10 @@ db_ops <- R6::R6Class(
         )
 
         self$logger$log_message(
-          sprintf("Inserted %d rows into pre-defined table '%s' using %d columns", 
-                  nrow(filtered_data), table_name, length(available_data_cols)),
+          sprintf(
+            "Inserted %d rows into pre-defined table '%s' using %d columns",
+            nrow(filtered_data), table_name, length(available_data_cols)
+          ),
           "INFO",
           "DATABASE"
         )
@@ -602,9 +611,9 @@ db_ops <- R6::R6Class(
         }
 
         # Extract join values from source data
-        source_col <- names(join_columns)[1]  # e.g., "grant_drops_id"
-        target_col <- join_columns[1]         # e.g., "id"
-        
+        source_col <- names(join_columns)[1] # e.g., "grant_drops_id"
+        target_col <- join_columns[1] # e.g., "id"
+
         if (!source_col %in% names(source_data)) {
           self$logger$log_message(
             sprintf("Join column '%s' not found in source data", source_col),
@@ -710,14 +719,14 @@ db_ops <- R6::R6Class(
       }
 
       required_cols <- list()
-      
+
       for (col in names(data)) {
         # Check if this field has showOtherItem enabled
         if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
           # Main column for choices
           main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
           required_cols[[col]] <- main_type
-          
+
           # Other column for free text responses
           other_col_name <- paste0(col, "_other")
           required_cols[[other_col_name]] <- "TEXT"
