@@ -729,9 +729,6 @@ survey <- function(json = NULL,
               duration_save = NA,  # Save failed, so no valid save duration
               force_log = TRUE  # Force logging even if survey not marked as loaded
             )
-            
-            # Also log to console
-            logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
             hide_and_show("savingDataMessage", "invalidDataMessage")
           }
         )
