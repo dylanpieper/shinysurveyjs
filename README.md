@@ -1,4 +1,4 @@
-# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" align="right" width="200" height="200"/>
+# shinysurveyjs<img src="man/figures/SSJS-Hex.svg" align="right" width="160" height="160"/>
 
 Deploy survey applications using [SurveyJS](https://surveyjs.io) and [Shiny](https://shiny.posit.co) for R with advanced database integration.
 
