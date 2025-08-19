@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Create and Deploy Survey Applications • shinysurveyjs</title>
+<title>Deploy SurveyJS Survey Applications Using R Shiny • shinysurveyjs</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -15,9 +15,9 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Create and Deploy Survey Applications">
-<meta name="description" content="The goal of this package is to integrate SurveyJS &lt;https://surveyjs.io/&gt; with Shiny &lt;https://shiny.posit.co/&gt; to interface with a PostgreSQL database &lt;https://www.postgresql.org/&gt; and create dynamic user experiences.">
-<meta property="og:description" content="The goal of this package is to integrate SurveyJS &lt;https://surveyjs.io/&gt; with Shiny &lt;https://shiny.posit.co/&gt; to interface with a PostgreSQL database &lt;https://www.postgresql.org/&gt; and create dynamic user experiences.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Deploy SurveyJS Survey Applications Using R Shiny">
+<meta name="description" content="Deploy SurveyJS &lt;https://surveyjs.io/&gt; survey applications using R Shiny &lt;https://shiny.posit.co/&gt; to interface with databases and create dynamic user experiences.">
+<meta property="og:description" content="Deploy SurveyJS &lt;https://surveyjs.io/&gt; survey applications using R Shiny &lt;https://shiny.posit.co/&gt; to interface with databases and create dynamic user experiences.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -37,12 +37,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/dynamic_field_config.html">Dynamic Field Configuration</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -65,81 +60,106 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="shinysurveyjs-">shinysurveyjs <img src="reference/figures/SSJS-Hex.svg" align="right" width="150" height="150"><a class="anchor" aria-label="anchor" href="#shinysurveyjs-"></a>
+<div class="page-header"><h1 id="shinysurveyjs-shinysurveyjs-website">shinysurveyjs <img src="reference/figures/ssjs-hex.svg" alt="shinysurveyjs website" align="right" width="130"><a class="anchor" aria-label="anchor" href="#shinysurveyjs-shinysurveyjs-website"></a>
 </h1></div>
-<p>Integrate <a href="#id_0">SurveyJS</a> with <a href="#id_0">Shiny</a> to interface with a <a href="#id_0">PostgreSQL</a> database and create dynamic survey experiences.</p>
+<p>Deploy survey applications using <a href="https://surveyjs.io" class="external-link">SurveyJS</a> and <a href="https://shiny.posit.co" class="external-link">Shiny</a> for R with advanced database integration.</p>
 <div class="section level2">
-<h2 id="surveyjs">SurveyJS<a class="anchor" aria-label="anchor" href="#surveyjs"></a>
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>SurveyJS is a JavaScript library that streamlines the creation of survey applications through a <a href="https://www.npmjs.com/package/survey-jquery" class="external-link">jQuery</a> architecture. The library offers a <a href="https://surveyjs.io/create-free-survey" class="external-link">visual editor</a> to design complex surveys through a drag-and-drop interface and generate a JSON object.</p>
-<p>The JSON defines every survey element, including a title, description, logo, and page layout as well as progress indicators, question types, validation rules, logic flows, visibility controls, and text piping. The library’s strength lies in its backend-agnostic approach, supporting integration with any server technology.</p>
-<p>In R &amp; Shiny applications, developers can parse the JSON either as a raw text string or by converting a list to JSON format, which then gets passed to the front-end. LLMs are great for converting a JSON object to a list.</p>
-</div>
-<div class="section level2">
-<h2 id="basic-features">Basic Features<a class="anchor" aria-label="anchor" href="#basic-features"></a>
-</h2>
+<p>shinysurveyjs bridges the gap between SurveyJS’s frontend for survey creation and Shiny’s backend for data plumbing, enabling individuals and organizations to deploy survey applications with:</p>
 <ul>
-<li>Store data in a PostgreSQL database, including timing metadata (duration to load, duration to complete, duration to save, date created, and date updated) and tracking metadata (Shiny session ID and IP address)</li>
-<li>All of the database tables that the app writes to are automatically created if they don’t already exist</li>
-<li>Automatically save survey progress as cookies and resume later</li>
-<li>Change the theme, primary color, and contrast mode (light or dark)</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="advanced-features">Advanced Features<a class="anchor" aria-label="anchor" href="#advanced-features"></a>
-</h2>
-<ul>
-<li>Dynamically populate field choices (i.e., response options) from a database table and create dependent inputs (e.g., select a package name and filter available versions) with support for tracking via URL parameters (e.g., referral source); see <a href="https://dylanpieper.github.io/shinysurveyjs/articles/dynamic_field_config.html">Dynamic Field Configuration</a>
-</li>
-<li>Log app messages, warnings, and errors in a database table</li>
-<li>Use <a href="https://future.futureverse.org/" class="external-link">future</a> to update database tables without interrupting the survey</li>
+<li>
+<strong>Bring Your Own Database</strong>: Setup your own database and survey tables for full control</li>
+<li>
+<strong>Multisurvey applications</strong>: URL-based routing to share multiple surveys in one application</li>
+<li>
+<strong>Many-to-one mapping</strong>: Map multiple surveys to a single table</li>
+<li>
+<strong>Database logic for survey fields</strong>: Choice population and validation from database sources</li>
+<li>
+<strong>Dual logging system</strong>: Console logging for development, and database logging for production</li>
+<li>
+<strong>Enterprise features</strong>: Custom survey themes, and metadata collection</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the development version from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"dylanpieper/shinysurveyjs"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<p>Imagine I want to develop a feedback survey for my package.</p>
-<div class="section level3">
-<h3 id="single-survey">Single Survey<a class="anchor" aria-label="anchor" href="#single-survey"></a>
-</h3>
-<p>Let’s define the survey as a list and then run the <code><a href="reference/survey.html">survey()</a></code> function. I’m using <a href="https://supabase.com/" class="external-link">Supabase</a> for my PostgreSQL database.</p>
-<div class="section level4">
-<h4 id="json">JSON<a class="anchor" aria-label="anchor" href="#json"></a>
-</h4>
+<p>This example shows a portion of two grant management surveys where researchers first drop opportunity information, then later create concept models for those opportunities. This pattern applies to many scenarios including patient intake and follow-up or event registration and feedback.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  title <span class="op">=</span> <span class="st">"R Package Feedback"</span>,</span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dylanpieper.github.io/shinysurveyjs">shinysurveyjs</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Database configuration (reused across examples)</span></span>
+<span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
+<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
+<span>  db_name <span class="op">=</span> <span class="st">"research_db"</span>,</span>
+<span>  user <span class="op">=</span> <span class="st">"db_user"</span>,</span>
+<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"research_db"</span><span class="op">)</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Define the first survey: Grant opportunity drop tracking</span></span>
+<span><span class="va">grant_drops</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  title <span class="op">=</span> <span class="st">"Opportunity Drop"</span>,</span>
 <span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      name <span class="op">=</span> <span class="st">"page1"</span>,</span>
+<span>      name <span class="op">=</span> <span class="st">"drop"</span>,</span>
 <span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"matrix"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"rating"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Please rate the shinysurveyjs 📦:"</span>,</span>
-<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>          columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"1"</span>, text <span class="op">=</span> <span class="st">"Very Bad"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"2"</span>, text <span class="op">=</span> <span class="st">"Bad"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"3"</span>, text <span class="op">=</span> <span class="st">"Neutral"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"4"</span>, text <span class="op">=</span> <span class="st">"Good"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"5"</span>, text <span class="op">=</span> <span class="st">"Very Good"</span><span class="op">)</span></span>
-<span>          <span class="op">)</span>,</span>
-<span>          rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"UI"</span>, text <span class="op">=</span> <span class="st">"UI Design"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>value <span class="op">=</span> <span class="st">"Server"</span>, text <span class="op">=</span> <span class="st">"Server Functionality"</span><span class="op">)</span></span>
-<span>          <span class="op">)</span></span>
+<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"title"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Official title of opportunity"</span>,</span>
+<span>          description <span class="op">=</span> <span class="st">"Please copy/paste to capture any potential duplicates"</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>        <span class="op">)</span>,</span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
-<span>          name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
-<span>          title <span class="op">=</span> <span class="st">"Any other feedback?"</span>,</span>
+<span>          type <span class="op">=</span> <span class="st">"html"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"match_warning"</span>,</span>
+<span>          visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>          html <span class="op">=</span> <span class="st">"🛑 &lt;b&gt;Error:&lt;/b&gt; Duplicate submission(s) were found in the database."</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"dropdown"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"grant_funders_id"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Funder"</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>          choices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placeholder"</span><span class="op">)</span>, <span class="co"># Populated from database</span></span>
+<span>          showOtherItem <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>          storeOthersAsComment <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Define the second survey: Concept model creation</span></span>
+<span><span class="va">grant_concept</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  title <span class="op">=</span> <span class="st">"Concept Model"</span>,</span>
+<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      name <span class="op">=</span> <span class="st">"concept"</span>,</span>
+<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"dropdown"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"grant_drops_id"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Select grant"</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>          choices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placeholder"</span><span class="op">)</span> <span class="co"># Populated from previous survey data</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"text"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"cm_note"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Note your concept for this grant"</span>,</span>
 <span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>        <span class="op">)</span></span>
 <span>      <span class="op">)</span></span>
@@ -147,21 +167,267 @@
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">shinysurveyjs</span><span class="fu">::</span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span></span>
-<span>  list <span class="op">=</span> <span class="va">survey</span>,</span>
-<span>  db_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"HOST"</span><span class="op">)</span>,                <span class="co"># aws-0-us-east-2.pooler.supabase.com</span></span>
-<span>    port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PORT"</span><span class="op">)</span><span class="op">)</span>,    <span class="co"># 5432</span></span>
-<span>    db_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,          <span class="co"># postgres</span></span>
-<span>    user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"USER"</span><span class="op">)</span>,                <span class="co"># username</span></span>
-<span>    password <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"PASSWORD"</span><span class="op">)</span>,        <span class="co"># password</span></span>
-<span>    write_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"WRITE_TABLE"</span><span class="op">)</span>,  <span class="co"># survey_package_feedback</span></span>
-<span>    log_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"LOG_TABLE"</span><span class="op">)</span>       <span class="co"># survey_app_logs</span></span>
+<span><span class="co"># Deploy multi-survey application</span></span>
+<span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span></span>
+<span>  list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="st">"grant_drops"</span> <span class="op">=</span> <span class="va">grant_drops</span>,     <span class="co"># Access at /?survey=grant_drops</span></span>
+<span>    <span class="st">"grant_concept"</span> <span class="op">=</span> <span class="va">grant_concept</span>  <span class="co"># Access at /?survey=grant_concept</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,</span>
+<span>    port <span class="op">=</span> <span class="fl">3838</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="va">db_config</span>,</span>
+<span>  </span>
+<span>  <span class="co"># Update grant_drops table when concept model is submitted</span></span>
+<span>  db_update <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      from <span class="op">=</span> <span class="st">"grant_concept"</span>,</span>
+<span>      to <span class="op">=</span> <span class="st">"grant_drops"</span>,</span>
+<span>      by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grant_drops_id"</span> <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  </span>
+<span>  <span class="co"># Database field logic</span></span>
+<span>  db_logic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="co"># Populate funders dropdown from database</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      type <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span>      source_tbl <span class="op">=</span> <span class="st">"grant_funders"</span>,</span>
+<span>      source_col <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>      source_display_col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"agency"</span><span class="op">)</span>, <span class="co"># Pastes column strings</span></span>
+<span>      target_tbl <span class="op">=</span> <span class="st">"grant_drops"</span>,</span>
+<span>      target_col <span class="op">=</span> <span class="st">"grant_funders_id"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    </span>
+<span>    <span class="co"># Prevent duplicate grant titles</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      type <span class="op">=</span> <span class="st">"unique"</span>,</span>
+<span>      source_tbl <span class="op">=</span> <span class="st">"grant_drops"</span>,</span>
+<span>      source_col <span class="op">=</span> <span class="st">"title"</span>,</span>
+<span>      target_tbl <span class="op">=</span> <span class="st">"grant_drops"</span>,</span>
+<span>      target_col <span class="op">=</span> <span class="st">"title"</span>,</span>
+<span>      result <span class="op">=</span> <span class="st">"stop"</span>,</span>
+<span>      result_field <span class="op">=</span> <span class="st">"match_warning"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    </span>
+<span>    <span class="co"># Populate available grants (only those without concept models)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      type <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span>      source_tbl <span class="op">=</span> <span class="st">"grant_drops"</span>,</span>
+<span>      source_col <span class="op">=</span> <span class="st">"id"</span>,</span>
+<span>      source_display_col <span class="op">=</span> <span class="st">"title"</span>,</span>
+<span>      target_tbl <span class="op">=</span> <span class="st">"grant_concept"</span>,</span>
+<span>      target_col <span class="op">=</span> <span class="st">"grant_drops_id"</span>,</span>
+<span>      filter_source <span class="op">=</span> <span class="st">"is.na(cm_note)"</span> <span class="co"># Only show grants without concept models</span></span>
+<span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>By default, the database configuration looks for environmental variables (e.g., <code>Sys.getenv("PASSWORD")</code>) that can be loaded from the <code>.Renviron</code> or your preferred method for handling environmental variables (e.g., <a href="https://keyring.r-lib.org" class="external-link">keyring</a>).</p>
-<p>See a more complex <a href="https://gist.github.com/dylanpieper/c570dba08f03daa25445dfe5aea9ab15" class="external-link">gist of this form with expressions and text piping</a>.</p>
 </div>
+<div class="section level2">
+<h2 id="single-survey-usage">Single survey usage<a class="anchor" aria-label="anchor" href="#single-survey-usage"></a>
+</h2>
+<p>For simple single-survey applications, pass your survey definition directly:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dylanpieper.github.io/shinysurveyjs">shinysurveyjs</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Database configuration (reused across examples)</span></span>
+<span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  host <span class="op">=</span> <span class="st">"localhost"</span>,</span>
+<span>  db_name <span class="op">=</span> <span class="st">"survey_db"</span>, </span>
+<span>  user <span class="op">=</span> <span class="st">"user"</span>,</span>
+<span>  password <span class="op">=</span> <span class="st">"pass"</span>,</span>
+<span>  write_table <span class="op">=</span> <span class="st">"responses"</span>, <span class="co"># Required for single surveys</span></span>
+<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Example survey definition</span></span>
+<span><span class="va">feedback_survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  title <span class="op">=</span> <span class="st">"Feedback Survey"</span>,</span>
+<span>  pages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      name <span class="op">=</span> <span class="st">"feedback"</span>,</span>
+<span>      elements <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"rating"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"satisfaction"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"How satisfied are you with our service?"</span>,</span>
+<span>          rateMin <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>          rateMax <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>          isRequired <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>        <span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          type <span class="op">=</span> <span class="st">"comment"</span>,</span>
+<span>          name <span class="op">=</span> <span class="st">"comments"</span>,</span>
+<span>          title <span class="op">=</span> <span class="st">"Additional comments"</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Using JSON definition</span></span>
+<span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span></span>
+<span>  json <span class="op">=</span> <span class="st">'{"title": "Quick Poll", "pages": [{"name": "poll", "elements": [{"type": "text", "name": "response", "title": "What do you think?", "isRequired": true}]}]}'</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="va">db_config</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Using list definition  </span></span>
+<span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span></span>
+<span>  list <span class="op">=</span> <span class="va">feedback_survey</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="va">db_config</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Use <code>write_table</code> in <code>db_config</code> when deploying single surveys or unnamed survey lists. For named survey lists (multi-survey apps), table names are derived from the list names.</p>
+</div>
+<div class="section level2">
+<h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+</h2>
+<div class="section level3">
+<h3 id="database-integration">Database integration<a class="anchor" aria-label="anchor" href="#database-integration"></a>
+</h3>
+<ul>
+<li>
+<strong>DBI database support</strong>: Our team is testing this application with MySQL (default), but other DBI-compatible database drivers can be used.</li>
+<li>
+<strong>Connection pooling</strong>: Automatic connection pooling with configurable pool size (default: 10 connections) for concurrent request handling.</li>
+<li>
+<strong>Transaction safety</strong>: Full ACID compliance with automatic transaction management. Operations use dedicated connections from the pool with automatic commit/rollback on success/failure.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="database-logic-for-survey-fields">Database logic for survey fields<a class="anchor" aria-label="anchor" href="#database-logic-for-survey-fields"></a>
+</h3>
+<p>Control survey behavior through database logic:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Choice fields populated from database</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  type <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span>  source_tbl <span class="op">=</span> <span class="st">"categories"</span>,       <span class="co"># Data source table  </span></span>
+<span>  source_col <span class="op">=</span> <span class="st">"id"</span>,               <span class="co"># Value column</span></span>
+<span>  source_display_col <span class="op">=</span> <span class="st">"name"</span>,     <span class="co"># Display text column</span></span>
+<span>  target_col <span class="op">=</span> <span class="st">"category_id"</span>,      <span class="co"># Survey field to populate</span></span>
+<span>  filter_source <span class="op">=</span> <span class="st">"active == 1"</span>,   <span class="co"># R expression filter</span></span>
+<span>  filter_unique <span class="op">=</span> <span class="cn">TRUE</span>             <span class="co"># Remove already-used options</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Parameter validation from URLs  </span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  type <span class="op">=</span> <span class="st">"param"</span>,</span>
+<span>  source_tbl <span class="op">=</span> <span class="st">"valid_sources"</span>,</span>
+<span>  target_col <span class="op">=</span> <span class="st">"referral_source"</span>   <span class="co"># Validates and stores in hidden field</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Uniqueness validation</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  type <span class="op">=</span> <span class="st">"unique"</span>, </span>
+<span>  source_tbl <span class="op">=</span> <span class="st">"participants"</span>,</span>
+<span>  source_col <span class="op">=</span> <span class="st">"email"</span>,</span>
+<span>  result <span class="op">=</span> <span class="st">"warn"</span>,                 <span class="co"># "warn" or "stop"</span></span>
+<span>  result_field <span class="op">=</span> <span class="st">"email_warning"</span>   <span class="co"># Field to show warning message</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="dual-logging-system">Dual logging system<a class="anchor" aria-label="anchor" href="#dual-logging-system"></a>
+</h3>
+<ul>
+<li>
+<strong>Console logging</strong>: Immediate feedback during development</li>
+<li>
+<strong>Database logging</strong>: Production monitoring and metadata
+<ul>
+<li>Error logging with SQL statement capture</li>
+<li>Survey completion timing (load, complete, and save durations)</li>
+<li>IP address tracking</li>
+</ul>
+</li>
+</ul>
+<p><strong>The database log table will be created automatically.</strong></p>
+</div>
+<div class="section level3">
+<h3 id="advanced-configuration">Advanced configuration<a class="anchor" aria-label="anchor" href="#advanced-configuration"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Database configuration</span></span>
+<span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
+<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
+<span>  db_name <span class="op">=</span> <span class="st">"survey_db"</span>,</span>
+<span>  user <span class="op">=</span> <span class="st">"db_user"</span>,</span>
+<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"survey_db"</span><span class="op">)</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span></span>
+<span>  list <span class="op">=</span> <span class="va">my_surveys</span>,</span>
+<span>  db_config <span class="op">=</span> <span class="va">db_config</span>,</span>
+<span>  </span>
+<span>  <span class="co"># Shiny server configuration</span></span>
+<span>  shiny_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    host <span class="op">=</span> <span class="st">"0.0.0.0"</span>,      <span class="co"># Bind to all interfaces</span></span>
+<span>    port <span class="op">=</span> <span class="fl">8080</span>            <span class="co"># Custom port</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  </span>
+<span>  <span class="co"># Theme customization</span></span>
+<span>  theme <span class="op">=</span> <span class="st">"modern"</span>,        <span class="co"># "defaultV2" or "modern"</span></span>
+<span>  theme_color <span class="op">=</span> <span class="st">"#1f77b4"</span>, <span class="co"># Primary color</span></span>
+<span>  custom_css <span class="op">=</span> <span class="st">"</span></span>
+<span><span class="st">    .sv-root { font-family: 'Roboto', sans-serif; }</span></span>
+<span><span class="st">    .sv-page { max-width: 800px; margin: 0 auto; }</span></span>
+<span><span class="st">  "</span>,</span>
+<span>  </span>
+<span>  <span class="co"># Progress tracking</span></span>
+<span>  cookie_expiration_days <span class="op">=</span> <span class="fl">30</span>,  <span class="co"># Save progress for 30 days</span></span>
+<span>  </span>
+<span>  <span class="co"># Development/production options</span></span>
+<span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,    <span class="co"># Display data table after submission</span></span>
+<span>  echo <span class="op">=</span> <span class="cn">FALSE</span>             <span class="co"># Hide console output</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="configuration">Configuration<a class="anchor" aria-label="anchor" href="#configuration"></a>
+</h2>
+<div class="section level3">
+<h3 id="environment-variables">Environment variables<a class="anchor" aria-label="anchor" href="#environment-variables"></a>
+</h3>
+<p>Set database connection parameters using environment variables:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># .Renviron file</span></span>
+<span><span class="va">DB_HOST</span><span class="op">=</span><span class="va">database.example.com</span></span>
+<span><span class="va">DB_PORT</span><span class="op">=</span><span class="fl">3306</span> </span>
+<span><span class="va">DB_NAME</span><span class="op">=</span><span class="va">research_db</span></span>
+<span><span class="va">DB_USER</span><span class="op">=</span><span class="va">db_user</span></span>
+<span><span class="va">DB_PASSWORD</span><span class="op">=</span><span class="va">db_pass</span></span>
+<span><span class="va">WRITE_TABLE</span><span class="op">=</span><span class="va">survey_responses</span> <span class="co"># For single survey use case</span></span>
+<span><span class="va">LOG_TABLE</span><span class="op">=</span><span class="va">survey_logs</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="secure-credential-management">Secure credential management<a class="anchor" aria-label="anchor" href="#secure-credential-management"></a>
+</h3>
+<p>Use <a href="https://keyring.r-lib.org/" class="external-link">keyring</a> for production deployments:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://keyring.r-lib.org/" class="external-link">keyring</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Store credentials securely</span></span>
+<span><span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_set</span><span class="op">(</span><span class="st">"db_pass"</span>, username <span class="op">=</span> <span class="st">"research_db"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Database configuration with secure credentials</span></span>
+<span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
+<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
+<span>  user <span class="op">=</span> <span class="st">"db_user"</span>, </span>
+<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"research_db"</span><span class="op">)</span>,</span>
+<span>  db_name <span class="op">=</span> <span class="st">"research_db"</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Use in survey</span></span>
+<span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span>list <span class="op">=</span> <span class="va">my_surveys</span>, db_config <span class="op">=</span> <span class="va">db_config</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 </div>
