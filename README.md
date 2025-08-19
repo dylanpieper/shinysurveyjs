@@ -143,7 +143,7 @@ survey(
       result_field = "match_warning"
     ),
     
-    # Populate available grants (only those without concept models)
+    # Populate available grants
     list(
       type = "choice",
       source_tbl = "grant_drops",
@@ -151,7 +151,7 @@ survey(
       source_display_col = "title",
       target_tbl = "grant_concept",
       target_col = "grant_drops_id",
-      filter_source = "is.na(cm_note)" # Only show grants without concept models
+      filter_source = "is.na(cm_note)" # Show grants without concept models
     )
   )
 )
