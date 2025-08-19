@@ -4,46 +4,62 @@
 \alias{survey_logger}
 \title{Survey Logger Class}
 \description{
-R6 Class providing queued logging functionality for Shiny survey applications
-using the main application's database connection pool.
+R6 Class providing dual logging functionality for Shiny survey applications:
+console messaging and database logging of survey metadata.
 }
 \details{
-The logger uses a queue-based approach where messages are:
-\enumerate{
-\item Added to an in-memory queue immediately
-\item Displayed in the console (if not suppressed)
-\item Periodically processed and written to the database in batches
+The logger provides two distinct logging mechanisms:
+
+\strong{Console Logging (\code{log_message})}:
+\itemize{
+\item Immediate color-coded console output for app messages, warnings, and errors
+\item No database persistence - console only
+\item Supports custom zones/contexts for message categorization
 }
 
-Features:
+\strong{Database Logging (\code{log_entry})}:
 \itemize{
-\item Uses main application pool for database operations
-\item Efficient batch database writes
-\item Immediate console feedback with color coding
-\item Connection pool health monitoring
+\item Queued logging of survey metadata to database table
+\item Tracks survey completion metrics (timing, errors, SQL statements)
+\item Uses batch processing with automatic queue management
+\item Only logs database errors after survey is loaded (conditional logging)
+}
+
+Key Features:
+\itemize{
+\item Dual-purpose logging: console messages + database survey metadata
+\item Uses main application connection for database operations
+\item Efficient batch database writes with automatic queue processing
+\item Immediate console feedback with color coding and zone support
+\item Database connection health monitoring
+\item SQL statement tracking for database error debugging
 }
 }
-\section{Message Types}{
+\section{Console Message Types}{
 
 \itemize{
-\item \code{INFO}: Regular informational messages (green)
-\item \code{WARN}: Warning messages (yellow)
-\item \code{ERROR}: Error messages (red)
+\item \code{INFO}: Regular informational messages (green console output)
+\item \code{WARN}: Warning messages (yellow console output)
+\item \code{ERROR}: Error messages (red console output)
 }
 }
 
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{log_table}}{Character string specifying the PostgreSQL table for logs}
+\item{\code{log_table}}{Character string specifying the database table for logs}
 
 \item{\code{session_id}}{Character string containing unique session identifier}
 
 \item{\code{survey_name}}{Character string identifying the current survey}
 
+\item{\code{survey_loaded}}{Logical flag indicating if a survey has been successfully loaded}
+
 \item{\code{suppress_logs}}{Logical flag to suppress console output}
 
 \item{\code{queue}}{data.frame containing queued messages for batch processing}
+
+\item{\code{last_sql_statement}}{Character string containing the last executed SQL statement}
 }
 \if{html}{\out{</div>}}
 }
@@ -51,6 +67,10 @@ Features:
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-survey_logger-new}{\code{survey_logger$new()}}
+\item \href{#method-survey_logger-update_survey_name}{\code{survey_logger$update_survey_name()}}
+\item \href{#method-survey_logger-mark_survey_loaded}{\code{survey_logger$mark_survey_loaded()}}
+\item \href{#method-survey_logger-update_last_sql_statement}{\code{survey_logger$update_last_sql_statement()}}
+\item \href{#method-survey_logger-log_entry}{\code{survey_logger$log_entry()}}
 \item \href{#method-survey_logger-log_message}{\code{survey_logger$log_message()}}
 \item \href{#method-survey_logger-clone}{\code{survey_logger$clone()}}
 }
@@ -61,7 +81,7 @@ Features:
 \subsection{Method \code{new()}}{
 Initialize a new survey logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, suppress_logs = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, echo = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -73,16 +93,112 @@ Initialize a new survey logger instance
 
 \item{\code{survey_name}}{Character string identifying the survey}
 
-\item{\code{suppress_logs}}{Logical flag to suppress console output. Default: FALSE}
+\item{\code{echo}}{Logical flag to display console output. Default: TRUE}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-survey_logger-update_survey_name"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-update_survey_name}{}}}
+\subsection{Method \code{update_survey_name()}}{
+Update the survey name for this logger instance
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_survey_name(survey_name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{survey_name}}{Character string identifying the new survey name}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible NULL
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-survey_logger-mark_survey_loaded"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-mark_survey_loaded}{}}}
+\subsection{Method \code{mark_survey_loaded()}}{
+Mark the survey as loaded to enable error logging
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$mark_survey_loaded()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Invisible NULL
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-survey_logger-update_last_sql_statement"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-update_last_sql_statement}{}}}
+\subsection{Method \code{update_last_sql_statement()}}{
+Update the last SQL statement executed
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_last_sql_statement(sql_statement)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sql_statement}}{Character string containing the SQL statement}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible NULL
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-survey_logger-log_entry"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-log_entry}{}}}
+\subsection{Method \code{log_entry()}}{
+Queue a log entry for database insert (only for loaded surveys)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_entry(
+  survey_id,
+  message = NULL,
+  ip_address = NULL,
+  duration_load = NULL,
+  duration_complete = NULL,
+  duration_save = NULL,
+  sql_statement = NULL,
+  force_log = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{survey_id}}{Integer ID from the survey table}
+
+\item{\code{message}}{Character string containing error message (only for DB errors after survey loaded)}
+
+\item{\code{ip_address}}{Character string containing client IP address}
+
+\item{\code{duration_load}}{Numeric time spent loading (seconds)}
+
+\item{\code{duration_complete}}{Numeric time spent completing survey (seconds)}
+
+\item{\code{duration_save}}{Numeric time spent saving (seconds)}
+
+\item{\code{sql_statement}}{Character string containing the SQL that failed (only for errors)}
+
+\item{\code{force_log}}{Logical flag to force logging even if survey not loaded (internal use)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible NULL
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-survey_logger-log_message"></a>}}
 \if{latex}{\out{\hypertarget{method-survey_logger-log_message}{}}}
 \subsection{Method \code{log_message()}}{
-Queue a message for logging and display in console
+Helper method for simple console logging (no database)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_message(message, type = "INFO", zone = "DEFAULT")}\if{html}{\out{</div>}}
 }
@@ -94,7 +210,7 @@ Queue a message for logging and display in console
 
 \item{\code{type}}{Character string specifying message type (INFO/WARN/ERROR)}
 
-\item{\code{zone}}{Character string identifying logging zone. Default: "DEFAULT"}
+\item{\code{zone}}{Character string specifying the logging zone/context (default: "DEFAULT")}
 }
 \if{html}{\out{</div>}}
 }

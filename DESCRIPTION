@@ -1,11 +1,10 @@
 Package: shinysurveyjs
-Title: Create and Deploy Survey Applications
+Title: Deploy SurveyJS Survey Applications Using R Shiny
 Version: 0.1.0
 Authors@R: 
     person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
-Description: The goal of this package is to integrate 'SurveyJS' <https://surveyjs.io/> 
-    with 'Shiny' <https://shiny.posit.co/> to interface with a 'PostgreSQL' database
-    <https://www.postgresql.org/> and create dynamic user experiences.
+Description: Deploy 'SurveyJS' <https://surveyjs.io/> survey applications using R 'Shiny' <https://shiny.posit.co/> 
+    to interface with databases and create dynamic user experiences.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -16,19 +15,22 @@ Imports:
     shinycssloaders,
     DT,
     R6,
-    promises,
-    future,
-    pool,
-    RPostgres,
+    RMariaDB,
     DBI,
     htmltools,
     sass,
     cli,
     jsonlite,
-    tools
+    tools,
+    future,
+    glue,
+    pool,
+    rlang
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    RPostgres,
+    RSQLite
 VignetteBuilder: knitr
 URL: https://dylanpieper.github.io/shinysurveyjs, https://github.com/dylanpieper/shinysurveyjs
 BugReports: https://github.com/dylanpieper/shinysurveyjs/issues

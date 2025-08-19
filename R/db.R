@@ -1,139 +1,89 @@
-#' Open Database Pool with Automatic Shutdown
+#' Open Database Connection Pool
 #'
-#' Creates and manages a global database pool connection using PostgreSQL.
-#' Automatically registers a shutdown handler to close the pool when the application terminates.
+#' Creates a database connection pool using DBI-compatible database drivers.
+#' Stores the pool globally and registers cleanup handler.
 #'
+#' @param driver DBI-compatible driver function or name of database driver (default: RMariaDB::MariaDB())
 #' @param host Database host
-#' @param port Database port
+#' @param port Database port (default: 3306)
 #' @param db_name Database name
 #' @param user Database username
 #' @param password Database password
-#' @param min_size Minimum pool size (default: 1)
-#' @param max_size Maximum pool size (default: Inf)
 #' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
 #' @param logger Logger object for tracking operations (default: NULL)
+#' @param pool_size Maximum number of connections in the pool (default: 10)
+#' @param ... Additional connection parameters passed to driver
 #'
-#' @return A database pool object
+#' @return A database connection pool object
 #'
-#' @importFrom pool dbPool poolIsValid
-#' @importFrom RPostgres Postgres
+#' @importFrom pool dbPool poolClose
 #' @importFrom shiny onStop
 #'
+#' @noRd
 #' @keywords internal
-db_pool_open <- function(host = NULL,
-                         port = NULL,
-                         db_name = NULL,
-                         user = NULL,
-                         password = NULL,
-                         min_size = 1,
-                         max_size = Inf,
-                         global = TRUE,
-                         logger = NULL) {
-  
-  if (all(!is.null(c(host, port, db_name, user, password)))) {
+db_conn_open <- function(
+    driver = RMariaDB::MariaDB(),
+    host = NULL,
+    port = 3306,
+    db_name = NULL,
+    user = NULL,
+    password = NULL,
+    global = TRUE,
+    logger = NULL,
+    pool_size = 10,
+    ...) {
+  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(db_name) && !is.null(user) && !is.null(password)) {
+    
+    # Create connection pool
     pool <- pool::dbPool(
-      RPostgres::Postgres(),
+      drv = driver,
       host = host,
       port = port,
       dbname = db_name,
       user = user,
       password = password,
-      minSize = min_size,
-      maxSize = max_size
+      maxSize = pool_size,
+      ...
     )
-    
+
     if (global) {
       assign("app_pool", pool, envir = .GlobalEnv)
-      
+
       shiny::onStop(function() {
-        db_pool_close(NULL, logger)
+        db_conn_close(NULL, logger)
       })
-      
+
       if (!is.null(logger)) {
-        logger$log_message("Database pool initialized and registered for auto-cleanup", "INFO", "DATABASE")
+        logger$log_message(paste("Database connection pool initialized for", class(driver)[1], "with", pool_size, "max connections"), "INFO", "DATABASE")
       }
     }
-    
+
     return(pool)
   } else {
     cli::cli_abort("Database connection parameters are required")
   }
 }
 
-#' Close Global Database Pool
+#' Close Global Database Connection Pool
 #'
 #' Closes the global database connection pool (app_pool) during application shutdown.
-#' This function handles cleanup of the global pool and should be used when the
-#' application is completely shutting down, not for individual session disconnections.
 #'
-#' @param session Shiny session object. Required to register cleanup handlers for
-#'                session shutdown.
+#' @param session Shiny session object (unused)
 #' @param logger Logger object for tracking cleanup operations.
 #'               If NULL, no logging is performed.
 #'
-#' @details
-#' The function looks for a global 'app_pool' object and closes it safely.
-#' Use this function only when completely shutting down the application.
-#' For managing individual connections, use `db_conn_release()` instead.
-#'
 #' @return Invisible NULL
 #'
-#' @importFrom shiny onStop
+#' @importFrom pool poolClose
+#' @noRd
 #' @keywords internal
-db_pool_close <- function(session, logger = NULL) {
+db_conn_close <- function(session, logger = NULL) {
   if (exists("app_pool", envir = .GlobalEnv)) {
     pool <- get("app_pool", envir = .GlobalEnv)
     pool::poolClose(pool)
     rm("app_pool", envir = .GlobalEnv)
     if (!is.null(logger)) {
-      logger$log_message("Closed pool and removed object", "INFO", "DATABASE")
-    }
-  }
-  invisible(NULL)
-}
-
-#' Release Database Connection Back to Pool
-#'
-#' Returns a database connection to the connection pool when done with operations.
-#' This function should be used to release individual connections after query execution.
-#'
-#' @param conn A DBI connection object obtained from the pool. If NULL, the function
-#'             attempts to find a connection in the session.
-#' @param session Shiny session object. Used to find session-specific connections.
-#' @param logger Logger object for tracking connection operations.
-#'               If NULL, no logging is performed.
-#'
-#' @details
-#' This function safely returns a connection to the pool without closing the entire pool.
-#' It validates that the connection exists and is valid before returning it.
-#' This is the preferred method for handling connections after queries in a pool-based
-#' application.
-#'
-#' If a connection is not explicitly provided, the function will look for a connection
-#' in the session environment first, then fall back to the global environment.
-#'
-#' @return Invisible NULL
-#'
-#' @importFrom DBI dbIsValid
-#' @importFrom pool poolReturn
-#' @keywords internal
-db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
-  if (is.null(conn)) {
-    if (!is.null(session) && exists("db_conn", envir = session)) {
-      conn <- get("db_conn", envir = session)
-    } else if (exists("db_conn", envir = .GlobalEnv)) {
-      conn <- get("db_conn", envir = .GlobalEnv)
-    }
-  }
-  if (!is.null(conn) && DBI::dbIsValid(conn)) {
-    pool::poolReturn(conn)
-    if (!is.null(session) && exists("db_conn", envir = session)) {
-      rm("db_conn", envir = session)
-    } else if (exists("db_conn", envir = .GlobalEnv)) {
-      rm("db_conn", envir = .GlobalEnv)
-    }
-    if (!is.null(logger)) {
-      logger$log_message("Released connection back to pool", "INFO", "DATABASE")
+      logger$log_message("Closed connection pool and removed object", "INFO", "DATABASE")
     }
   }
   invisible(NULL)
@@ -143,205 +93,102 @@ db_conn_release <- function(conn = NULL, session = NULL, logger = NULL) {
 #'
 #' @description
 #' R6 Class for managing database operations related to survey data storage
-#' and retrieval using PostgreSQL. Includes automatic tracking of creation date,
-#' update date, session ID, and IP address.
+#' and retrieval using MySQL and other DBI-compatible databases.
 #'
 #' @details
 #' This class handles all database interactions for survey data, including:
-#' * Table creation and modification with tracking columns
-#' * Data insertion with automatic timestamp management
-#' * Session and IP tracking
+#' * Table creation and modification
+#' * Data insertion and retrieval
 #' * Transaction management
 #' * Error handling and logging
-#'
-#' Tracking columns automatically added to each table:
-#' * date_created: Timestamp when record was created
-#' * date_updated: Timestamp when record was last updated
-#' * session_id: Shiny session identifier
-#' * ip_address: Client IP address
 #'
 #' @import R6
 #' @importFrom DBI dbExecute dbQuoteIdentifier dbGetQuery dbBegin dbCommit
 #' @importFrom DBI dbRollback dbIsValid dbExistsTable dbWriteTable
-#' @importFrom pool poolCheckout poolReturn
 #' @importFrom shiny getDefaultReactiveDomain parseQueryString
 db_ops <- R6::R6Class(
   "Database Operations",
   public = list(
-    #' @field session_id Unique identifier for the current session
-    session_id = NULL,
 
-    #' @field pool Database connection pool
-    pool = NULL,
+    #' @field conn Database connection
+    conn = NULL,
 
     #' @field logger Logger instance for tracking operations
     logger = NULL,
 
     #' @description Create a new Database Operations instance
-    #' @param pool Pool object. Database connection pool
-    #' @param session_id Character. Unique identifier for the current session
+    #' @param conn Connection pool object. Database connection pool
     #' @param logger survey_logger object. Logger instance for tracking operations
-    initialize = function(pool, session_id, logger) {
-      if (is.null(pool)) {
-        logger$log_message("Database pool cannot be NULL", "ERROR", "DATABASE")
-        stop("Database pool is required")
+    initialize = function(conn, logger) {
+      if (is.null(conn)) {
+        logger$log_message("Database connection pool cannot be NULL", "ERROR", "DATABASE")
+        stop("Database connection pool is required")
       }
-      self$pool <- pool
-      self$session_id <- session_id
+      self$conn <- conn
       self$logger <- logger
-
-      private$init_tracking_triggers()
     },
 
-    #' @description Execute a database operation with transaction handling
+    #' @description Execute a database operation with transaction handling using connection pool
     #' @param operation Function. The database operation to execute
     #' @param error_message Character. Message to display if operation fails
     #' @return Result of the operation or error message if failed
     operate = function(operation, error_message) {
-      if (is.null(self$pool)) {
-        self$logger$log_message("Database pool is not initialized", "ERROR", "DATABASE")
-        stop("Database pool not initialized")
+      if (is.null(self$conn)) {
+        self$logger$log_message("Database connection pool is not valid", "ERROR", "DATABASE")
+        stop("Database connection pool not valid")
       }
 
-      conn <- NULL
-      tryCatch({
-        conn <- pool::poolCheckout(self$pool)
-        if (is.null(conn) || !DBI::dbIsValid(conn)) {
-          self$logger$log_message("Failed to obtain valid database connection", "ERROR", "DATABASE")
-          stop("Failed to obtain valid database connection")
-        }
+      # Get a connection from the pool for this transaction
+      conn <- pool::poolCheckout(self$conn)
+      on.exit(pool::poolReturn(conn))
 
-        DBI::dbBegin(conn)
-        result <- operation(conn)
-        DBI::dbCommit(conn)
+      tryCatch(
+        {
+          DBI::dbBegin(conn)
+          result <- operation(conn)
+          DBI::dbCommit(conn)
 
-        return(result)
-      }, error = function(e) {
-        if (!is.null(conn) && DBI::dbIsValid(conn)) {
-          tryCatch(
-            {
-              DBI::dbRollback(conn)
-              self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
-            },
-            error = function(rollback_error) {
-              self$logger$log_message(
-                sprintf("Rollback error: %s", rollback_error$message),
-                "ERROR",
-                "DATABASE"
-              )
-            }
-          )
-        }
-        self$logger$log_message(
-          sprintf("%s: %s", error_message, e$message),
-          "ERROR",
-          "DATABASE"
-        )
-        stop(sprintf("%s: %s", error_message, e$message))
-      }, finally = {
-        if (!is.null(conn)) {
-          tryCatch(
-            {
-              pool::poolReturn(conn)
-            },
-            error = function(return_error) {
-              self$logger$log_message(
-                sprintf("Error returning connection to pool: %s", return_error$message),
-                "ERROR",
-                "DATABASE"
-              )
-            }
-          )
-        }
-      })
-    },
-
-    #' @description Ensure tracking columns exist in a table
-    #' @param table_name Character. Name of the table to check/modify
-    #' @return Invisible NULL
-    ensure_tracking_columns = function(table_name) {
-      self$operate(function(conn) {
-        # Get existing columns
-        cols_query <- sprintf(
-          "SELECT column_name, data_type
-           FROM information_schema.columns
-           WHERE table_name = '%s';",
-          table_name
-        )
-        existing_cols <- DBI::dbGetQuery(conn, cols_query)
-
-        # Define tracking columns with their types
-        tracking_cols <- list(
-          date_created = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-          date_updated = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-          session_id = "TEXT",
-          ip_address = "INET"
-        )
-
-        # Add missing tracking columns
-        for (col_name in names(tracking_cols)) {
-          if (!col_name %in% existing_cols$column_name) {
-            alter_query <- sprintf(
-              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-              DBI::dbQuoteIdentifier(conn, table_name),
-              DBI::dbQuoteIdentifier(conn, col_name),
-              tracking_cols[[col_name]]
-            )
-            DBI::dbExecute(conn, alter_query)
-
-            # For existing rows, set date_created and date_updated to current timestamp
-            if (col_name %in% c("date_created", "date_updated")) {
-              update_query <- sprintf(
-                "UPDATE %s SET %s = CURRENT_TIMESTAMP WHERE %s IS NULL;",
-                DBI::dbQuoteIdentifier(conn, table_name),
-                DBI::dbQuoteIdentifier(conn, col_name),
-                DBI::dbQuoteIdentifier(conn, col_name)
-              )
-              DBI::dbExecute(conn, update_query)
-            }
-
-            self$logger$log_message(
-              sprintf("Added column '%s' to table '%s'", col_name, table_name),
-              "INFO",
-              "DATABASE"
+          return(result)
+        },
+        error = function(e) {
+          if (DBI::dbIsValid(conn)) {
+            tryCatch(
+              {
+                DBI::dbRollback(conn)
+                self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
+              },
+              error = function(rollback_error) {
+                self$logger$log_message(
+                  sprintf("Rollback error: %s", rollback_error$message),
+                  "ERROR",
+                  "DATABASE"
+                )
+              }
             )
           }
+          # Log database errors with SQL statement if available
+          # Force log for critical operations (connection, table creation)
+          # Skip logging for insert/update operations as they are handled by the calling function with more context
+          force_critical <- grepl("connection|initialize|create", error_message, ignore.case = TRUE)
+          skip_logging <- grepl("update|insert", error_message, ignore.case = TRUE)
+          
+          if (!skip_logging) {
+            self$logger$log_entry(
+              survey_id = NA, # Will be set by calling function if available
+              message = sprintf("%s: %s", error_message, e$message),
+              sql_statement = self$logger$last_sql_statement,
+              force_log = force_critical
+            )
+          }
+          stop(sprintf("%s: %s", error_message, e$message))
         }
-
-        # Check if trigger exists
-        trigger_name <- paste0("update_date_updated_", table_name)
-        trigger_exists_query <- sprintf(
-          "SELECT 1 FROM pg_trigger WHERE tgname = '%s'",
-          trigger_name
-        )
-        trigger_exists <- nrow(DBI::dbGetQuery(conn, trigger_exists_query)) > 0
-
-        # Create trigger if it doesn't exist
-        if (!trigger_exists) {
-          trigger_query <- sprintf(
-            "CREATE TRIGGER %s
-             BEFORE UPDATE ON %s
-             FOR EACH ROW
-             EXECUTE FUNCTION update_date_updated();",
-            trigger_name,
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
-          DBI::dbExecute(conn, trigger_query)
-
-          self$logger$log_message(
-            sprintf("Added update trigger to table '%s'", table_name),
-            "INFO",
-            "DATABASE"
-          )
-        }
-
-        invisible(NULL)
-      }, sprintf("Failed to ensure tracking columns for table '%s'", table_name))
+      )
     },
 
-    #' @description Create new survey data table with tracking columns
-    #' @param write_table Character. Name of the table to create
-    #' @param data data.frame. Data frame containing the schema for the new table
+
+    #' @description Check pre-defined survey table for required columns
+    #' @param write_table Character. Name of the pre-defined table to check
+    #' @param data data.frame. Data frame containing the required columns for the survey
     #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
     #'   A nested list containing:
     #'   \describe{
@@ -367,74 +214,61 @@ db_ops <- R6::R6Class(
         table_exists <- DBI::dbExistsTable(conn, table_name)
 
         if (!table_exists) {
-          # Define tracking columns
-          tracking_cols <- c(
-            "date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-            "date_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-            "session_id TEXT",
-            "ip_address INET"
-          )
-
-          col_defs <- private$generate_column_definitions(data, survey_obj)
-
-          create_query <- sprintf(
-            "CREATE TABLE %s (
-            id SERIAL PRIMARY KEY,
-            %s,
-            %s
-          );",
-            DBI::dbQuoteIdentifier(conn, table_name),
-            paste(col_defs, collapse = ", "),
-            paste(tracking_cols, collapse = ", ")
-          )
-          DBI::dbExecute(conn, create_query)
-
-          # Create trigger for automatic date_updated
-          trigger_query <- sprintf(
-            "CREATE TRIGGER update_date_updated_%s
-           BEFORE UPDATE ON %s
-           FOR EACH ROW
-           EXECUTE FUNCTION update_date_updated();",
-            table_name,
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
-          DBI::dbExecute(conn, trigger_query)
-
           self$logger$log_message(
-            sprintf("Created survey table '%s'", table_name),
-            "INFO",
+            sprintf("Pre-defined table '%s' does not exist", table_name),
+            "ERROR",
             "DATABASE"
           )
-        } else {
-          # For existing table, ensure tracking columns
-          self$ensure_tracking_columns(table_name)
+          stop(sprintf("Pre-defined table '%s' not found. Please ensure the table exists before running the survey.", table_name))
+        }
 
-          # Add any missing columns
-          cols_query <- sprintf(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = '%s';",
-            table_name
-          )
-          existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
+        # Get existing columns from the pre-defined table
+        cols_query <- sprintf(
+          "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
+          table_name
+        )
+        self$logger$update_last_sql_statement(cols_query)
+        existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
-          for (col in names(data)) {
-            if (!col %in% existing_cols) {
-              col_type <- private$get_postgres_type(data[[col]], col, survey_obj)
-              alter_query <- sprintf(
-                "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-                DBI::dbQuoteIdentifier(conn, table_name),
-                DBI::dbQuoteIdentifier(conn, col),
-                col_type
-              )
-              DBI::dbExecute(conn, alter_query)
-              self$logger$log_message(
-                sprintf("Added column '%s' to table '%s'", col, table_name),
-                "INFO",
-                "DATABASE"
-              )
+        # Check for required columns
+        missing_cols <- character(0)
+        for (col in names(data)) {
+          if (!col %in% existing_cols) {
+            # Check if this field has showOtherItem enabled and needs an _other column
+            if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+              other_col_name <- paste0(col, "_other")
+              if (!other_col_name %in% existing_cols) {
+                missing_cols <- c(missing_cols, col, other_col_name)
+              } else if (!col %in% existing_cols) {
+                missing_cols <- c(missing_cols, col)
+              }
+            } else {
+              missing_cols <- c(missing_cols, col)
             }
           }
         }
-      }, "Failed to create/update survey table")
+
+        if (length(missing_cols) > 0) {
+          self$logger$log_message(
+            sprintf(
+              "Pre-defined table '%s' is missing required columns: %s",
+              table_name, paste(missing_cols, collapse = ", ")
+            ),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf(
+            "Pre-defined table '%s' is missing required columns: %s. Please add these columns to the table.",
+            table_name, paste(missing_cols, collapse = ", ")
+          ))
+        }
+
+        self$logger$log_message(
+          sprintf("Validated pre-defined table '%s' has all required columns", table_name),
+          "INFO",
+          "DATABASE"
+        )
+      }, "Failed to validate survey table")
 
       invisible(table_name)
     },
@@ -460,61 +294,90 @@ db_ops <- R6::R6Class(
       self$operate(function(conn) {
         if (!DBI::dbExistsTable(conn, table_name)) {
           self$logger$log_message(
-            sprintf("Table '%s' does not exist", table_name),
+            sprintf("Pre-defined table '%s' does not exist", table_name),
             "ERROR",
             "table_check"
           )
-          stop(sprintf("Table '%s' does not exist", table_name))
+          stop(sprintf("Pre-defined table '%s' does not exist", table_name))
         }
 
-        # Ensure tracking columns exist
-        self$ensure_tracking_columns(table_name)
-
-        # Add tracking data
-        data$session_id <- self$session_id
-        data$ip_address <- self$get_client_ip()
-
-        # Check for new columns
+        # Get existing columns from the pre-defined table
         cols_query <- sprintf(
-          "SELECT column_name, data_type
+          "SELECT COLUMN_NAME as column_name, DATA_TYPE as data_type
            FROM information_schema.columns
-           WHERE table_name = '%s';",
+           WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
+        self$logger$update_last_sql_statement(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
-        new_cols <- setdiff(names(data), existing_cols$column_name)
-
-        # Add new columns if needed
-        for (col in new_cols) {
-          if (!col %in% c("date_created", "date_updated", "session_id", "ip_address")) {
-            col_type <- private$get_postgres_type(data[[col]])
-            alter_query <- sprintf(
-              "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;",
-              DBI::dbQuoteIdentifier(conn, table_name),
-              DBI::dbQuoteIdentifier(conn, col),
-              col_type
-            )
-            DBI::dbExecute(conn, alter_query)
-            self$logger$log_message(
-              sprintf("Added column '%s' to '%s'", col, table_name),
-              "INFO",
-              "DATABASE"
-            )
-          }
+        # Check that all required columns exist
+        missing_cols <- setdiff(names(data), existing_cols$column_name)
+        if (length(missing_cols) > 0) {
+          self$logger$log_message(
+            sprintf(
+              "Pre-defined table '%s' is missing required columns: %s",
+              table_name, paste(missing_cols, collapse = ", ")
+            ),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf(
+            "Pre-defined table '%s' is missing required columns: %s",
+            table_name, paste(missing_cols, collapse = ", ")
+          ))
         }
 
-        # Insert data
+        # Filter data to only include columns that exist in the table
+        available_data_cols <- intersect(names(data), existing_cols$column_name)
+        if (length(available_data_cols) == 0) {
+          self$logger$log_message(
+            sprintf("No matching columns found between data and table '%s'", table_name),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("No matching columns found between data and table '%s'", table_name))
+        }
+
+        # Select only the columns that exist in the table
+        filtered_data <- data[, available_data_cols, drop = FALSE]
+
+        # Insert data - construct actual INSERT statement for logging
+        columns <- paste(DBI::dbQuoteIdentifier(conn, names(filtered_data)), collapse = ", ")
+        values_list <- apply(filtered_data, 1, function(row) {
+          values <- vapply(row, function(val) {
+            if (is.na(val) || is.null(val)) {
+              "NULL"
+            } else if (is.character(val)) {
+              DBI::dbQuoteString(conn, val)
+            } else {
+              as.character(val)
+            }
+          }, character(1))
+          paste("(", paste(values, collapse = ", "), ")")
+        })
+
+        insert_statement <- sprintf(
+          "INSERT INTO %s (%s) VALUES %s",
+          DBI::dbQuoteIdentifier(conn, table_name),
+          columns,
+          paste(values_list, collapse = ", ")
+        )
+        self$logger$update_last_sql_statement(insert_statement)
+
         DBI::dbWriteTable(
           conn,
           name = table_name,
-          value = data,
+          value = filtered_data,
           append = TRUE,
           row.names = FALSE
         )
 
         self$logger$log_message(
-          sprintf("Inserted survey data (n = %d)", nrow(data)),
+          sprintf(
+            "Inserted %d rows into pre-defined table '%s' using %d columns",
+            nrow(filtered_data), table_name, length(available_data_cols)
+          ),
           "INFO",
           "DATABASE"
         )
@@ -530,9 +393,10 @@ db_ops <- R6::R6Class(
     #' @param order_by Character vector. Columns to order by
     #' @param desc Logical. If TRUE, sort in descending order
     #' @param limit Numeric. Maximum number of rows to return (NULL for all rows)
+    #' @param update_last_sql Logical. If TRUE, update logger's last_sql_statement (default: TRUE)
     #' @return data.frame. The requested data
     read_table = function(table_name, columns = NULL, filters = NULL,
-                          order_by = NULL, desc = FALSE, limit = NULL) {
+                          order_by = NULL, desc = FALSE, limit = NULL, update_last_sql = TRUE) {
       if (is.null(table_name) || !is.character(table_name)) {
         self$logger$log_message(paste("Invalid table_name parameter:", table_name), "ERROR", "DATABASE")
         stop("Invalid table name")
@@ -635,10 +499,13 @@ db_ops <- R6::R6Class(
           limit_clause
         )
 
+        if (update_last_sql) {
+          self$logger$update_last_sql_statement(query)
+        }
         result <- DBI::dbGetQuery(conn, query)
 
         self$logger$log_message(
-          sprintf("Read n = %d rows from '%s'", nrow(result), sanitized_table),
+          sprintf("Read %d rows from '%s'", nrow(result), sanitized_table),
           "INFO",
           "DATABASE"
         )
@@ -699,6 +566,7 @@ db_ops <- R6::R6Class(
           id
         )
 
+        self$logger$update_last_sql_statement(query)
         rows_affected <- DBI::dbExecute(conn, query)
 
         if (rows_affected == 0) {
@@ -706,7 +574,11 @@ db_ops <- R6::R6Class(
         }
 
         self$logger$log_message(
-          sprintf("Updated %d rows in table '%s' for id %d", rows_affected, sanitized_table, id),
+          sprintf(
+            "Updated %d rows in table '%s' for id %d: %s",
+            rows_affected, sanitized_table, id,
+            jsonlite::toJSON(list(values), auto_unbox = TRUE)
+          ),
           "INFO",
           "DATABASE"
         )
@@ -715,63 +587,176 @@ db_ops <- R6::R6Class(
       }, sprintf("Failed to update table '%s' for id %d", sanitized_table, id))
     },
 
-    #' Get Client IP Address
-    #'
-    #' @description
-    #' Retrieves the client IP address from HTTP request headers in order of preference.
-    #' This method checks multiple headers to handle scenarios involving proxies and load balancers.
-    #'
-    #' @details
-    #' The method checks the following headers in order:
-    #' 1. X-Real-IP
-    #' 2. X-Forwarded-For (takes first IP if multiple are present)
-    #' 3. REMOTE_ADDR
-    #'
-    #' If no IP address is found in any header, returns "0.0.0.0" as a fallback.
-    #'
-    #' @return Character string containing the client IP address. Returns "0.0.0.0" if no IP address can be determined.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Inside a Shiny server function
-    #' server <- function(input, output, session) {
-    #'   db_ops <- db_ops$new(pool, session$token, logger)
-    #'   client_ip <- db_ops$get_client_ip()
-    #' }
-    #' }
-    #'
-    #' @importFrom shiny parseQueryString getDefaultReactiveDomain
-    get_client_ip = function() {
-      headers <- as.list(shiny::parseQueryString(shiny::getDefaultReactiveDomain()$REQUEST))
-
-      ip <- headers$`X-Real-IP` %||%
-        headers$`X-Forwarded-For` %||%
-        headers$REMOTE_ADDR %||%
-        "0.0.0.0"
-
-      # If X-Forwarded-For contains multiple IPs, get the first one
-      if (grepl(",", ip)) {
-        ip <- trimws(strsplit(ip, ",")[[1]][1])
+    #' @description Perform survey update operation using join columns
+    #' @param source_data data.frame. Data from the source survey to use for updates
+    #' @param target_table Character. Name of the target table to update
+    #' @param join_columns Named character vector. Columns to join on (source_col = target_col)
+    #' @return Invisible(NULL)
+    perform_survey_update = function(source_data, target_table, join_columns) {
+      if (!is.data.frame(source_data) || nrow(source_data) == 0) {
+        self$logger$log_message("Invalid source_data: must be a non-empty data frame", "ERROR", "DATABASE")
+        stop("Invalid source data format")
       }
 
-      return(ip)
+      if (is.null(target_table) || !is.character(target_table)) {
+        self$logger$log_message("Invalid target_table parameter", "ERROR", "DATABASE")
+        stop("Invalid target table name")
+      }
+
+      if (is.null(join_columns) || !is.character(join_columns) || length(join_columns) == 0) {
+        self$logger$log_message("Invalid join_columns: must be a named character vector", "ERROR", "DATABASE")
+        stop("Invalid join columns")
+      }
+
+      sanitized_target <- private$sanitize_survey_table_name(target_table)
+
+      self$operate(function(conn) {
+        if (!DBI::dbExistsTable(conn, sanitized_target)) {
+          self$logger$log_message(
+            sprintf("Target table '%s' does not exist", sanitized_target),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Target table '%s' does not exist", sanitized_target))
+        }
+
+        # Extract join values from source data
+        source_col <- names(join_columns)[1] # e.g., "grant_drops_id"
+        target_col <- join_columns[1] # e.g., "id"
+
+        if (!source_col %in% names(source_data)) {
+          self$logger$log_message(
+            sprintf("Join column '%s' not found in source data", source_col),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Join column '%s' not found in source data", source_col))
+        }
+
+        join_value <- source_data[[source_col]]
+        if (is.na(join_value) || is.null(join_value)) {
+          self$logger$log_message(
+            sprintf("Join value for column '%s' is NA or NULL", source_col),
+            "ERROR",
+            "DATABASE"
+          )
+          stop(sprintf("Join value for column '%s' is NA or NULL", source_col))
+        }
+
+        # Prepare update data (exclude the join column from updates)
+        update_data <- source_data[!names(source_data) %in% source_col]
+
+        if (ncol(update_data) == 0) {
+          self$logger$log_message("No columns to update after excluding join column", "WARNING", "DATABASE")
+          return(invisible(NULL))
+        }
+
+        # Check if target record exists
+        check_query <- sprintf(
+          "SELECT COUNT(*) as count FROM %s WHERE %s = %s",
+          DBI::dbQuoteIdentifier(conn, sanitized_target),
+          DBI::dbQuoteIdentifier(conn, target_col),
+          if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
+        )
+        self$logger$update_last_sql_statement(check_query)
+        record_count <- DBI::dbGetQuery(conn, check_query)$count
+
+        if (record_count == 0) {
+          self$logger$log_message(
+            sprintf("No record found in '%s' with %s = %s", sanitized_target, target_col, join_value),
+            "WARNING",
+            "DATABASE"
+          )
+          return(invisible(NULL))
+        }
+
+        # Build SET clause for UPDATE
+        set_parts <- vapply(names(update_data), function(col) {
+          value <- update_data[[col]]
+          if (is.na(value) || is.null(value)) {
+            sprintf("%s = NULL", DBI::dbQuoteIdentifier(conn, col))
+          } else if (is.character(value)) {
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              DBI::dbQuoteString(conn, value)
+            )
+          } else {
+            sprintf(
+              "%s = %s",
+              DBI::dbQuoteIdentifier(conn, col),
+              value
+            )
+          }
+        }, character(1))
+
+        set_clause <- paste(set_parts, collapse = ", ")
+
+        # Build and execute UPDATE query
+        update_query <- sprintf(
+          "UPDATE %s SET %s WHERE %s = %s",
+          DBI::dbQuoteIdentifier(conn, sanitized_target),
+          set_clause,
+          DBI::dbQuoteIdentifier(conn, target_col),
+          if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
+        )
+
+        self$logger$update_last_sql_statement(update_query)
+        rows_affected <- DBI::dbExecute(conn, update_query)
+
+        self$logger$log_message(
+          sprintf(
+            "Updated %d rows in table '%s' using join %s = %s",
+            rows_affected, sanitized_target, target_col, join_value
+          ),
+          "INFO",
+          "DATABASE"
+        )
+
+        invisible(NULL)
+      }, sprintf("Failed to perform survey update on table '%s'", sanitized_target))
+    },
+
+    #' @description Get required columns for a survey to help with pre-defined table setup
+    #' @param data data.frame. Data frame containing the survey data structure
+    #' @param survey_obj Survey.JS definition object that contains the complete survey structure.
+    #'   Used to identify fields with "other" options that need separate columns.
+    #' @return List containing required column names and their recommended MySQL types
+    get_required_columns = function(data, survey_obj = NULL) {
+      if (!is.data.frame(data)) {
+        self$logger$log_message("Invalid data: must be a data frame", "ERROR", "DATABASE")
+        stop("Invalid data format")
+      }
+
+      required_cols <- list()
+
+      for (col in names(data)) {
+        # Check if this field has showOtherItem enabled
+        if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+          # Main column for choices
+          main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
+          required_cols[[col]] <- main_type
+
+          # Other column for free text responses
+          other_col_name <- paste0(col, "_other")
+          required_cols[[other_col_name]] <- "TEXT"
+        } else {
+          # Regular field
+          col_type <- private$get_mysql_type(data[[col]], col, survey_obj)
+          required_cols[[col]] <- col_type
+        }
+      }
+
+      self$logger$log_message(
+        sprintf("Generated column requirements for %d fields", length(names(data))),
+        "INFO",
+        "DATABASE"
+      )
+
+      return(required_cols)
     }
   ),
   private = list(
-    init_tracking_triggers = function() {
-      self$operate(function(conn) {
-        # Create trigger function for updating date_updated
-        trigger_func_query <- "
-          CREATE OR REPLACE FUNCTION update_date_updated()
-          RETURNS TRIGGER AS $$
-          BEGIN
-            NEW.date_updated = CURRENT_TIMESTAMP;
-            RETURN NEW;
-          END;
-          $$ LANGUAGE plpgsql;"
-        DBI::dbExecute(conn, trigger_func_query)
-      }, "Failed to initialize tracking triggers")
-    },
     sanitize_survey_table_name = function(name) {
       tolower(gsub("[^[:alnum:]]", "_", name))
     },
@@ -820,49 +805,131 @@ db_ops <- R6::R6Class(
 
       return(FALSE)
     },
-    get_postgres_type = function(vector, field_name = NULL, survey_obj = NULL) {
-      # First check if field has showOtherItem enabled
-      if (!is.null(survey_obj) && !is.null(field_name)) {
-        if (private$has_other_option(survey_obj, field_name)) {
-          self$logger$log_message(
-            sprintf("Field '%s' has showOtherItem enabled, using TEXT type", field_name),
-            "INFO",
-            "DATABASE"
-          )
-          return("TEXT")
+    get_fields_with_other_option = function(survey_obj) {
+      if (is.null(survey_obj)) {
+        return(character(0))
+      }
+
+      fields_with_other <- character(0)
+
+      # Helper function to recursively search elements
+      search_elements <- function(elements) {
+        for (element in elements) {
+          if (!is.null(element$name) &&
+            !is.null(element$showOtherItem) &&
+            element$showOtherItem) {
+            fields_with_other <<- c(fields_with_other, element$name)
+          }
+
+          # Check nested elements (e.g., in panels)
+          if (!is.null(element$elements)) {
+            search_elements(element$elements)
+          }
         }
       }
 
-      # Regular type detection for other fields
+      # Search through all pages
+      if (!is.null(survey_obj$pages)) {
+        for (page in survey_obj$pages) {
+          if (!is.null(page$elements)) {
+            search_elements(page$elements)
+          }
+        }
+      }
+
+      # Also search direct elements (if not using pages)
+      if (!is.null(survey_obj$elements)) {
+        search_elements(survey_obj$elements)
+      }
+
+      return(unique(fields_with_other))
+    },
+    get_mysql_type = function(vector, field_name = NULL, survey_obj = NULL) {
+      # Note: Fields with showOtherItem are now handled separately in generate_column_definitions
+      # This function only determines type for regular fields or when called independently
+
+      # MySQL type detection based on data
       if (is.numeric(vector)) {
         if (all(vector == floor(vector), na.rm = TRUE)) {
           return("BIGINT")
         }
-        return("NUMERIC")
+        return("DECIMAL(10,2)")
       }
       if (is.logical(vector)) {
         return("BOOLEAN")
       }
       if (inherits(vector, "POSIXt")) {
-        return("TIMESTAMP WITH TIME ZONE")
+        return("TIMESTAMP")
       }
       if (is.factor(vector)) {
         return("TEXT")
       }
       if (is.list(vector)) {
-        return("JSONB")
+        return("JSON")
       }
       return("TEXT")
     },
+    get_mysql_type_for_choices = function(vector, field_name = NULL, survey_obj = NULL) {
+      # For fields with showOtherItem, determine type based on expected choice values
+      # Most survey fields with choices will be numeric IDs, but check the actual data
+      if (is.numeric(vector)) {
+        if (all(vector == floor(vector), na.rm = TRUE)) {
+          return("BIGINT")
+        }
+        return("DECIMAL(10,2)")
+      }
+      # Default to TEXT for choice fields that might contain mixed types
+      return("TEXT")
+    },
     generate_column_definitions = function(data, survey_obj = NULL) {
-      vapply(names(data), function(col) {
-        type <- private$get_postgres_type(data[[col]], col, survey_obj)
-        sprintf(
-          "%s %s",
-          DBI::dbQuoteIdentifier(self$pool, col),
-          type
-        )
-      }, character(1))
+      col_defs <- c()
+      created_cols <- character(0) # Track all created columns (main and _other)
+
+      for (col in unique(names(data))) { # Use unique() to prevent processing duplicate column names
+        # Skip if main column already created
+        if (col %in% created_cols) {
+          next
+        }
+
+        # Check if this field has showOtherItem enabled
+        if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
+          # Create main column with appropriate type for the choices (usually INT)
+          main_type <- private$get_mysql_type_for_choices(data[[col]], col, survey_obj)
+          col_defs <- c(col_defs, sprintf(
+            "%s %s",
+            DBI::dbQuoteIdentifier(self$conn, col),
+            main_type
+          ))
+          created_cols <- c(created_cols, col)
+
+          # Create separate column for "other" responses - check for duplicates
+          other_col_name <- paste0(col, "_other")
+          if (!other_col_name %in% created_cols) {
+            col_defs <- c(col_defs, sprintf(
+              "%s TEXT",
+              DBI::dbQuoteIdentifier(self$conn, other_col_name)
+            ))
+            created_cols <- c(created_cols, other_col_name)
+
+            self$logger$log_message(
+              sprintf("Field '%s' has showOtherItem enabled, creating separate '_other' column", col),
+              "INFO",
+              "DATABASE"
+            )
+          }
+        } else {
+          # Regular field without other option
+          type <- private$get_mysql_type(data[[col]], col, survey_obj)
+          col_defs <- c(col_defs, sprintf(
+            "%s %s",
+            DBI::dbQuoteIdentifier(self$conn, col),
+            type
+          ))
+          created_cols <- c(created_cols, col)
+        }
+      }
+
+      return(col_defs)
     }
   )
 )

@@ -21,7 +21,7 @@ function initializeSurvey(data) {
 
         let surveyJSON;
         let urlParams = {};
-        let expectDynamicConfig = false;  // New flag to track dynamic config expectation
+        let expectDbLogicConfig = false;  // New flag to track database logic config expectation
 
         if (typeof data === "object") {
             surveyJSON = data.survey || data;
@@ -29,8 +29,8 @@ function initializeSurvey(data) {
                 urlParams = data.params;
                 console.log("URL parameters:", urlParams);
             }
-            // Check if dynamic config is expected
-            expectDynamicConfig = !!data.dynamic_config;
+            // Check if database logic config is expected
+            expectDbLogicConfig = !!data.db_logic;
         } else if (typeof data === "string") {
             try {
                 surveyJSON = JSON.parse(data);
@@ -84,8 +84,8 @@ function initializeSurvey(data) {
         } else if (savedData) {
             survey.data = savedData;
             setTimeout(() => {
-                if (savedData._dynamicConfig) {
-                    restoreDynamicChoices(survey, savedData);
+                if (savedData._dbLogicConfig) {
+                    restoreDbLogicChoices(survey, savedData);
                 }
             }, DEBOUNCE_DELAY);
         } else {
@@ -150,7 +150,40 @@ function initializeSurvey(data) {
                                     break;
         
                                 default:
-                                    responses[key] = question._param ?? value;
+                                    // Check if this question has showOtherItem enabled
+                                    if (question.showOtherItem) {
+                                        console.log(`Processing field with showOtherItem: ${key}`, {
+                                            value: value,
+                                            valueType: typeof value,
+                                            questionComment: question.comment
+                                        });
+                                        
+                                        // Handle "other" responses separately
+                                        if (typeof value === 'object' && value !== null && 'value' in value && 'other' in value) {
+                                            // SurveyJS structure for other responses: {value: selectedChoice, other: otherText}
+                                            responses[key] = value.value;
+                                            responses[`${key}_other`] = value.other || null;
+                                        } else if (value === 'other' && question.comment) {
+                                            // Alternative structure where "other" is selected and comment contains the text
+                                            responses[key] = value;
+                                            responses[`${key}_other`] = question.comment;
+                                        } else if (typeof value === 'string' && value.startsWith('other:')) {
+                                            // Another possible structure: "other:custom text"
+                                            responses[key] = 'other';
+                                            responses[`${key}_other`] = value.substring(6); // Remove "other:" prefix
+                                        } else if (value === survey.otherValue || (typeof value === 'string' && value === 'other')) {
+                                            // User selected "other" option
+                                            responses[key] = value;
+                                            responses[`${key}_other`] = survey.getOtherValue(key) || null;
+                                        } else {
+                                            // Regular choice selection (not "other") - don't create _other field at all for non-other responses
+                                            responses[key] = question._param ?? value;
+                                            // Don't add _other field for regular responses to avoid empty objects
+                                        }
+                                    } else {
+                                        // Regular field without other option
+                                        responses[key] = question._param ?? value;
+                                    }
                                     break;
                             }
                         }
@@ -191,19 +224,19 @@ function initializeSurvey(data) {
             }
         });
 
-        // Initialize survey with proper dynamic config handling
+        // Initialize survey with proper database logic config handling
         $("#surveyContainer").Survey({
             model: survey,
             onAfterRenderSurvey: () => {
-                console.log("Survey rendered, expectDynamicConfig:", expectDynamicConfig);
-                if (expectDynamicConfig) {
-                    console.log("Waiting for dynamic config");
+                console.log("Survey rendered, expectDbLogicConfig:", expectDbLogicConfig);
+                if (expectDbLogicConfig) {
+                    console.log("Waiting for database logic config");
                     Shiny.setInputValue("surveyReady", true);
                 } else {
-                    console.log("No dynamic config expected, showing survey");
+                    console.log("No database logic config expected, showing survey");
                     document.getElementById("waitingMessage").style.display = "none";
                     document.getElementById("surveyContainer").style.display = "block";
-                    Shiny.setInputValue("dynamicConfigComplete", true);
+                    Shiny.setInputValue("dbLogicConfigComplete", true);
                 }
             }
         });

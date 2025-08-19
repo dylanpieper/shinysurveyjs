@@ -1,95 +1,110 @@
 #' Deploy a Survey Shiny Application
 #'
-#' Creates and deploys a Shiny application for a survey using SurveyJS
-#' (<https://surveyjs.io>) with PostgreSQL database integration. The application handles
-#' survey data collection, dynamic fields, and asynchronous logging through a future plan.
+#' Creates and deploys a Shiny application for SurveyJS surveys with database integration,
+#' dual logging system, and advanced dynamic configuration. Supports both single surveys
+#' and multi-survey applications with URL-based routing.
 #'
-#' @param json String. JSON survey definition or object.
-#' @param list List. Survey structure to convert to JSON.
+#' The dual logging system provides:
+#' * Console logging: Immediate color-coded messages for development and monitoring
+#' * Database logging: Survey metadata including timing, IP addresses, and error tracking
+#'
+#' @param json String. JSON survey definition. Use for single survey applications.
+#' @param list List. Survey structure(s). Can be:
+#'   * Single survey: List with survey elements (converted to JSON)
+#'   * Multi-survey: Named list where each element is a complete survey
+#'     (e.g., `list("survey_1" = survey1, "survey_2" = survey2)`)
 #' @param show_response Logical. Display responses in a data.table after submission.
 #'   Default: `FALSE`.
-#' @param theme String. SurveyJS theme, either "defaultV2" or "modern".
-#'   Default: "defaultV2".
+#' @param theme String. SurveyJS theme: "defaultV2" or "modern". Default: "defaultV2".
 #' @param theme_color String. Hex color code for primary theme customization.
-#' @param shiny_config List. Optional Shiny configuration parameters.
-#' @param db_config List. Database connection parameters. If not specified,
-#'   values are read from environment variables:
-#'   * `host`: Database host (env: HOST)
-#'   * `port`: Database port (env: PORT)
-#'   * `db_name`: Database name (env: DB_NAME)
-#'   * `user`: Database username (env: USER)
-#'   * `password`: Database password (env: PASSWORD)
-#'   * `write_table`: Survey data table name (env: WRITE_TABLE)
-#'   * `log_table`: Log messages table name (env: LOG_TABLE)
-#' @param dynamic_config List. Configuration for dynamic fields. Supports three types:
-#'   \subsection{Choice Configuration}{
-#'     Populates dropdown or radio button choices from database tables:
-#'     * `config_type`: Set to "choice"
-#'     * `table_name`: Database table to populate choices from
-#'     * `config_col`: Column containing choice text
-#'     * `display_col`: Optional column for display text
-#'
-#'     For dependent fields:
-#'     * `parent_table_name`: Parent table for dependency chain
-#'     * `parent_id_col`: Column linking to parent table
+#'   Default: "#003594".
+#' @param shiny_config List. Shiny server configuration:
+#'   * `host`: Server host address. Default: "0.0.0.0"
+#'   * `port`: Server port number. Default: 3838
+#' @param db_config List. Database connection parameters:
+#'   * `host`: Database host (default: `Sys.getenv("HOST")`)
+#'   * `port`: Database port (default: `Sys.getenv("PORT")`)
+#'   * `db_name`: Database name (default: `Sys.getenv("DB_NAME")`)
+#'   * `user`: Database username (default: `Sys.getenv("USER")`)
+#'   * `password`: Database password (default: `Sys.getenv("PASSWORD")`)
+#'   * `write_table`: Survey data table (default: `Sys.getenv("WRITE_TABLE")`)
+#'   * `log_table`: Application logs table (default: `Sys.getenv("LOG_TABLE")`)
+#'   * `pool_size`: Maximum connections in pool (default: 10)
+#' @param db_update List. Update configuration for multi-survey workflows.
+#'   Each element contains:
+#'   * `from`: Source survey name to update from
+#'   * `to`: Target survey/table name to update
+#'   * `by`: Named vector for join columns (e.g., `c("source_id" = "target_id")`)
+#' @param db_logic List. Dynamic database configurations supporting multiple types:
+#'   \subsection{Choice Configuration (`type = "choice"`)}{
+#'     Populates dropdown/radio choices from database tables:
+#'     * `source_tbl`: Database table containing choices
+#'     * `source_col`: Column with choice values
+#'     * `source_display_col`: Optional column for display text (defaults to `source_col`)
+#'     * `target_tbl`: Target survey/table name (for multi-survey filtering)
+#'     * `target_col`: Survey field to populate
+#'     * `filter_source`: R expression to filter source data (e.g., `"is.na(status)"`)
+#'     * `filter_unique`: Logical. Remove choices already used in target table
 #'   }
-#'   \subsection{Parameter Configuration}{
-#'     Handles URL query parameters and hidden fields:
-#'     * `config_type`: Set to "param"
-#'     * `table_name`: Database table with valid parameters
-#'     * `config_col`: Column matching URL parameter name
-#'     * `display_col`: Optional column for display text
+#'   \subsection{Parameter Configuration (`type = "param"`)}{
+#'     Validates URL query parameters against database values:
+#'     * `source_tbl`: Database table with valid parameter values
+#'     * `target_col`: URL parameter name to validate
 #'   }
-#'   \subsection{Unique Value Configuration}{
-#'     Validates unique entries against existing database records:
-#'     * `config_type`: Set to "unique"
-#'     * `config_col`: Column to check for uniqueness
-#'     * `result`: Action on duplicate ("warn" or "stop")
-#'     * `result_field`: Survey field for warning message (should be hidden)
+#'   \subsection{Uniqueness Validation (`type = "unique"`)}{
+#'     Prevents duplicate entries in database fields:
+#'     * `source_tbl`: Database table to check against
+#'     * `source_col`: Database column to check for duplicates
+#'     * `target_tbl`: Target survey/table name
+#'     * `target_col`: Survey field to validate
+#'     * `result`: Action on duplicate - "warn" or "stop"
+#'     * `result_field`: Survey field for warning display (use hidden HTML element)
 #'   }
-#' @param cookie_expiration_days Numeric. Number of days to retain survey cookies.
-#'   Default: 7.
-#' @param custom_css String. Custom CSS rules to append to the theme.
-#' @param suppress_logs Logical. Suppress console log messages. Default: `FALSE`.
+#' @param cookie_expiration_days Numeric. Days to retain survey progress cookies.
+#'   Default: 0 (no cookies).
+#' @param custom_css String. Additional CSS rules to append to the theme.
+#' @param echo Logical. Display console logging messages. Default: `TRUE`.
 #'
 #' @return A Shiny application object
 #'
 #' @examples
 #' \dontrun{
-#' # Choice configuration example
-#' dynamic_config <- list(
-#'   list(
-#'     config_type = "choice",
-#'     table_name = "packages",
-#'     config_col = "name"
+#' # Single survey with basic configuration
+#' survey <- list(
+#'   title = "Feedback Survey",
+#'   pages = list(
+#'     list(
+#'       name = "feedback",
+#'       elements = list(
+#'         list(
+#'           type = "radiogroup",
+#'           name = "rating",
+#'           title = "How satisfied are you?",
+#'           choices = c("Very satisfied", "Satisfied", "Neutral", "Dissatisfied")
+#'         )
+#'       )
+#'     )
 #'   )
 #' )
 #'
-#' # Parameter configuration example
-#' dynamic_config <- list(
-#'   list(
-#'     config_type = "param",
-#'     table_name = "sources",
-#'     config_col = "source",
-#'     display_col = "display_text"
-#'   )
-#' )
-#'
-#' # Unique value configuration example
-#' dynamic_config <- list(
-#'   list(
-#'     config_type = "unique",
-#'     config_col = "title",
-#'     result = "warn",
-#'     result_field = "warning_message"
+#' survey(
+#'   list = survey,
+#'   db_config = list(
+#'     driver = RMariaDB::MariaDB(),
+#'     host = "localhost",
+#'     user = "user",
+#'     password = "password",
+#'     db_name = "surveys",
+#'     write_table = "feedback_data",
+#'     log_table = "app_logs",
+#'     pool_size = 10
 #'   )
 #' )
 #' }
-#'
-#' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp
+#' @importFrom shiny fluidPage observeEvent reactive reactiveValues req outputOptions shinyApp div h1 h3 h4 tags
 #' @importFrom DT renderDT datatable
 #' @importFrom jsonlite fromJSON toJSON
-#' @importFrom shinyjs hide show
+#' @importFrom shinyjs hide show useShinyjs
 #' @importFrom future plan multisession
 #'
 #' @export
@@ -109,37 +124,89 @@ survey <- function(json = NULL,
                      user = Sys.getenv("USER"),
                      password = Sys.getenv("PASSWORD"),
                      write_table = Sys.getenv("WRITE_TABLE"),
-                     log_table = Sys.getenv("LOG_TABLE")
+                     log_table = Sys.getenv("LOG_TABLE"),
+                     pool_size = 10
                    ),
-                   dynamic_config = NULL,
-                   cookie_expiration_days = 7,
+                   db_update = NULL,
+                   db_logic = NULL,
+                   cookie_expiration_days = 0,
                    custom_css = NULL,
-                   suppress_logs = FALSE) {
+                   echo = TRUE) {
   if (missing(json) && missing(list)) {
     stop("Survey JSON or list is required")
   }
 
-  if (!missing(list) & missing(json)) {
+  # Check if list contains multiple surveys (multisurvey mode)
+  is_multisurvey <- !missing(list) && missing(json) &&
+    is.list(list) &&
+    length(list) > 0 &&
+    !is.null(names(list)) &&
+    all(sapply(list, function(x) is.list(x) && ("title" %in% names(x) || "pages" %in% names(x))))
+
+  if (!missing(list) & missing(json) && !is_multisurvey) {
     json <- jsonlite::toJSON(list,
       pretty = TRUE,
       auto_unbox = TRUE
     )
   }
 
-  survey_setup(db_config, shiny_config)
+  survey_setup(db_config, shiny_config, is_multisurvey)
 
-  ui <- fluidPage(
-    survey_ui_wrapper(
-      id = "surveyContainer",
-      theme = theme,
-      theme_color = theme_color,
-      cookie_expiration_days = cookie_expiration_days,
-      custom_css = custom_css
+  ui <- if (is_multisurvey) {
+    # Multisurvey UI with landing page
+    fluidPage(
+      shinyjs::useShinyjs(),
+      # Landing page
+      shiny::div(
+        id = "landingPage",
+        style = "text-align: center; padding: 50px;",
+        shiny::h1("Survey Portal"),
+        shiny::div(
+          id = "surveyLinks",
+          lapply(names(list), function(survey_name) {
+            shiny::div(
+              style = "margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; display: inline-block; min-width: 200px;",
+              shiny::h4(list[[survey_name]]$title %||% survey_name),
+              shiny::tags$a(
+                href = paste0("?survey=", survey_name),
+                "Start",
+                class = "btn btn-primary",
+                style = paste0("background-color: ", theme_color, "; border-color: ", theme_color, ";")
+              )
+            )
+          })
+        )
+      ),
+      # Survey container (hidden initially)
+      shiny::div(
+        id = "surveySection",
+        style = "display: none;",
+        survey_ui_wrapper(
+          id = "surveyContainer",
+          theme = theme,
+          theme_color = theme_color,
+          cookie_expiration_days = cookie_expiration_days,
+          custom_css = custom_css
+        )
+      )
     )
-  )
+  } else {
+    # Single survey UI
+    fluidPage(
+      survey_ui_wrapper(
+        id = "surveyContainer",
+        theme = theme,
+        theme_color = theme_color,
+        cookie_expiration_days = cookie_expiration_days,
+        custom_css = custom_css
+      )
+    )
+  }
 
   server <- function(input, output, session) {
-    hide_and_show("surveyContainer", "waitingMessage")
+    if (!is_multisurvey) {
+      hide_and_show("surveyContainer", "waitingMessage")
+    }
 
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
@@ -154,7 +221,9 @@ survey <- function(json = NULL,
       duration_complete = NULL,
       duration_save = NULL,
       validated_params = NULL,
-      survey_def = NULL
+      survey_def = NULL,
+      selected_survey = NULL,
+      survey_json = NULL
     )
 
     server_setup(
@@ -163,24 +232,34 @@ survey <- function(json = NULL,
       app_pool = app_pool,
       survey_logger = survey_logger,
       db_ops = db_ops,
-      suppress_logs = suppress_logs
+      echo = echo,
+      is_multisurvey = is_multisurvey
     )
 
     config_list_reactive <- reactive({
-      req(!is.null(dynamic_config))
+      req(!is.null(db_logic))
+
+      # Determine current survey/table for optimization
+      current_survey <- if (is_multisurvey) {
+        rv$selected_survey
+      } else {
+        db_config$write_table
+      }
+
       read_and_cache(
         db_ops = db_ops,
-        dynamic_config = dynamic_config
+        db_logic = db_logic,
+        target_survey = current_survey
       )
     })
 
     validate_params_reactive <- reactive({
-      req(!is.null(dynamic_config))
+      req(!is.null(db_logic))
 
       config_list <- config_list_reactive()
 
-      config_validation <- validate_dynamic_config(
-        dynamic_config = dynamic_config,
+      config_validation <- validate_db_logic(
+        db_logic = db_logic,
         config_list = config_list,
         survey_logger = logger
       )
@@ -197,7 +276,7 @@ survey <- function(json = NULL,
       query_list <- parse_query(session)
 
       param_validation <- validate_url_parameters(
-        dynamic_config = dynamic_config,
+        db_logic = db_logic,
         config_list = config_list,
         query_list = query_list,
         survey_logger = logger
@@ -225,7 +304,39 @@ survey <- function(json = NULL,
       tryCatch(
         {
           isolate({
-            if (!is.null(dynamic_config)) {
+            # Handle multisurvey mode
+            if (is_multisurvey) {
+              query_list <- parse_query(session)
+              survey_param <- query_list$survey
+
+              if (is.null(survey_param) || survey_param == "") {
+                # Show landing page
+                shinyjs::show("landingPage")
+                shinyjs::hide("surveySection")
+                return()
+              } else if (!survey_param %in% names(list)) {
+                # Invalid survey name
+                hide_and_show("landingPage", "surveyNotFoundMessage")
+                return()
+              } else {
+                # Valid survey selected
+                rv$selected_survey <- survey_param
+                rv$survey_json <- jsonlite::toJSON(list[[survey_param]], pretty = TRUE, auto_unbox = TRUE)
+
+                # Update logger to use actual survey name and start logging
+                logger$update_survey_name(survey_param)
+                logger$log_message("Started session", zone = "SURVEY")
+
+                shinyjs::hide("landingPage")
+                shinyjs::show("surveySection")
+                hide_and_show("surveyContainer", "waitingMessage")
+              }
+            } else {
+              # Single survey mode - set survey_json
+              rv$survey_json <- json
+            }
+
+            if (!is.null(db_logic)) {
               validation_result <- validate_params_reactive()
 
               if (!validation_result$valid) {
@@ -236,10 +347,10 @@ survey <- function(json = NULL,
               rv$validated_params <- validation_result$values
             }
 
-            survey_obj <- if (is.character(json)) {
-              jsonlite::fromJSON(json, simplifyVector = FALSE)
+            survey_obj <- if (is.character(rv$survey_json)) {
+              jsonlite::fromJSON(rv$survey_json, simplifyVector = FALSE)
             } else {
-              json
+              rv$survey_json
             }
 
             rv$survey_def <- survey_obj
@@ -248,47 +359,51 @@ survey <- function(json = NULL,
               rv$validated_params, config_list_reactive()
             )
 
+            # Check if current survey has relevant database logic configs
+            has_relevant_configs <- FALSE
+            if (!is.null(db_logic)) {
+              current_table <- if (is_multisurvey) rv$selected_survey else db_config$write_table
+              relevant_configs <- Filter(function(config) {
+                target_tbl <- config$target_tbl
+                # If no target_tbl specified, include the config (legacy behavior)
+                # If target_tbl matches current survey, include it
+                is.null(target_tbl) || target_tbl == current_table
+              }, db_logic)
+              has_relevant_configs <- length(relevant_configs) > 0
+            }
+
             survey_data <- list(
               survey = survey_obj,
               params = validated_params,
-              dynamic_config = !is.null(dynamic_config)
+              db_logic = has_relevant_configs
             )
 
             json <- jsonlite::toJSON(rv$validated_params)
 
-            logger$log_message(
-              sprintf(
-                "Attached JSON to survey data: %s",
-                json
-              ),
-              zone = "SURVEY"
-            )
-
             session$sendCustomMessage("loadSurvey", survey_data)
 
-            # Keep loading spinner visible until dynamic config is complete
+            # Keep loading spinner visible until database logic config is complete
             observeEvent(input$surveyReady,
               {
                 req(session)
-                req(dynamic_config)
+                req(db_logic)
                 req(db_ops)
 
-                configure_dynamic_fields(
-                  dynamic_config = dynamic_config,
+                configure_db_logic(
+                  db_logic = db_logic,
                   config_list_reactive = config_list_reactive(),
                   session = session,
                   logger = logger,
-                  write_table = db_config$write_table,
-                  db_ops = db_ops
+                  write_table = if (is_multisurvey) rv$selected_survey else db_config$write_table,
+                  db_ops = db_ops,
+                  db_update = db_update
                 )
-
-                logger$log_message("Configured dynamic fields", zone = "SURVEY")
               },
               once = TRUE
             )
 
-            # Only hide loading spinner after dynamic config is complete
-            observeEvent(input$dynamicConfigComplete,
+            # Only hide loading spinner after database logic config is complete
+            observeEvent(input$dbLogicConfigComplete,
               {
                 hide_and_show("waitingMessage", "surveyContainer")
 
@@ -300,6 +415,9 @@ survey <- function(json = NULL,
                 logger$log_message("Loaded survey",
                   zone = "SURVEY"
                 )
+
+                # Mark survey as loaded to enable error logging
+                logger$mark_survey_loaded()
               },
               once = TRUE
             )
@@ -367,6 +485,85 @@ survey <- function(json = NULL,
             "SURVEY"
           )
 
+          # Ensure _other fields exist for all fields with showOtherItem = TRUE
+          survey_def <- isolate(rv$survey_def)
+          if (!is.null(survey_def) && !is.null(db_ops)) {
+            # Get all field names that have showOtherItem enabled
+            # We need to create a temporary helper function since we can't access private methods
+            get_fields_with_other_option <- function(survey_obj) {
+              if (is.null(survey_obj)) {
+                return(character(0))
+              }
+
+              fields_with_other <- character(0)
+
+              # Helper function to recursively search elements
+              search_elements <- function(elements) {
+                for (element in elements) {
+                  if (!is.null(element$name) &&
+                    !is.null(element$showOtherItem) &&
+                    element$showOtherItem) {
+                    fields_with_other <<- c(fields_with_other, element$name)
+                  }
+
+                  # Check nested elements (e.g., in panels)
+                  if (!is.null(element$elements)) {
+                    search_elements(element$elements)
+                  }
+                }
+              }
+
+              # Search through all pages
+              if (!is.null(survey_obj$pages)) {
+                for (page in survey_obj$pages) {
+                  if (!is.null(page$elements)) {
+                    search_elements(page$elements)
+                  }
+                }
+              }
+
+              # Also search direct elements (if not using pages)
+              if (!is.null(survey_obj$elements)) {
+                search_elements(survey_obj$elements)
+              }
+
+              return(unique(fields_with_other))
+            }
+
+            other_fields <- get_fields_with_other_option(survey_def)
+
+            for (field_name in other_fields) {
+              other_field_name <- paste0(field_name, "_other")
+
+              if (field_name %in% names(parsed_data)) {
+                field_value <- parsed_data[[field_name]]
+
+                # Check if the main field contains non-numeric text (indicating "other" was selected)
+                if (!is.na(field_value) && is.character(field_value) &&
+                  !grepl("^\\d+$", field_value)) {
+                  # Move the text to the _other column
+                  parsed_data[[other_field_name]] <- field_value
+                  # Set main field to NULL (will be stored as NULL in database)
+                  parsed_data[[field_name]] <- NA
+
+                  logger$log_message(
+                    sprintf(
+                      "Moved 'other' text from '%s' to '%s': %s",
+                      field_name, other_field_name, field_value
+                    ),
+                    "INFO",
+                    "SURVEY"
+                  )
+                } else {
+                  # Regular choice selected, ensure _other field exists but is empty
+                  if (!other_field_name %in% names(parsed_data)) {
+                    parsed_data[[other_field_name]] <- NA_character_
+                  }
+                }
+              }
+            }
+          }
+
           # Convert to data frame while preserving all fields including field-other
           parsed_data <- as.data.frame(parsed_data, stringsAsFactors = FALSE)
         }
@@ -379,9 +576,7 @@ survey <- function(json = NULL,
               stop(msg)
             }
 
-            parsed_data$duration_load <- rv$duration_load
-            parsed_data$duration_complete <- rv$duration_complete
-            parsed_data$duration_save <- as.numeric(0.1)
+            # Remove tracking columns - these will go in the log table instead
 
             # Log the final data structure being sent to database
             logger$log_message(
@@ -393,29 +588,113 @@ survey <- function(json = NULL,
               "SURVEY"
             )
 
-            # First create/ensure the table exists with the correct schema
-            db_ops$create_survey_table(
-              db_config$write_table,
-              parsed_data,
-              survey_obj = isolate(rv$survey_def)
+            # Determine table name (use survey name directly for multisurvey mode)
+            table_name <- if (is_multisurvey && !is.null(rv$selected_survey)) {
+              rv$selected_survey
+            } else {
+              db_config$write_table
+            }
+
+            # Check if this is a db_update operation
+            is_update_operation <- FALSE
+            update_config <- NULL
+
+            if (!is.null(db_update) && is_multisurvey && !is.null(rv$selected_survey)) {
+              # Find matching update configuration
+              for (config in db_update) {
+                if (!is.null(config$from) && config$from == rv$selected_survey) {
+                  is_update_operation <- TRUE
+                  update_config <- config
+                  break
+                }
+              }
+            }
+
+            if (is_update_operation) {
+              # Handle update operation
+              target_table <- update_config$to
+              join_columns <- update_config$by
+
+              # Remove join column from data for table creation (we don't want to add it as a new column)
+              join_col_name <- names(join_columns)[1] # e.g., "grant_drops_id"
+              schema_data <- parsed_data[!names(parsed_data) %in% join_col_name]
+
+              # First create/ensure the target table exists with the correct schema (excluding join column)
+              if (ncol(schema_data) > 0) {
+                db_ops$create_survey_table(
+                  target_table,
+                  schema_data,
+                  survey_obj = isolate(rv$survey_def)
+                )
+              }
+
+              # Perform update instead of insert
+              result <- db_ops$perform_survey_update(
+                source_data = parsed_data,
+                target_table = target_table,
+                join_columns = join_columns
+              )
+            } else {
+              # Regular insert operation
+              # First create/ensure the table exists with the correct schema
+              db_ops$create_survey_table(
+                table_name,
+                parsed_data,
+                survey_obj = isolate(rv$survey_def)
+              )
+
+              # Then insert the survey data
+              result <- db_ops$update_survey_table(table_name, parsed_data)
+            }
+
+            # Get the survey ID for logging
+            survey_id <- tryCatch(
+              {
+                if (is_update_operation) {
+                  # For updates, get the ID from the target table using the join value
+                  join_value <- parsed_data[[names(update_config$by)[1]]]
+                  target_row <- db_ops$read_table(
+                    update_config$to,
+                    columns = "id",
+                    filters = setNames(list(join_value), update_config$by[1]),
+                    limit = 1,
+                    update_last_sql = FALSE
+                  )
+                  if (nrow(target_row) > 0) target_row$id else NA
+                } else {
+                  # For inserts, get the most recent insert for this survey
+                  recent_row <- db_ops$read_table(
+                    table_name,
+                    columns = "id",
+                    order_by = "id",
+                    desc = TRUE,
+                    limit = 1,
+                    update_last_sql = FALSE
+                  )
+                  if (nrow(recent_row) > 0) recent_row$id else NA
+                }
+              },
+              error = function(e) NA
             )
 
-            # Then insert the survey data
-            result <- db_ops$update_survey_table(db_config$write_table, parsed_data)
+            # Get client IP address
+            client_ip <- session$clientData$url_hostname %||% "unknown"
+
+            # Log the successful submission with timing data
+            logger$log_entry(
+              survey_id = survey_id,
+              ip_address = client_ip,
+              duration_load = rv$duration_load,
+              duration_complete = rv$duration_complete,
+              duration_save = as.numeric(difftime(Sys.time(), rv$complete_time, units = "secs"))
+            )
 
             rv$save_time <- Sys.time()
             rv$duration_save <- as.numeric(
               difftime(rv$save_time, rv$complete_time, units = "secs")
             )
 
-            if (show_response) {
-              parsed_data$duration_load <- rv$duration_load |> round(2)
-              parsed_data$duration_complete <- rv$duration_complete |> round(2)
-              parsed_data$duration_save <- rv$duration_save |> round(2)
-              parsed_data$session_id <- session$token
-              parsed_data$ip_address <- db_ops$get_client_ip()
-              parsed_data$date_created <- Sys.Date()
-            }
+            # Tracking fields removed - timing data now in log table
 
             rv$survey_responses <- parsed_data
             rv$error_message <- NULL
@@ -432,17 +711,24 @@ survey <- function(json = NULL,
               shinyjs::hide(id = "savingDataMessage")
             }
 
-            update_duration_save(
-              db_ops = db_ops,
-              db_config = db_config,
-              session_id = session$token,
-              duration_save = rv$duration_save,
-              logger = logger
-            )
+            # Duration tracking removed - timing data now logged per survey submission
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
-            logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
+            
+            # Get client IP address
+            client_ip <- session$clientData$url_hostname %||% "unknown"
+            
+            # Log error with available information (no survey_id since save failed)
+            logger$log_entry(
+              survey_id = NA,
+              message = rv$error_message,
+              ip_address = client_ip,
+              duration_load = rv$duration_load,
+              duration_complete = rv$duration_complete,
+              duration_save = NA,  # Save failed, so no valid save duration
+              force_log = TRUE  # Force logging even if survey not marked as loaded
+            )
             hide_and_show("savingDataMessage", "invalidDataMessage")
           }
         )

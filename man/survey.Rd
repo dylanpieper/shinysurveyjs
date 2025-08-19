@@ -15,10 +15,11 @@ survey(
     db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
     Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
     Sys.getenv("LOG_TABLE")),
-  dynamic_config = NULL,
-  cookie_expiration_days = 7,
+  db_update = NULL,
+  db_logic = NULL,
+  cookie_expiration_days = 0,
   custom_css = NULL,
-  suppress_logs = FALSE
+  echo = TRUE
 )
 }
 \arguments{
@@ -48,7 +49,15 @@ values are read from environment variables:
 \item \code{log_table}: Log messages table name (env: LOG_TABLE)
 }}
 
-\item{dynamic_config}{List. Configuration for dynamic fields. Supports three types:
+\item{db_update}{List. Configuration for updating existing records instead of inserting new ones.
+Each element should be a list containing:
+\itemize{
+\item \code{from}: Source survey name to update from
+\item \code{to}: Target survey name to update to
+\item \code{by}: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
+}}
+
+\item{db_logic}{List. Configuration for database logic. Supports three types:
 \subsection{Choice Configuration}{
 Populates dropdown or radio button choices from database tables:
 * \code{config_type}: Set to "choice"
@@ -77,25 +86,25 @@ Validates unique entries against existing database records:
 * \code{result_field}: Survey field for warning message (should be hidden)
 }}
 
-\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies.
-Default: 7.}
+\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies (experimental).
+Default: 0.}
 
 \item{custom_css}{String. Custom CSS rules to append to the theme.}
 
-\item{suppress_logs}{Logical. Suppress console log messages. Default: \code{FALSE}.}
+\item{echo}{Logical. Display console log messages. Default: \code{TRUE}.}
 }
 \value{
 A Shiny application object
 }
 \description{
 Creates and deploys a Shiny application for a survey using SurveyJS
-(\url{https://surveyjs.io}) with PostgreSQL database integration. The application handles
-survey data collection, dynamic fields, and asynchronous logging through a future plan.
+(\url{https://surveyjs.io}) with MySQL and DBI database integration. The application handles
+survey data collection, database logic, and asynchronous logging through a future plan.
 }
 \examples{
 \dontrun{
 # Choice configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "choice",
     table_name = "packages",
@@ -104,7 +113,7 @@ dynamic_config <- list(
 )
 
 # Parameter configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "param",
     table_name = "sources",
@@ -114,7 +123,7 @@ dynamic_config <- list(
 )
 
 # Unique value configuration example
-dynamic_config <- list(
+db_logic <- list(
   list(
     config_type = "unique",
     config_col = "title",

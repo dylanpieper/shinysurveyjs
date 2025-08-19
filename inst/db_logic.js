@@ -119,7 +119,10 @@ const UniqueValidation = {
 };
 
 function setupUniqueValidation(data) {
-    if (!data.unique_validation) return;
+    if (!data || !data.unique_validation || typeof data.unique_validation !== 'object') {
+        console.log("No unique validation configuration found");
+        return;
+    }
 
     const attemptSetup = () => {
         if (typeof survey === 'undefined' || survey === null) {
@@ -129,6 +132,10 @@ function setupUniqueValidation(data) {
 
         // Initialize validation for each field
         Object.entries(data.unique_validation).forEach(([fieldName, config]) => {
+            if (!config || typeof config !== 'object') {
+                console.error(`Invalid config for field ${fieldName}:`, config);
+                return;
+            }
             if (!config.result_field) {
                 console.error(`Missing result_field for ${fieldName}`);
                 return;
@@ -166,19 +173,49 @@ function setupUniqueValidation(data) {
     attemptSetup();
 }
 
-// Helper functions for dynamic configuration
+// Helper functions for database logic configuration
 function setChoices(question, choicesData) {
-    if (!choicesData || !Array.isArray(choicesData.value)) {
-        console.warn(`Invalid choices data for ${question.name}`);
+    if (!choicesData) {
+        console.warn(`No choices data provided for ${question.name}`);
         return;
     }
 
-    const surveyChoices = choicesData.value.map((value, index) => ({
-        value: value,
-        text: choicesData.text[index]
-    }));
+    // Handle different choice data formats
+    let surveyChoices = [];
+    
+    if (Array.isArray(choicesData.value) && Array.isArray(choicesData.text)) {
+        // Standard format with parallel arrays
+        surveyChoices = choicesData.value.map((value, index) => ({
+            value: value,
+            text: choicesData.text[index] || value
+        }));
+    } else if (Array.isArray(choicesData)) {
+        // Array of choice objects
+        surveyChoices = choicesData.map(choice => ({
+            value: choice.value || choice,
+            text: choice.text || choice.value || choice
+        }));
+    } else if (choicesData.value !== undefined && choicesData.text !== undefined) {
+        // Handle single value/text pairs or non-array values by converting to arrays
+        const values = Array.isArray(choicesData.value) ? choicesData.value : [choicesData.value];
+        const texts = Array.isArray(choicesData.text) ? choicesData.text : [choicesData.text];
+        
+        surveyChoices = values.map((value, index) => ({
+            value: value,
+            text: texts[index] || value
+        }));
+    } else {
+        console.warn(`Invalid choices data format for ${question.name}:`, choicesData);
+        return;
+    }
+
+    if (surveyChoices.length === 0) {
+        console.warn(`No valid choices found for ${question.name}`);
+        return;
+    }
 
     question.choices = surveyChoices;
+    console.log(`Updated ${question.name} with ${surveyChoices.length} choices`);
 }
 
 function processChildField(fieldName, fieldData) {
@@ -284,8 +321,8 @@ function updateChildFieldsFromParents() {
     });
 }
 
-// Update dynamic choices based on incoming data
-function updateDynamicChoices(data) {
+// Update database logic choices based on incoming data
+function updateDbLogicChoices(data) {
     const metrics = {
         processedFields: {
             standalone: 0,
@@ -310,20 +347,23 @@ function updateDynamicChoices(data) {
             return;
         }
 
-        survey.dynamicConfig = data;
+        survey.dbLogicConfig = data;
 
         // Process standalone and child fields
         Object.entries(data).forEach(([fieldName, fieldData]) => {
             if (fieldData.type === "standalone" || fieldData.type === "child") {
+                console.log(`Processing ${fieldData.type} field: ${fieldName}`, fieldData);
                 const targetQuestion = survey.getQuestionByName(fieldName);
                 if (!targetQuestion) {
                     metrics.warnings.push(`Target question not found: ${fieldName}`);
+                    console.warn(`Target question not found: ${fieldName}`);
                     return;
                 }
 
                 if (fieldData.type === "standalone") {
                     setChoices(targetQuestion, fieldData.choices);
                     metrics.processedFields.standalone++;
+                    metrics.updatedChoices++;
                 } else {
                     processChildField(fieldName, fieldData);
                     metrics.processedFields.child++;
@@ -359,9 +399,9 @@ function updateDynamicChoices(data) {
                 setupUniqueValidation(data);
             }
 
-            // Signal that dynamic configuration is complete
-            console.log("Dynamic configuration complete");
-            Shiny.setInputValue("dynamicConfigComplete", true);
+            // Signal that database logic configuration is complete
+            console.log("Database logic configuration complete");
+            Shiny.setInputValue("dbLogicConfigComplete", true);
 
             // Now show the survey container and hide the loading message
             document.getElementById("surveyContainer").style.display = "block";
@@ -370,7 +410,7 @@ function updateDynamicChoices(data) {
         }, CHOICE_UPDATE_DELAY);
 
         // Log final summary
-        console.log("Dynamic choices update summary:", {
+        console.log("Database logic choices update summary:", {
             ...metrics,
             totalProcessedFields: Object.values(metrics.processedFields).reduce((a, b) => a + b, 0),
             totalWarnings: metrics.warnings.length,
@@ -383,7 +423,7 @@ function updateDynamicChoices(data) {
 }
 
 // Handler registration
-Shiny.addCustomMessageHandler("updateDynamicChoices", updateDynamicChoices);
+Shiny.addCustomMessageHandler("updateDbLogicChoices", updateDbLogicChoices);
 
 // Cookie handling functions remain the same
 function saveSurveyProgress(survey) {
@@ -394,8 +434,8 @@ function saveSurveyProgress(survey) {
 
         const dataToStore = { ...survey.data };
 
-        if (survey.dynamicConfig) {
-            dataToStore._dynamicConfig = {
+        if (survey.dbLogicConfig) {
+            dataToStore._dbLogicConfig = {
                 parentFields: {},
                 childChoices: {}
             };
@@ -430,13 +470,13 @@ function saveSurveyProgress(survey) {
     }
 }
 
-function restoreDynamicChoices(survey, savedData) {
+function restoreDbLogicChoices(survey, savedData) {
     try {
-        if (!savedData || !savedData._dynamicConfig) {
+        if (!savedData || !savedData._dbLogicConfig) {
             return;
         }
 
-        const { parentFields, childChoices } = savedData._dynamicConfig;
+        const { parentFields, childChoices } = savedData._dbLogicConfig;
 
         Object.entries(parentFields).forEach(([parentField, config]) => {
             const parentQuestion = survey.getQuestionByName(parentField);
@@ -463,15 +503,15 @@ function restoreDynamicChoices(survey, savedData) {
             }
         });
     } catch (error) {
-        console.error("Error restoring dynamic choices:", error);
+        console.error("Error restoring database logic choices:", error);
     }
 }
 
-function restoreDynamicChoices(survey, savedData) {
-    if (!savedData || !savedData._dynamicConfig) return;
+function restoreDbLogicChoices(survey, savedData) {
+    if (!savedData || !savedData._dbLogicConfig) return;
 
-    console.log("Restoring dynamic choices:", savedData._dynamicConfig);
-    const { parentFields, childChoices } = savedData._dynamicConfig;
+    console.log("Restoring database logic choices:", savedData._dbLogicConfig);
+    const { parentFields, childChoices } = savedData._dbLogicConfig;
 
     // First restore parent values
     Object.entries(parentFields).forEach(([parentField, config]) => {

@@ -14,6 +14,7 @@
 #' @return String containing complete CSS stylesheet for survey styling
 #'
 #' @importFrom glue glue
+#' @noRd
 #' @keywords internal
 generate_survey_theme <- function(
     theme = "defaultV2",
@@ -144,7 +145,6 @@ body {{
     margin: 0 auto !important;
     padding: 2rem !important;
     box-sizing: border-box !important;
-    height: -webkit-fill-available !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;

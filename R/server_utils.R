@@ -11,35 +11,34 @@
 #'   * `db_name`: Name of the database
 #'   * `user`: Database username
 #'   * `password`: Database password
-#'   * `write_table`: Table name for write operations
 #' @param shiny_config List. Optional Shiny configuration parameters to pass to
 #'   `configure_shiny()`. Applied before database initialization.
 #'
 #' @details
 #' The function:
-#' * Validates write_table is non-empty
 #' * Checks required database fields
 #' * Sets environment variables if missing (HOST, PORT, DB_NAME, USER, PASSWORD)
 #' * Applies optional Shiny settings
-#' * Creates global database pool if needed
+#' * Creates global database connection if needed
 #'
-#' The database pool is stored globally as 'app_pool' and reused if it exists.
+#' The database connection pool is stored globally as 'app_pool' and reused if it exists.
 #' Environment variables are only set if not already present.
 #'
-#' @return Invisibly returns the initialized database pool object
+#' @return Invisibly returns the initialized database connection object
 #'
 #' @importFrom cli cli_h1 cli_alert_danger cli_alert_success cli_alert_info
 #'   cli_alert_warning
 #'
+#' @noRd
 #' @keywords internal
-survey_setup <- function(db_config, shiny_config = NULL) {
+survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE) {
   # Start status group for setup process
   cli::cli_h1("Initializing Survey Environment")
 
-  # Validate write_table parameter
-  if (is.null(db_config$write_table) ||
-      !is.character(db_config$write_table) ||
-      nchar(db_config$write_table) == 0) {
+  # Validate write_table parameter (skip for multisurvey mode)
+  if (!is_multisurvey && (is.null(db_config$write_table) ||
+    !is.character(db_config$write_table) ||
+    nchar(db_config$write_table) == 0)) {
     cli::cli_alert_danger("db_config$write_table must be a non-empty character string")
     stop("Invalid write_table parameter")
   }
@@ -80,29 +79,33 @@ survey_setup <- function(db_config, shiny_config = NULL) {
     cli::cli_alert_success("Shiny configuration applied")
   }
 
-  # Initialize global database pool with error handling
+  # Initialize global database connection with error handling
   cli::cli_h2("Database Connection")
   if (!exists("app_pool", envir = .GlobalEnv)) {
     tryCatch(
       {
+        # Handle driver parameter - create driver object if needed
+        if (is.null(db_config$driver)) {
+          db_config$driver <- RMariaDB::MariaDB()
+        }
         assign("app_pool", do.call(
-          db_pool_open,
-          db_config[c("host", "port", "db_name", "user", "password")]
+          db_conn_open,
+          db_config[c("driver", "host", "port", "db_name", "user", "password", "pool_size")]
         ),
         envir = .GlobalEnv
         )
-        cli::cli_alert_success("Started database pool")
+        cli::cli_alert_success(paste("Started database connection for", class(db_config$driver)[1]))
       },
       error = function(e) {
-        cli::cli_alert_danger("Failed to initialize database pool: {e$message}")
-        stop("Database pool initialization failed")
+        cli::cli_alert_danger("Failed to initialize database connection: {e$message}")
+        stop("Database connection initialization failed")
       }
     )
   } else {
-    cli::cli_alert_success("Using existing database pool")
+    cli::cli_alert_success("Using existing database connection pool")
   }
 
-  # Return pool object invisibly
+  # Return connection object invisibly
   invisible(get("app_pool", envir = .GlobalEnv))
 }
 
@@ -130,6 +133,7 @@ survey_setup <- function(db_config, shiny_config = NULL) {
 #' )
 #' }
 #'
+#' @noRd
 #' @keywords internal
 configure_shiny <- function(..., type_handlers = list()) {
   # Default type handlers
@@ -171,7 +175,6 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' @param session Shiny session object containing the session token.
 #' @param db_config List. Database configuration parameters:
 #'   * `log_table`: Name of logging table
-#'   * `write_table`: Name of survey data table
 #' @param app_pool Database connection pool object from global environment
 #' @param survey_logger Reference class object for logging functionality
 #' @param db_ops Reference class object for database operations
@@ -188,26 +191,32 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'   db_config = db_config,
 #'   app_pool = app_pool,
 #'   survey_logger = survey_logger,
-#'   db_ops = db_ops
+#'   db_ops = db_ops,
+#'   suppress_logs = FALSE
 #' )
 #' }
 #'
+#' @noRd
 #' @keywords internal
-server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, suppress_logs) {
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
   # Initialize survey app logger
+  survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
-    survey_name = db_config$write_table,
-    suppress_logs = suppress_logs
+    survey_name = survey_name,
+    echo = echo
   )
 
-  logger$log_message("Started session", zone = "SURVEY")
+  # Only log session start for single survey mode or when survey is selected
+  if (!is_multisurvey) {
+    logger$log_message("Started session", zone = "SURVEY")
+  }
 
   # Initialize database operations with error logging
   db_operations <- tryCatch(
     {
-      db_ops$new(app_pool, session$token, logger)
+      db_ops$new(app_pool, logger)
     },
     error = function(e) {
       msg <- sprintf("Failed to initialize db_ops: %s", e$message)
@@ -276,6 +285,7 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, su
 #' @importFrom shiny req validate need reactive outputOptions
 #' @importFrom DT renderDT datatable formatStyle
 #'
+#' @noRd
 #' @keywords internal
 server_response <- function(output, rv, show_response = TRUE, theme_mode = "light", theme_color = "#003594") {
   # Get theme colors based on mode
@@ -378,10 +388,10 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' }
 #' }
 #'
+#' @noRd
 #' @keywords internal
 server_clean <- function(session, logger, zone = "SURVEY") {
   session$onSessionEnded(function() {
-    db_conn_release(session = session, logger = logger)
     logger$log_message("Ended session", zone = zone)
   })
   invisible(NULL)
@@ -408,6 +418,7 @@ server_clean <- function(session, logger, zone = "SURVEY") {
 #' }
 #' }
 #'
+#' @noRd
 #' @keywords internal
 parse_query <- function(input) {
   # Check if input is a Shiny session object
@@ -465,55 +476,4 @@ parse_query <- function(input) {
   return(result)
 }
 
-#' Update Survey Response Duration
-#'
-#' Updates the duration_save field for a survey response identified by session ID.
-#' Records time spent completing the survey before final submission.
-#'
-#' @param db_ops Database operations object for query execution
-#' @param db_config List. Database configuration parameters:
-#'   * `write_table`: Survey response data table name
-#' @param session_id String. Shiny session token identifying the response
-#' @param duration_save Numeric. Survey completion duration in seconds
-#' @param logger Logger object. Records database operations and errors
-#'
-#' @return Invisible NULL
-#'
-#' @keywords internal
-update_duration_save <- function(db_ops, db_config, session_id, duration_save, logger) {
-  # Get the row ID using the existing connection
-  row_id <- db_ops$read_table(
-    db_config$write_table,
-    columns = "id",
-    filters = list(session_id = session_id),
-    order_by = "id",
-    desc = TRUE,
-    limit = 1
-  )$id
-
-  tryCatch(
-    {
-      # Perform the update using the existing db_ops instance
-      db_ops$update_by_id(
-        db_config$write_table,
-        row_id,
-        list(duration_save = duration_save)
-      )
-
-      logger$log_message(
-        sprintf("Updated duration_save for row %d", row_id),
-        "INFO",
-        "DATABASE"
-      )
-    },
-    error = function(e) {
-      logger$log_message(
-        sprintf("Failed to update duration_save: %s", e$message),
-        "ERROR",
-        "DATABASE"
-      )
-    }
-  )
-
-  invisible(NULL)
-}
+# update_duration_save function removed - timing data now handled in log table
