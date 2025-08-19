@@ -19,7 +19,7 @@ survey(
   db_logic = NULL,
   cookie_expiration_days = 0,
   custom_css = NULL,
-  suppress_logs = FALSE
+  echo = TRUE
 )
 }
 \arguments{
@@ -91,7 +91,7 @@ Default: 0.}
 
 \item{custom_css}{String. Custom CSS rules to append to the theme.}
 
-\item{suppress_logs}{Logical. Suppress console log messages. Default: \code{FALSE}.}
+\item{echo}{Logical. Display console log messages. Default: \code{TRUE}.}
 }
 \value{
 A Shiny application object

@@ -84,15 +84,17 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
   if (!exists("app_conn", envir = .GlobalEnv)) {
     tryCatch(
       {
-        # Add driver parameter, default to mysql
-        db_config$driver <- db_config$driver %||% "mysql"
+        # Handle driver parameter - create driver object if needed
+        if (is.null(db_config$driver)) {
+          db_config$driver <- RMariaDB::MariaDB()
+        }
         assign("app_conn", do.call(
           db_conn_open,
           db_config[c("driver", "host", "port", "db_name", "user", "password")]
         ),
         envir = .GlobalEnv
         )
-        cli::cli_alert_success(paste("Started database connection for", db_config$driver))
+        cli::cli_alert_success(paste("Started database connection for", class(db_config$driver)[1]))
       },
       error = function(e) {
         cli::cli_alert_danger("Failed to initialize database connection: {e$message}")
@@ -196,14 +198,14 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'
 #' @noRd
 #' @keywords internal
-server_setup <- function(session, db_config, app_conn, survey_logger, db_ops, suppress_logs, is_multisurvey = FALSE) {
+server_setup <- function(session, db_config, app_conn, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
   # Initialize survey app logger
   survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
     survey_name = survey_name,
-    suppress_logs = suppress_logs
+    echo = echo
   )
 
   # Only log session start for single survey mode or when survey is selected

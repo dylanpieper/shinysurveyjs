@@ -81,7 +81,7 @@ Key Features:
 \subsection{Method \code{new()}}{
 Initialize a new survey logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, suppress_logs = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, echo = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -93,7 +93,7 @@ Initialize a new survey logger instance
 
 \item{\code{survey_name}}{Character string identifying the survey}
 
-\item{\code{suppress_logs}}{Logical flag to suppress console output. Default: FALSE}
+\item{\code{echo}}{Logical flag to display console output. Default: TRUE}
 }
 \if{html}{\out{</div>}}
 }

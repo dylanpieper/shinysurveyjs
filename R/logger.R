@@ -68,13 +68,13 @@ survey_logger <- R6::R6Class(
     #' @param log_table Character string specifying logging table name
     #' @param session_id Character string containing session identifier
     #' @param survey_name Character string identifying the survey
-    #' @param suppress_logs Logical flag to suppress console output. Default: FALSE
-    initialize = function(log_table, session_id, survey_name, suppress_logs = FALSE) {
+    #' @param echo Logical flag to display console output. Default: TRUE
+    initialize = function(log_table, session_id, survey_name, echo = TRUE) {
       self$log_table <- log_table
       self$session_id <- session_id
       self$survey_name <- survey_name
       self$survey_loaded <- FALSE
-      self$suppress_logs <- suppress_logs
+      self$suppress_logs <- !echo
       self$last_sql_statement <- NULL
 
       # Initialize empty queue

@@ -3,7 +3,7 @@
 #' Creates a database connection using DBI-compatible database drivers.
 #' Stores the connection globally and registers cleanup handler.
 #'
-#' @param driver Name of database to match to a tested driver (only "mysql" currently)
+#' @param driver DBI-compatible driver function or name of database driver (default: RMariaDB::MariaDB())
 #' @param host Database host
 #' @param port Database port (default: 3306)
 #' @param db_name Database name
@@ -21,7 +21,7 @@
 #' @noRd
 #' @keywords internal
 db_conn_open <- function(
-    driver = "mysql",
+    driver = RMariaDB::MariaDB(),
     host = NULL,
     port = 3306,
     db_name = NULL,
@@ -30,11 +30,9 @@ db_conn_open <- function(
     global = TRUE,
     logger = NULL,
     ...) {
-  if (all(!is.null(c(driver, host, port, db_name, user, password)))) {
+  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(db_name) && !is.null(user) && !is.null(password)) {
     conn <- DBI::dbConnect(
-      switch(driver,
-        "mysql" = RMariaDB::MariaDB()
-      ),
+      driver,
       host = host,
       port = port,
       dbname = db_name,
@@ -51,7 +49,7 @@ db_conn_open <- function(
       })
 
       if (!is.null(logger)) {
-        logger$log_message(paste("Database connection initialized for", driver), "INFO", "DATABASE")
+        logger$log_message(paste("Database connection initialized for", class(driver)[1]), "INFO", "DATABASE")
       }
     }
 
