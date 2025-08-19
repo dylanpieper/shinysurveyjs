@@ -168,13 +168,18 @@ db_ops <- R6::R6Class(
           }
           # Log database errors with SQL statement if available
           # Force log for critical operations (connection, table creation)
+          # Skip logging for insert/update operations as they are handled by the calling function with more context
           force_critical <- grepl("connection|initialize|create", error_message, ignore.case = TRUE)
-          self$logger$log_entry(
-            survey_id = NA, # Will be set by calling function if available
-            message = sprintf("%s: %s", error_message, e$message),
-            sql_statement = self$logger$last_sql_statement,
-            force_log = force_critical
-          )
+          skip_logging <- grepl("update|insert", error_message, ignore.case = TRUE)
+          
+          if (!skip_logging) {
+            self$logger$log_entry(
+              survey_id = NA, # Will be set by calling function if available
+              message = sprintf("%s: %s", error_message, e$message),
+              sql_statement = self$logger$last_sql_statement,
+              force_log = force_critical
+            )
+          }
           stop(sprintf("%s: %s", error_message, e$message))
         }
       )

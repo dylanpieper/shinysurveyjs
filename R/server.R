@@ -715,7 +715,22 @@ survey <- function(json = NULL,
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
-            # Error already logged by db_ops with SQL statement
+            
+            # Get client IP address
+            client_ip <- session$clientData$url_hostname %||% "unknown"
+            
+            # Log error with available information (no survey_id since save failed)
+            logger$log_entry(
+              survey_id = NA,
+              message = rv$error_message,
+              ip_address = client_ip,
+              duration_load = rv$duration_load,
+              duration_complete = rv$duration_complete,
+              duration_save = NA,  # Save failed, so no valid save duration
+              force_log = TRUE  # Force logging even if survey not marked as loaded
+            )
+            
+            # Also log to console
             logger$log_message(rv$error_message, type = "ERROR", zone = "DATABASE")
             hide_and_show("savingDataMessage", "invalidDataMessage")
           }
