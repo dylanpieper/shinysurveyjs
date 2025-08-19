@@ -6,12 +6,12 @@ Deploy survey applications using [SurveyJS](https://surveyjs.io) and [Shiny](htt
 
 shinysurveyjs bridges the gap between SurveyJS's frontend for survey creation and Shiny's backend for data plumbing, enabling individuals and organizations to deploy survey applications with:
 
--   **Bring Your Own Database**: Setup your own database and tables for full control
+-   **Bring Your Own Database**: Setup your own database and survey tables for full control
 -   **Multisurvey applications**: URL-based routing to share multiple surveys in one application
 -   **Many-to-one mapping**: Map multiple surveys to a single table
 -   **Database logic for survey fields**: Choice population and validation from database sources
 -   **Dual logging system**: Console logging for development, and database logging for production
--   **Enterprise features**: Custom themes, simple tracking, and metadata collection
+-   **Enterprise features**: Custom survey themes, and metadata collection
 
 ## Installation
 
@@ -23,12 +23,12 @@ pak::pak("dylanpieper/shinysurveyjs")
 
 ## Quick start
 
-This example shows a portion of a grant management workflow where researchers first drop opportunity information, then later create concept models for those opportunities. This pattern applies to many research scenarios including patient intake and follow-up or event registration and feedback.
+This example shows a portion of two grant management surveys where researchers first drop opportunity information, then later create concept models for those opportunities. This pattern applies to many scenarios including patient intake and follow-up or event registration and feedback.
 
 ``` r
 library(shinysurveyjs)
 
-# Define the first survey: Grant opportunity tracking
+# Define the first survey: Grant opportunity drop tracking
 grant_drops <- list(
   title = "Opportunity Drop",
   pages = list(
@@ -124,7 +124,7 @@ survey(
       type = "choice",
       source_tbl = "grant_funders",
       source_col = "id",
-      source_display_col = "name",
+      source_display_col = c("name", "agency"), # Pastes column strings
       target_tbl = "grant_drops",
       target_col = "grant_funders_id"
     ),
@@ -198,10 +198,12 @@ list(
 ### Dual logging system
 
 -   **Console logging**: Immediate feedback during development
--   **Database logging**: Production monitoring and analytics
+-   **Database logging**: Production monitoring and metadata
     -   Error logging with SQL statement capture
     -   Survey completion timing (load, complete, and save durations)
     -   IP address tracking
+
+**The database log table will be created automatically.**
 
 ### Advanced configuration
 

@@ -504,10 +504,30 @@ configure_db_logic <- function(db_logic, config_list_reactive, session, logger, 
         }
         
         choice_values <- source_data[[source_col]]
-        choice_texts <- if (source_display_col %in% names(source_data)) {
-          source_data[[source_display_col]]
+        
+        # Handle source_display_col - support both single column and multiple columns
+        if (is.character(source_display_col) && length(source_display_col) > 1) {
+          # Vector of column names (e.g., c("name", "agency"))
+          display_cols <- source_display_col
+          
+          # Check if all display columns exist
+          missing_cols <- display_cols[!display_cols %in% names(source_data)]
+          if (length(missing_cols) > 0) {
+            logger$log_message(sprintf("Display columns not found in table '%s': %s", source_tbl, paste(missing_cols, collapse = ", ")), "ERROR", "SURVEY")
+            choice_texts <- choice_values  # fallback to values
+          } else {
+            # Combine columns with " - " separator
+            choice_texts <- apply(source_data[display_cols], 1, function(row) {
+              paste(row, collapse = " - ")
+            })
+          }
         } else {
-          choice_values
+          # Single column (original behavior)
+          choice_texts <- if (length(source_display_col) == 1 && source_display_col %in% names(source_data)) {
+            source_data[[source_display_col]]
+          } else {
+            choice_values
+          }
         }
         
         # Apply filter_unique if specified
