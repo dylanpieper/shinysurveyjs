@@ -21,7 +21,7 @@
 #' * Applies optional Shiny settings
 #' * Creates global database connection if needed
 #'
-#' The database connection is stored globally as 'app_conn' and reused if it exists.
+#' The database connection pool is stored globally as 'app_pool' and reused if it exists.
 #' Environment variables are only set if not already present.
 #'
 #' @return Invisibly returns the initialized database connection object
@@ -81,16 +81,16 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
 
   # Initialize global database connection with error handling
   cli::cli_h2("Database Connection")
-  if (!exists("app_conn", envir = .GlobalEnv)) {
+  if (!exists("app_pool", envir = .GlobalEnv)) {
     tryCatch(
       {
         # Handle driver parameter - create driver object if needed
         if (is.null(db_config$driver)) {
           db_config$driver <- RMariaDB::MariaDB()
         }
-        assign("app_conn", do.call(
+        assign("app_pool", do.call(
           db_conn_open,
-          db_config[c("driver", "host", "port", "db_name", "user", "password")]
+          db_config[c("driver", "host", "port", "db_name", "user", "password", "pool_size")]
         ),
         envir = .GlobalEnv
         )
@@ -102,11 +102,11 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
       }
     )
   } else {
-    cli::cli_alert_success("Using existing database connection")
+    cli::cli_alert_success("Using existing database connection pool")
   }
 
   # Return connection object invisibly
-  invisible(get("app_conn", envir = .GlobalEnv))
+  invisible(get("app_pool", envir = .GlobalEnv))
 }
 
 #' Configure Shiny App Settings
@@ -175,7 +175,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' @param session Shiny session object containing the session token.
 #' @param db_config List. Database configuration parameters:
 #'   * `log_table`: Name of logging table
-#' @param app_conn Database connection object from global environment
+#' @param app_pool Database connection pool object from global environment
 #' @param survey_logger Reference class object for logging functionality
 #' @param db_ops Reference class object for database operations
 #'
@@ -189,7 +189,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' server_setup(
 #'   session = session,
 #'   db_config = db_config,
-#'   app_conn = app_conn,
+#'   app_pool = app_pool,
 #'   survey_logger = survey_logger,
 #'   db_ops = db_ops,
 #'   suppress_logs = FALSE
@@ -198,7 +198,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #'
 #' @noRd
 #' @keywords internal
-server_setup <- function(session, db_config, app_conn, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
+server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
   # Initialize survey app logger
   survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
@@ -216,7 +216,7 @@ server_setup <- function(session, db_config, app_conn, survey_logger, db_ops, ec
   # Initialize database operations with error logging
   db_operations <- tryCatch(
     {
-      db_ops$new(app_conn, logger)
+      db_ops$new(app_pool, logger)
     },
     error = function(e) {
       msg <- sprintf("Failed to initialize db_ops: %s", e$message)

@@ -4,9 +4,9 @@ Deploy survey applications using [SurveyJS](https://surveyjs.io) and [Shiny](htt
 
 ## Overview
 
-shinysurveyjs bridges the gap between SurveyJS's powerful frontend capabilities and R's robust data ecosystem, enabling researchers and organizations to deploy survey applications with:
+shinysurveyjs bridges the gap between SurveyJS's frontend for survey creation and Shiny's backend for data plumbing, enabling individuals and organizations to deploy survey applications with:
 
--   **Bring Your Own Tables**: Setup your own database and tables
+-   **Bring Your Own Database**: Setup your own database and tables for full control
 -   **Multisurvey applications**: URL-based routing to share multiple surveys in one application
 -   **Many-to-one mapping**: Map multiple surveys to a single table
 -   **Database logic for survey fields**: Choice population and validation from database sources
@@ -46,7 +46,7 @@ grant_drops <- list(
           type = "html",
           name = "match_warning",
           visible = FALSE,
-          html = "⚠️ <b>Warning:</b> Duplicate submission(s) were found in the database."
+          html = "🛑 <b>Error:</b> Duplicate submission(s) were found in the database."
         ),
         list(
           type = "dropdown",
@@ -104,7 +104,8 @@ survey(
     db_name = "research_db",
     user = "db_user",
     password = keyring::key_get("db_pass", "research_db"),
-    log_table = "survey_logs"
+    log_table = "survey_logs",
+    pool_size = 10
   ),
   
   # Update grant_drops table when concept model is submitted
@@ -158,7 +159,8 @@ survey(
 ### Database integration
 
 -   **DBI database support**: Our team is testing this application with MySQL (default), but other DBI-compatible database drivers can be used.
--   **Transaction safety**: Atomic operations with rollback on errors, immediate non-blocking insertion for survey data, and queued data insertion for metadata logging.
+-   **Connection pooling**: Automatic connection pooling with configurable pool size (default: 10 connections) for concurrent request handling.
+-   **Transaction safety**: Full ACID compliance with automatic transaction management. Operations use dedicated connections from the pool with automatic commit/rollback on success/failure.
 
 ### Database logic for survey fields
 
@@ -196,9 +198,7 @@ list(
 ### Dual logging system
 
 -   **Console logging**: Immediate feedback during development
-
 -   **Database logging**: Production monitoring and analytics
-
     -   Error logging with SQL statement capture
     -   Survey completion timing (load, complete, and save durations)
     -   IP address tracking
@@ -267,6 +267,7 @@ db_config <- list(
   user = "db_user", 
   password = keyring::key_get("db_pass", "research_db"),
   db_name = "research_db",
-  log_table = "survey_logs"
+  log_table = "survey_logs",
+  pool_size = 10
 )
 ```

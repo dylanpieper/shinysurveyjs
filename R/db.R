@@ -1,7 +1,7 @@
-#' Open Database Connection
+#' Open Database Connection Pool
 #'
-#' Creates a database connection using DBI-compatible database drivers.
-#' Stores the connection globally and registers cleanup handler.
+#' Creates a database connection pool using DBI-compatible database drivers.
+#' Stores the pool globally and registers cleanup handler.
 #'
 #' @param driver DBI-compatible driver function or name of database driver (default: RMariaDB::MariaDB())
 #' @param host Database host
@@ -9,13 +9,14 @@
 #' @param db_name Database name
 #' @param user Database username
 #' @param password Database password
-#' @param global Logical; if TRUE (default), assigns connection to .GlobalEnv as app_conn
+#' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
 #' @param logger Logger object for tracking operations (default: NULL)
+#' @param pool_size Maximum number of connections in the pool (default: 10)
 #' @param ... Additional connection parameters passed to driver
 #'
-#' @return A database connection object
+#' @return A database connection pool object
 #'
-#' @importFrom DBI dbConnect
+#' @importFrom pool dbPool poolClose
 #' @importFrom shiny onStop
 #'
 #' @noRd
@@ -29,39 +30,43 @@ db_conn_open <- function(
     password = NULL,
     global = TRUE,
     logger = NULL,
+    pool_size = 10,
     ...) {
   if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(db_name) && !is.null(user) && !is.null(password)) {
-    conn <- DBI::dbConnect(
-      driver,
+    
+    # Create connection pool
+    pool <- pool::dbPool(
+      drv = driver,
       host = host,
       port = port,
       dbname = db_name,
       user = user,
       password = password,
+      maxSize = pool_size,
       ...
     )
 
     if (global) {
-      assign("app_conn", conn, envir = .GlobalEnv)
+      assign("app_pool", pool, envir = .GlobalEnv)
 
       shiny::onStop(function() {
         db_conn_close(NULL, logger)
       })
 
       if (!is.null(logger)) {
-        logger$log_message(paste("Database connection initialized for", class(driver)[1]), "INFO", "DATABASE")
+        logger$log_message(paste("Database connection pool initialized for", class(driver)[1], "with", pool_size, "max connections"), "INFO", "DATABASE")
       }
     }
 
-    return(conn)
+    return(pool)
   } else {
     cli::cli_abort("Database connection parameters are required")
   }
 }
 
-#' Close Global Database Connection
+#' Close Global Database Connection Pool
 #'
-#' Closes the global database connection (app_conn) during application shutdown.
+#' Closes the global database connection pool (app_pool) during application shutdown.
 #'
 #' @param session Shiny session object (unused)
 #' @param logger Logger object for tracking cleanup operations.
@@ -69,18 +74,16 @@ db_conn_open <- function(
 #'
 #' @return Invisible NULL
 #'
-#' @importFrom DBI dbDisconnect dbIsValid
+#' @importFrom pool poolClose
 #' @noRd
 #' @keywords internal
 db_conn_close <- function(session, logger = NULL) {
-  if (exists("app_conn", envir = .GlobalEnv)) {
-    conn <- get("app_conn", envir = .GlobalEnv)
-    if (DBI::dbIsValid(conn)) {
-      DBI::dbDisconnect(conn)
-    }
-    rm("app_conn", envir = .GlobalEnv)
+  if (exists("app_pool", envir = .GlobalEnv)) {
+    pool <- get("app_pool", envir = .GlobalEnv)
+    pool::poolClose(pool)
+    rm("app_pool", envir = .GlobalEnv)
     if (!is.null(logger)) {
-      logger$log_message("Closed connection and removed object", "INFO", "DATABASE")
+      logger$log_message("Closed connection pool and removed object", "INFO", "DATABASE")
     }
   }
   invisible(NULL)
@@ -114,40 +117,44 @@ db_ops <- R6::R6Class(
     logger = NULL,
 
     #' @description Create a new Database Operations instance
-    #' @param conn Connection object. Database connection
+    #' @param conn Connection pool object. Database connection pool
     #' @param logger survey_logger object. Logger instance for tracking operations
     initialize = function(conn, logger) {
       if (is.null(conn)) {
-        logger$log_message("Database connection cannot be NULL", "ERROR", "DATABASE")
-        stop("Database connection is required")
+        logger$log_message("Database connection pool cannot be NULL", "ERROR", "DATABASE")
+        stop("Database connection pool is required")
       }
       self$conn <- conn
       self$logger <- logger
     },
 
-    #' @description Execute a database operation with transaction handling
+    #' @description Execute a database operation with transaction handling using connection pool
     #' @param operation Function. The database operation to execute
     #' @param error_message Character. Message to display if operation fails
     #' @return Result of the operation or error message if failed
     operate = function(operation, error_message) {
-      if (is.null(self$conn) || !DBI::dbIsValid(self$conn)) {
-        self$logger$log_message("Database connection is not valid", "ERROR", "DATABASE")
-        stop("Database connection not valid")
+      if (is.null(self$conn)) {
+        self$logger$log_message("Database connection pool is not valid", "ERROR", "DATABASE")
+        stop("Database connection pool not valid")
       }
+
+      # Get a connection from the pool for this transaction
+      conn <- pool::poolCheckout(self$conn)
+      on.exit(pool::poolReturn(conn))
 
       tryCatch(
         {
-          DBI::dbBegin(self$conn)
-          result <- operation(self$conn)
-          DBI::dbCommit(self$conn)
+          DBI::dbBegin(conn)
+          result <- operation(conn)
+          DBI::dbCommit(conn)
 
           return(result)
         },
         error = function(e) {
-          if (DBI::dbIsValid(self$conn)) {
+          if (DBI::dbIsValid(conn)) {
             tryCatch(
               {
-                DBI::dbRollback(self$conn)
+                DBI::dbRollback(conn)
                 self$logger$log_message("Transaction rolled back", "WARNING", "DATABASE")
               },
               error = function(rollback_error) {

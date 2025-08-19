@@ -29,6 +29,7 @@
 #'   * `password`: Database password (default: `Sys.getenv("PASSWORD")`)
 #'   * `write_table`: Survey data table (default: `Sys.getenv("WRITE_TABLE")`)
 #'   * `log_table`: Application logs table (default: `Sys.getenv("LOG_TABLE")`)
+#'   * `pool_size`: Maximum connections in pool (default: 10)
 #' @param db_update List. Update configuration for multi-survey workflows.
 #'   Each element contains:
 #'   * `from`: Source survey name to update from
@@ -95,7 +96,8 @@
 #'     password = "password",
 #'     db_name = "surveys",
 #'     write_table = "feedback_data",
-#'     log_table = "app_logs"
+#'     log_table = "app_logs",
+#'     pool_size = 10
 #'   )
 #' )
 #' }
@@ -122,7 +124,8 @@ survey <- function(json = NULL,
                      user = Sys.getenv("USER"),
                      password = Sys.getenv("PASSWORD"),
                      write_table = Sys.getenv("WRITE_TABLE"),
-                     log_table = Sys.getenv("LOG_TABLE")
+                     log_table = Sys.getenv("LOG_TABLE"),
+                     pool_size = 10
                    ),
                    db_update = NULL,
                    db_logic = NULL,
@@ -226,7 +229,7 @@ survey <- function(json = NULL,
     server_setup(
       session = session,
       db_config = db_config,
-      app_conn = app_conn,
+      app_pool = app_pool,
       survey_logger = survey_logger,
       db_ops = db_ops,
       echo = echo,

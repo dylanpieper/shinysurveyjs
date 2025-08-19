@@ -227,7 +227,7 @@ survey_logger <- R6::R6Class(
   ),
   private = list(
     initialize_table = function() {
-      conn <- get("app_conn", envir = .GlobalEnv)
+      conn <- get("app_pool", envir = .GlobalEnv)
       tryCatch(
         {
           if (!DBI::dbExistsTable(conn, self$log_table)) {
@@ -266,7 +266,7 @@ survey_logger <- R6::R6Class(
         return(invisible(NULL))
       }
 
-      conn <- get("app_conn", envir = .GlobalEnv)
+      conn <- get("app_pool", envir = .GlobalEnv)
       tryCatch(
         {
           query <- sprintf(
