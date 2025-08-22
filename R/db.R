@@ -207,6 +207,9 @@ db_ops <- R6::R6Class(
         stop("Invalid data format")
       }
 
+      # Consolidate multiple choice fields before table validation
+      data <- private$consolidate_multiple_choice_fields(data)
+
       table_name <- private$sanitize_survey_table_name(write_table)
 
       self$operate(function(conn) {
@@ -598,6 +601,9 @@ db_ops <- R6::R6Class(
         stop("Invalid source data format")
       }
 
+      # Consolidate multiple choice fields before update
+      source_data <- private$consolidate_multiple_choice_fields(source_data)
+
       if (is.null(target_table) || !is.character(target_table)) {
         self$logger$log_message("Invalid target_table parameter", "ERROR", "DATABASE")
         stop("Invalid target table name")
@@ -727,6 +733,9 @@ db_ops <- R6::R6Class(
         self$logger$log_message("Invalid data: must be a data frame", "ERROR", "DATABASE")
         stop("Invalid data format")
       }
+
+      # Consolidate multiple choice fields before determining column requirements
+      data <- private$consolidate_multiple_choice_fields(data)
 
       required_cols <- list()
 
@@ -930,6 +939,126 @@ db_ops <- R6::R6Class(
       }
 
       return(col_defs)
+    },
+
+    # Consolidate multiple choice fields that share a common base name before the dot
+    consolidate_multiple_choice_fields = function(data) {
+      if (is.null(data) || nrow(data) == 0) {
+        return(data)
+      }
+
+      field_names <- names(data)
+      
+      # Group all fields by their base name (everything before any dot notation)
+      base_groups <- list()
+      
+      for (field in field_names) {
+        # Find the base name - everything before the first dot
+        if (grepl("\\.", field)) {
+          base_name <- sub("^([^.]+)\\..+$", "\\1", field)
+          
+          if (!base_name %in% names(base_groups)) {
+            base_groups[[base_name]] <- c()
+          }
+          base_groups[[base_name]] <- c(base_groups[[base_name]], field)
+        }
+      }
+      
+      # Only consolidate groups that have multiple fields
+      for (base_name in names(base_groups)) {
+        group_fields <- base_groups[[base_name]]
+        
+        if (length(group_fields) > 1) {
+          # Check if this is simple multiple choice (just numbered) or structured data
+          # Simple: field_name.1, field_name.2 (just numbers)
+          # Structured: field_name.subfield, field_name.subfield.1 (has named subfields)
+          
+          is_simple_choice <- all(grepl("^\\d+$", sub(paste0("^", base_name, "\\."), "", group_fields)))
+          
+          if (is_simple_choice) {
+            # Simple multiple choice - just collect values as array
+            simple_values <- c()
+            for (field in sort(group_fields)) {
+              field_value <- data[[field]]
+              if (!is.na(field_value) && !is.null(field_value) && field_value != "") {
+                simple_values <- c(simple_values, field_value)
+              }
+            }
+            
+            if (length(simple_values) > 1) {
+              data[[base_name]] <- jsonlite::toJSON(simple_values, auto_unbox = FALSE)
+            } else if (length(simple_values) == 1) {
+              data[[base_name]] <- simple_values[1]
+            } else {
+              data[[base_name]] <- NA_character_
+            }
+          } else {
+            # Structured data - parse complex objects
+            structured_data <- list()
+            
+            for (field in group_fields) {
+              field_value <- data[[field]]
+              if (!is.na(field_value) && !is.null(field_value) && field_value != "") {
+                # Parse the field structure
+                path_part <- sub(paste0("^", base_name, "\\."), "", field)
+                
+                # Check if this has a numeric suffix (indicates array index)
+                if (grepl("\\.\\d+$", path_part)) {
+                  # Extract field name and index: partner_name.1 -> partner_name, 1
+                  field_name <- sub("\\.\\d+$", "", path_part)
+                  index <- as.numeric(sub(".*\\.(\\d+)$", "\\1", path_part))
+                } else {
+                  # No numeric suffix, this is index 0
+                  field_name <- path_part
+                  index <- 0
+                }
+                
+                # Ensure the array index exists
+                if (length(structured_data) <= index) {
+                  length(structured_data) <- index + 1
+                }
+                
+                # Initialize the object at this index if needed
+                if (is.null(structured_data[[index + 1]])) {
+                  structured_data[[index + 1]] <- list()
+                }
+                
+                # Set the field value
+                structured_data[[index + 1]][[field_name]] <- field_value
+              }
+            }
+            
+            # Convert to appropriate format
+            if (length(structured_data) > 1) {
+              # Multiple objects - store as JSON array
+              data[[base_name]] <- jsonlite::toJSON(structured_data, auto_unbox = TRUE)
+            } else if (length(structured_data) == 1 && !is.null(structured_data[[1]])) {
+              # Single object - store as JSON object
+              data[[base_name]] <- jsonlite::toJSON(structured_data[[1]], auto_unbox = TRUE)
+            } else {
+              data[[base_name]] <- NA_character_
+            }
+          }
+          
+          # Remove the original dotted fields
+          data[group_fields] <- NULL
+          
+          if (!is.null(self$logger)) {
+            self$logger$log_message(
+              sprintf(
+                "Consolidated structured field '%s' from %d fields: %s",
+                base_name,
+                length(group_fields),
+                paste(group_fields, collapse = ", ")
+              ),
+              "INFO",
+              "DATABASE"
+            )
+          }
+        }
+      }
+      
+      return(data)
     }
   )
 )

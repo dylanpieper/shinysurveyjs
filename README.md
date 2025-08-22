@@ -150,7 +150,7 @@ survey(
       source_display_col = "title",
       target_tbl = "grant_concept",
       target_col = "grant_drops_id",
-      filter_source = "is.na(cm_note)" # Show grants without concept models
+      filter_source = "is.na(cm_target_pop)" # Show grants without concept models
     )
   )
 )

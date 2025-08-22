@@ -18,7 +18,7 @@
 #'
 #' @noRd
 #' @keywords internal
-survey_single_js <- function(cookie_expiration_days = 7) {
+survey_single_js <- function(cookie_expiration_days = 0) {
   # Get the package installation directory
   pkg_dir <- system.file(package = "shinysurveyjs")
 
