@@ -79,12 +79,6 @@ LdapAuth <- R6::R6Class(
             clean_username <- gsub("@.*$", "", username)
           }
 
-          if (!is.null(logger)) {
-            logger$log_message(paste("Original username:", username), type = "DEBUG", zone = "AUTH")
-            logger$log_message(paste("Clean username:", clean_username), type = "DEBUG", zone = "AUTH")
-            logger$log_message(paste("Final bind username:", bind_username), type = "DEBUG", zone = "AUTH")
-            logger$log_message(paste("Domain config:", self$config$domain), type = "DEBUG", zone = "AUTH")
-          }
 
           # Get connection parameters (may use SSH tunnel)
           conn_params <- self$get_connection_params()
@@ -114,20 +108,20 @@ LdapAuth <- R6::R6Class(
             )
 
             if (!is.null(logger)) {
-              logger$log_message(paste("LDAP auth successful:", username), type = "INFO", zone = "AUTH")
+              logger$log_message(paste("Login success:", username), type = "INFO", zone = "AUTH")
             }
 
             return(list(success = TRUE, user_info = self$user_info))
           } else {
             if (!is.null(logger)) {
-              logger$log_message(paste("LDAP auth failed:", username), type = "WARN", zone = "AUTH")
+              logger$log_message(paste("Login failed:", username), type = "WARN", zone = "AUTH")
             }
             return(list(success = FALSE, message = "Invalid credentials"))
           }
         },
         error = function(e) {
           if (!is.null(logger)) {
-            logger$log_message(paste("LDAP error:", e$message), "ERROR", "AUTH")
+            logger$log_message(paste("Auth error:", e$message), "ERROR", "AUTH")
           }
           return(list(success = FALSE, message = paste("Authentication error:", e$message)))
         }
@@ -147,8 +141,9 @@ LdapAuth <- R6::R6Class(
 #' @param id Namespace ID
 #' @param title Login form title
 #' @param logo Logo URL to display instead of title (optional)
+#' @param theme_color Hex color code for button styling (optional)
 #' @export
-ldap_login_ui <- function(id, title = "Login", logo = NULL) {
+ldap_login_ui <- function(id, title = "Login", logo = NULL, theme_color = "#007bff") {
   ns <- shiny::NS(id)
 
   shiny::div(
@@ -205,7 +200,7 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL) {
       ns("login_btn"),
       shiny::HTML(paste0('<span id="', ns("login_btn_text"), '">Sign In</span>')),
       class = "btn btn-primary",
-      style = "width: 100%; padding: 12px; font-size: 16px; font-weight: 500; background-color: #007bff; border-color: #007bff; border-radius: 4px; transition: all 0.15s ease-in-out;"
+      style = paste0("width: 100%; padding: 12px; font-size: 16px; font-weight: 500; background-color: ", theme_color, "; border-color: ", theme_color, "; border-radius: 4px; transition: all 0.15s ease-in-out;")
     ),
 
     # JavaScript for better UX
@@ -225,8 +220,8 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL) {
 
         // Input focus styling
         $("#" + ns_prefix + "username, #" + ns_prefix + "password").focus(function() {
-          $(this).css("border-color", "#007bff");
-          $(this).css("box-shadow", "0 0 0 0.2rem rgba(0, 123, 255, 0.25)");
+          $(this).css("border-color", "%s");
+          $(this).css("box-shadow", "0 0 0 0.2rem %s");
         }).blur(function() {
           $(this).css("border-color", "#ddd");
           $(this).css("box-shadow", "none");
@@ -262,7 +257,7 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL) {
         btn.prop("disabled", false);
         btn.css("opacity", "1");
       });
-    ', ns(""))))
+    ', ns(""), theme_color, paste0("rgba(", paste(as.integer(col2rgb(theme_color)), collapse = ", "), ", 0.25)"))))
   )
 }
 

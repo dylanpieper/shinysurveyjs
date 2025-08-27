@@ -178,15 +178,19 @@ survey <- function(json = NULL,
   ui <- fluidPage(
     shinyjs::useShinyjs(),
 
-    # LDAP Login Form (shown when auth required)
+    # LDAP Login Form (hidden initially, shown when auth required)
     if (!is.null(ldap_auth)) {
-      ldap_login_ui("auth", "Surveys", logo = ldap_config$logo)
+      shiny::div(
+        id = "login_section",
+        style = "display: none;",
+        ldap_login_ui("auth", "Surveys", logo = ldap_config$logo, theme_color = theme_color)
+      )
     },
 
-    # Main content (hidden until authenticated if LDAP enabled)
+    # Main content (conditionally hidden based on LDAP and survey access)
     shiny::div(
       id = "main_content",
-      style = if (!is.null(ldap_auth)) "display: none;" else "",
+      style = "",
       if (is_multisurvey) {
         # Multisurvey content
         list(
@@ -194,7 +198,7 @@ survey <- function(json = NULL,
           shiny::div(
             id = "landingPage",
             style = "text-align: center; padding: 50px;",
-            shiny::h1("Survey Portal"),
+            shiny::h1("Survey Library"),
             shiny::div(
               id = "surveyLinks",
               lapply(names(list), function(survey_name) {
@@ -211,10 +215,10 @@ survey <- function(json = NULL,
               })
             )
           ),
-          # Survey container (hidden initially)
+          # Survey container (hidden initially, requires auth if LDAP enabled)
           shiny::div(
             id = "surveySection",
-            style = "display: none;",
+            style = if (!is.null(ldap_auth)) "display: none;" else "display: none;",
             survey_ui_wrapper(
               id = "surveyContainer",
               theme = theme,
@@ -225,13 +229,17 @@ survey <- function(json = NULL,
           )
         )
       } else {
-        # Single survey content
-        survey_ui_wrapper(
-          id = "surveyContainer",
-          theme = theme,
-          theme_color = theme_color,
-          cookie_expiration_days = cookie_expiration_days,
-          custom_css = custom_css
+        # Single survey content (requires auth if LDAP enabled)
+        shiny::div(
+          id = "singleSurveySection",
+          style = if (!is.null(ldap_auth)) "display: none;" else "",
+          survey_ui_wrapper(
+            id = "surveyContainer",
+            theme = theme,
+            theme_color = theme_color,
+            cookie_expiration_days = cookie_expiration_days,
+            custom_css = custom_css
+          )
         )
       }
     )
@@ -246,18 +254,35 @@ survey <- function(json = NULL,
       shiny::reactive(list(authenticated = TRUE, user_info = NULL))
     }
 
-    # Show main content when authenticated
+    # Show authenticated content when user is authenticated
     if (!is.null(ldap_auth)) {
       shiny::observe({
         auth <- auth_status()
         if (auth$authenticated) {
+          # Hide login form and show main content
+          shinyjs::hide("login_section")
           shinyjs::show("main_content")
+
+          # Show survey sections that require authentication
+          if (is_multisurvey) {
+            # Check if a survey is currently selected
+            query_list <- parse_query(session)
+            survey_param <- query_list$survey
+            if (!is.null(survey_param) && survey_param != "") {
+              shinyjs::show("surveySection")
+            }
+          } else {
+            shinyjs::show("singleSurveySection")
+          }
 
           # Log successful authentication
           if (!is.null(logger)) {
             username <- auth$user_info$username %||% "unknown"
-            logger$log_message(paste("User authenticated:", username), type = "INFO", zone = "AUTH")
+            logger$log_message(paste("Authenticated:", username), type = "INFO", zone = "AUTH")
           }
+
+          # Trigger re-evaluation of URL parsing after authentication
+          rv$auth_changed <- Sys.time()
         }
       })
     }
@@ -281,7 +306,8 @@ survey <- function(json = NULL,
       validated_params = NULL,
       survey_def = NULL,
       selected_survey = NULL,
-      survey_json = NULL
+      survey_json = NULL,
+      auth_changed = NULL
     )
 
     server_setup(
@@ -377,7 +403,19 @@ survey <- function(json = NULL,
                 hide_and_show("landingPage", "surveyNotFoundMessage")
                 return()
               } else {
-                # Valid survey selected
+                # Valid survey selected - check authentication if LDAP is configured
+                if (!is.null(ldap_auth)) {
+                  auth <- auth_status()
+                  if (!auth$authenticated) {
+                    # Hide landing page and show login form
+                    shinyjs::hide("landingPage")
+                    shinyjs::hide("main_content")
+                    shinyjs::show("login_section")
+                    return()
+                  }
+                }
+
+                # Valid survey selected and authenticated (or no auth required)
                 rv$selected_survey <- survey_param
                 rv$survey_json <- jsonlite::toJSON(list[[survey_param]], pretty = TRUE, auto_unbox = TRUE)
 
@@ -390,6 +428,16 @@ survey <- function(json = NULL,
                 hide_and_show("surveyContainer", "waitingMessage")
               }
             } else {
+              # Single survey mode - check authentication if LDAP is configured
+              if (!is.null(ldap_auth)) {
+                auth <- auth_status()
+                if (!auth$authenticated) {
+                  # Hide main content and show login form
+                  shinyjs::hide("main_content")
+                  shinyjs::show("login_section")
+                  return()
+                }
+              }
               # Single survey mode - set survey_json
               rv$survey_json <- json
             }
@@ -488,7 +536,7 @@ survey <- function(json = NULL,
           shinyjs::hide("waitingMessage")
         }
       )
-    }) |> bindEvent(session$clientData$url_search, ignoreInit = FALSE)
+    }) |> bindEvent(session$clientData$url_search, rv$auth_changed, ignoreInit = FALSE, ignoreNULL = FALSE)
 
     observeEvent(input$surveyComplete, {
       shinyjs::hide(
