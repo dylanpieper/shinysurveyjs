@@ -285,11 +285,13 @@ survey <- function(json = NULL,
     }
 
     # LDAP Authentication
-    auth_status <- if (!is.null(ldap_auth)) {
-      ldap_login_server("auth", ldap_auth, logger)
+    if (!is.null(ldap_auth)) {
+      ldap_server <- ldap_login_server("auth", ldap_auth, logger)
+      auth_status <- ldap_server$auth_status
     } else {
       # No auth required - always authenticated
-      shiny::reactive(list(authenticated = TRUE, user_info = NULL))
+      ldap_server <- NULL
+      auth_status <- shiny::reactive(list(authenticated = TRUE, user_info = NULL))
     }
 
     # Show authenticated content when user is authenticated
@@ -416,11 +418,27 @@ survey <- function(json = NULL,
                 if (!is.null(ldap_config)) {
                   auth <- auth_status()
                   if (!auth$authenticated) {
-                    # Hide landing page and show login form
-                    shinyjs::hide("landingPage")
-                    shinyjs::hide("main_content")
-                    shinyjs::show("login_section")
-                    return()
+                    # Try to validate any existing session before showing login
+                    if (!is.null(ldap_server) && !is.null(ldap_server$validate_existing_session)) {
+                      ldap_server$validate_existing_session()
+                      # Give a moment for validation to complete before showing login
+                      shinyjs::delay(100, {
+                        auth_recheck <- auth_status()
+                        if (!auth_recheck$authenticated) {
+                          # Hide landing page and show login form
+                          shinyjs::hide("landingPage")
+                          shinyjs::hide("main_content")
+                          shinyjs::show("login_section")
+                        }
+                      })
+                      return()
+                    } else {
+                      # No session validation available - show login immediately
+                      shinyjs::hide("landingPage")
+                      shinyjs::hide("main_content")
+                      shinyjs::show("login_section")
+                      return()
+                    }
                   }
                 }
 
@@ -441,10 +459,25 @@ survey <- function(json = NULL,
               if (!is.null(ldap_config)) {
                 auth <- auth_status()
                 if (!auth$authenticated) {
-                  # Hide main content and show login form
-                  shinyjs::hide("main_content")
-                  shinyjs::show("login_section")
-                  return()
+                  # Try to validate any existing session before showing login
+                  if (!is.null(ldap_server) && !is.null(ldap_server$validate_existing_session)) {
+                    ldap_server$validate_existing_session()
+                    # Give a moment for validation to complete before showing login
+                    shinyjs::delay(100, {
+                      auth_recheck <- auth_status()
+                      if (!auth_recheck$authenticated) {
+                        # Hide main content and show login form
+                        shinyjs::hide("main_content")
+                        shinyjs::show("login_section")
+                      }
+                    })
+                    return()
+                  } else {
+                    # No session validation available - show login immediately
+                    shinyjs::hide("main_content")
+                    shinyjs::show("login_section")
+                    return()
+                  }
                 }
               }
               # Single survey mode - set survey_json

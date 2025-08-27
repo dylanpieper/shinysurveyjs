@@ -48,23 +48,19 @@ LdapAuth <- R6::R6Class(
         message("SSH tunnel configured for localhost:", ssh_tunnel)
       }
 
-      # Initialize session table if db_ops is provided
+      # Initialize session table once during app startup if db_ops is provided
+      # This ensures the table exists for all future operations without repeated checks
       if (!is.null(db_ops)) {
-        self$ensure_session_table()
-        # Clean up any expired sessions on startup
-        self$cleanup_expired_sessions()
+        self$ensure_session_table_once()
       }
     },
 
-    #' Ensure session table exists
-    ensure_session_table = function() {
+    #' Ensure session table exists once during initialization (no read check)
+    ensure_session_table_once = function() {
       if (is.null(self$config$db_ops)) return(FALSE)
       
       tryCatch({
-        # Check if table exists by attempting to read from it
-        self$config$db_ops$read_table(self$config$auth_table, limit = 0, update_last_sql = FALSE)
-      }, error = function(e) {
-        # Table doesn't exist, create it
+        # Create table if it doesn't exist (using CREATE TABLE IF NOT EXISTS)
         create_query <- paste0("
         CREATE TABLE IF NOT EXISTS ", self$config$auth_table, " (
           session_token VARCHAR(255) PRIMARY KEY,
@@ -73,17 +69,19 @@ LdapAuth <- R6::R6Class(
           expires_at TIMESTAMP NOT NULL
         )")
         
-        tryCatch({
-          self$config$db_ops$operate(function(conn) {
-            DBI::dbExecute(conn, create_query)
-          }, "Failed to create auth_sessions table")
-          TRUE
-        }, error = function(e2) {
-          warning("Failed to create auth_sessions table: ", e2$message)
-          FALSE
-        })
+        self$config$db_ops$operate(function(conn) {
+          DBI::dbExecute(conn, create_query)
+        }, "Failed to create auth_sessions table")
+        
+        # Also do initial cleanup of any expired sessions
+        self$cleanup_expired_sessions_silent()
+        TRUE
+      }, error = function(e) {
+        warning("Failed to initialize auth_sessions table: ", e$message)
+        FALSE
       })
     },
+
 
     #' Generate secure session token
     generate_session_token = function() {
@@ -96,6 +94,7 @@ LdapAuth <- R6::R6Class(
     create_session = function(username) {
       if (is.null(self$config$db_ops)) return(NULL)
       
+      # Table existence already ensured by validate_session or authentication flow
       token <- self$generate_session_token()
       expires_at <- Sys.time() + (self$config$session_duration_days * 24 * 60 * 60)
       
@@ -130,8 +129,12 @@ LdapAuth <- R6::R6Class(
       }
       
       tryCatch({
-        # Clean up expired sessions first
-        self$cleanup_expired_sessions()
+        # Only clean up expired sessions occasionally (every 12 hours)
+        if (is.null(private$last_cleanup) || 
+            as.numeric(Sys.time() - private$last_cleanup) > 43200) {
+          self$cleanup_expired_sessions()
+          private$last_cleanup <- Sys.time()
+        }
         
         # Check if token exists and is not expired
         session_data <- self$config$db_ops$read_table(
@@ -162,6 +165,22 @@ LdapAuth <- R6::R6Class(
       }, error = function(e) {
         warning("Session validation error: ", e$message)
         return(list(valid = FALSE, user_info = NULL))
+      })
+    },
+
+    #' Clean up expired sessions silently (no logging)
+    cleanup_expired_sessions_silent = function() {
+      if (is.null(self$config$db_ops)) return(FALSE)
+      
+      tryCatch({
+        delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE expires_at < NOW()")
+        self$config$db_ops$operate(function(conn) {
+          DBI::dbExecute(conn, delete_query)
+        }, "Failed to cleanup expired sessions")
+        TRUE
+      }, error = function(e) {
+        # Silent failure during initialization
+        FALSE
       })
     },
 
@@ -305,6 +324,10 @@ LdapAuth <- R6::R6Class(
     logout = function() {
       self$logout_session()
     }
+  ),
+  
+  private = list(
+    last_cleanup = NULL
   )
 )
 
@@ -405,11 +428,12 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL, theme_color = "#007b
       $(document).ready(function() {
         var ns_prefix = "%s";
 
-        // Check for existing session after Shiny is connected
+        // Store session token but do not validate automatically
         $(document).on("shiny:connected", function() {
           var existingToken = getCookie("auth_session");
           if (existingToken) {
-            Shiny.setInputValue(ns_prefix + "session_token", existingToken, {priority: "event"});
+            // Store the token but do not trigger validation yet
+            window.authSessionToken = existingToken;
           }
         });
 
@@ -484,14 +508,19 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL, theme_color = "#007b
 #' @export
 ldap_login_server <- function(id, ldap_auth, logger = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
+    # Capture namespace prefix for use in validation function
+    ns_prefix <- session$ns("")
+    
     auth_status <- shiny::reactiveValues(
       authenticated = FALSE,
       user_info = NULL
     )
 
-    # Check for existing session token
+    # Check for existing session token - only validate when authentication is actually needed
     shiny::observeEvent(input$session_token, {
-      if (!is.null(input$session_token) && input$session_token != "") {
+      # Only validate session if we're not just browsing the library
+      # This prevents unnecessary auth checks on the landing page
+      if (!is.null(input$session_token) && input$session_token != "" && input$validate_session) {
         validation_result <- ldap_auth$validate_session(input$session_token)
         
         if (validation_result$valid) {
@@ -503,9 +532,22 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
             username <- validation_result$user_info$username %||% "unknown"
             logger$log_message(paste("Session validated:", username), type = "INFO", zone = "AUTH")
           }
+          
+          # Signal successful validation - the auth reactive will handle the rest
         }
       }
     })
+    
+    # Method to trigger session validation when needed
+    validate_existing_session <- function() {
+      shinyjs::runjs(sprintf("
+        var existingToken = getCookie('auth_session');
+        if (existingToken) {
+          Shiny.setInputValue('%svalidate_session', true, {priority: 'event'});
+          Shiny.setInputValue('%ssession_token', existingToken, {priority: 'event'});
+        }
+      ", ns_prefix, ns_prefix))
+    }
 
     shiny::observeEvent(input$login_btn, {
       shinyjs::hide("error_msg")
@@ -531,11 +573,18 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
       }
     })
 
-    return(shiny::reactive({
+    # Return both the auth status reactive and the validation function
+    auth_reactive <- shiny::reactive({
       list(
         authenticated = auth_status$authenticated,
         user_info = auth_status$user_info
       )
-    }))
+    })
+    
+    # Return a list with both the reactive and the validation function
+    return(list(
+      auth_status = auth_reactive,
+      validate_existing_session = validate_existing_session
+    ))
   })
 }
