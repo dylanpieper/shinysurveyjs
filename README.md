@@ -29,13 +29,14 @@ library(shinysurveyjs)
 
 # Database configuration (reused across examples)
 db_config <- list(
-  driver = RMariaDB::MariaDB(),
-  host = "database.example.com",
-  port = 3306,
-  db_name = "research_db",
-  user = "db_user",
-  password = keyring::key_get("db_pass", "research_db"),
+  host = Sys.getenv("DB_HOST"),
+  port = as.numeric(Sys.getenv("DB_PORT")),
+  name = Sys.getenv("DB_NAME"),
+  user = Sys.getenv("DB_USER"),
+  pass = Sys.getenv("DB_PASS"),
+  write_table = "survey_data",
   log_table = "survey_logs",
+  auth_table = "survey_auth",
   pool_size = 10
 )
 
@@ -163,17 +164,6 @@ For simple single-survey applications, pass your survey definition directly:
 ``` r
 library(shinysurveyjs)
 
-# Database configuration (reused across examples)
-db_config <- list(
-  driver = RMariaDB::MariaDB(),
-  host = "localhost",
-  db_name = "survey_db", 
-  user = "user",
-  password = "pass",
-  write_table = "responses", # Required for single surveys
-  log_table = "survey_logs"
-)
-
 # Example survey definition
 feedback_survey <- list(
   title = "Feedback Survey",
@@ -270,13 +260,14 @@ list(
 ``` r
 # Database configuration
 db_config <- list(
-  driver = RMariaDB::MariaDB(),
-  host = "database.example.com",
-  port = 3306,
-  db_name = "survey_db",
-  user = "db_user",
-  password = keyring::key_get("db_pass", "survey_db"),
+  host = Sys.getenv("DB_HOST"),
+  port = as.numeric(Sys.getenv("DB_PORT")),
+  name = Sys.getenv("DB_NAME"),
+  user = Sys.getenv("DB_USER"),
+  pass = Sys.getenv("DB_PASS"),
+  write_table = "survey_data",
   log_table = "survey_logs",
+  auth_table = "survey_auth",
   pool_size = 10
 )
 
@@ -307,9 +298,7 @@ survey(
 )
 ```
 
-## Configuration
-
-### Environment variables
+#### Environment variables
 
 Set database connection parameters using environment variables:
 
@@ -319,12 +308,10 @@ DB_HOST=database.example.com
 DB_PORT=3306 
 DB_NAME=research_db
 DB_USER=db_user
-DB_PASSWORD=db_pass
-WRITE_TABLE=survey_responses # For single survey use case
-LOG_TABLE=survey_logs
+DB_PASS=db_pass
 ```
 
-### Secure credential management
+#### Secure credential management
 
 Use [keyring](https://keyring.r-lib.org/) for production deployments:
 
@@ -336,13 +323,14 @@ keyring::key_set("db_pass", username = "research_db")
 
 # Database configuration with secure credentials
 db_config <- list(
-  driver = RMariaDB::MariaDB(),
-  host = "database.example.com",
-  port = 3306,
-  user = "db_user", 
-  password = keyring::key_get("db_pass", "research_db"),
-  db_name = "research_db",
+  host = Sys.getenv("DB_HOST"),
+  port = as.numeric(Sys.getenv("DB_PORT")),
+  name = Sys.getenv("DB_NAME"),
+  user = Sys.getenv("DB_USER"),
+  pass = keyring::key_get("db_pass", "research_db"),
+  write_table = "survey_data",
   log_table = "survey_logs",
+  auth_table = "survey_auth",
   pool_size = 10
 )
 

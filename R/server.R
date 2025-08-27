@@ -5,7 +5,7 @@
 #' and multi-survey applications with URL-based routing.
 #'
 #' The dual logging system provides:
-#' * Console logging: Immediate color-coded messages for development and monitoring
+#' * Console logging: Immediate zoned messages for development and monitoring
 #' * Database logging: Survey metadata including timing, IP addresses, and error tracking
 #'
 #' @param json String. JSON survey definition. Use for single survey applications.
@@ -30,13 +30,14 @@
 #'   * `ssh_tunnel`: Local port number for SSH tunnel (assumes tunnel already running, e.g., `ssh_tunnel = 3389`)
 #'   * `logo`: URL to logo image to display instead of title text (optional)
 #' @param db_config List. Database connection parameters:
-#'   * `host`: Database host (default: `Sys.getenv("HOST")`)
-#'   * `port`: Database port (default: `Sys.getenv("PORT")`)
-#'   * `db_name`: Database name (default: `Sys.getenv("DB_NAME")`)
-#'   * `user`: Database username (default: `Sys.getenv("USER")`)
-#'   * `password`: Database password (default: `Sys.getenv("PASSWORD")`)
-#'   * `write_table`: Survey data table (default: `Sys.getenv("WRITE_TABLE")`)
-#'   * `log_table`: Application logs table (default: `Sys.getenv("LOG_TABLE")`)
+#'   * `host`: Database host (default: `Sys.getenv("DB_HOST")`)
+#'   * `port`: Database port (default: `as.numeric(Sys.getenv("DB_PORT"))`)
+#'   * `name`: Database name (default: `Sys.getenv("DB_NAME")`)
+#'   * `user`: Database username (default: `Sys.getenv("DB_USER")`)
+#'   * `pass`: Database password (default: `Sys.getenv("DB_PASS")`)
+#'   * `write_table`: Survey data table (default: "survey_data")
+#'   * `log_table`: Application logs table (default: "survey_logs")
+#'   * `auth_table`: Authentication sessions table (default: "survey_auth")
 #'   * `pool_size`: Maximum connections in pool (default: 10)
 #' @param db_update List. Update configuration for multi-survey workflows.
 #'   Each element contains:
@@ -98,13 +99,14 @@
 #' survey(
 #'   list = survey,
 #'   db_config = list(
-#'     driver = RMariaDB::MariaDB(),
-#'     host = "localhost",
-#'     user = "user",
-#'     password = "password",
-#'     db_name = "surveys",
-#'     write_table = "feedback_data",
-#'     log_table = "app_logs",
+#'     host = Sys.getenv("DB_HOST"),
+#'     port = as.numeric(Sys.getenv("DB_PORT")),
+#'     name = Sys.getenv("DB_NAME"),
+#'     user = Sys.getenv("DB_USER"),
+#'     pass = Sys.getenv("DB_PASS"),
+#'     write_table = "survey_data",
+#'     log_table = "survey_logs",
+#'     auth_table = "survey_auth",
 #'     pool_size = 10
 #'   )
 #' )
@@ -127,13 +129,14 @@ survey <- function(json = NULL,
                    ),
                    ldap_config = NULL,
                    db_config = list(
-                     host = Sys.getenv("HOST"),
-                     port = as.numeric(Sys.getenv("PORT")),
-                     db_name = Sys.getenv("DB_NAME"),
-                     user = Sys.getenv("USER"),
-                     password = Sys.getenv("PASSWORD"),
-                     write_table = Sys.getenv("WRITE_TABLE"),
-                     log_table = Sys.getenv("LOG_TABLE"),
+                     host = Sys.getenv("DB_HOST"),
+                     port = as.numeric(Sys.getenv("DB_PORT")),
+                     name = Sys.getenv("DB_NAME"),
+                     user = Sys.getenv("DB_USER"),
+                     pass = Sys.getenv("DB_PASS"),
+                     write_table = "survey_data",
+                     log_table = "survey_logs",
+                     auth_table = "survey_auth",
                      pool_size = 10
                    ),
                    db_update = NULL,
@@ -161,25 +164,13 @@ survey <- function(json = NULL,
 
   survey_setup(db_config, shiny_config, is_multisurvey)
 
-  # Initialize LDAP authentication if configured
-  ldap_auth <- if (!is.null(ldap_config)) {
-    LdapAuth$new(
-      host = ldap_config$host,
-      base_dn = ldap_config$base_dn,
-      port = ldap_config$port %||% 389,
-      user_attr = ldap_config$user_attr %||% "uid",
-      domain = ldap_config$domain,
-      ssh_tunnel = ldap_config$ssh_tunnel
-    )
-  } else {
-    NULL
-  }
+  # LDAP configuration will be initialized later after db_ops is available
 
   ui <- fluidPage(
     shinyjs::useShinyjs(),
 
     # LDAP Login Form (hidden initially, shown when auth required)
-    if (!is.null(ldap_auth)) {
+    if (!is.null(ldap_config)) {
       shiny::div(
         id = "login_section",
         style = "display: none;",
@@ -218,7 +209,7 @@ survey <- function(json = NULL,
           # Survey container (hidden initially, requires auth if LDAP enabled)
           shiny::div(
             id = "surveySection",
-            style = if (!is.null(ldap_auth)) "display: none;" else "display: none;",
+            style = if (!is.null(ldap_config)) "display: none;" else "display: none;",
             survey_ui_wrapper(
               id = "surveyContainer",
               theme = theme,
@@ -232,7 +223,7 @@ survey <- function(json = NULL,
         # Single survey content (requires auth if LDAP enabled)
         shiny::div(
           id = "singleSurveySection",
-          style = if (!is.null(ldap_auth)) "display: none;" else "",
+          style = if (!is.null(ldap_config)) "display: none;" else "",
           survey_ui_wrapper(
             id = "surveyContainer",
             theme = theme,
@@ -246,6 +237,53 @@ survey <- function(json = NULL,
   )
 
   server <- function(input, output, session) {
+    # Initialize reactive values first
+    rv <- shiny::reactiveValues(
+      survey_responses = NULL,
+      loading = FALSE,
+      survey_completed = FALSE,
+      error_message = NULL,
+      load_start_time = Sys.time(),
+      start_time = NULL,
+      complete_time = NULL,
+      save_time = NULL,
+      duration_load = NULL,
+      duration_complete = NULL,
+      duration_save = NULL,
+      validated_params = NULL,
+      survey_def = NULL,
+      selected_survey = NULL,
+      survey_json = NULL,
+      auth_changed = NULL
+    )
+
+    server_setup(
+      session = session,
+      db_config = db_config,
+      app_pool = app_pool,
+      survey_logger = survey_logger,
+      db_ops = db_ops,
+      echo = echo,
+      is_multisurvey = is_multisurvey
+    )
+
+    # Initialize LDAP authentication after db_ops is available
+    ldap_auth <- if (!is.null(ldap_config)) {
+      LdapAuth$new(
+        host = ldap_config$host,
+        base_dn = ldap_config$base_dn,
+        port = ldap_config$port %||% 389,
+        user_attr = ldap_config$user_attr %||% "uid",
+        domain = ldap_config$domain,
+        ssh_tunnel = ldap_config$ssh_tunnel,
+        db_ops = db_ops,
+        session_duration_days = ldap_config$session_duration_days %||% 7,
+        auth_table = db_config$auth_table %||% "survey_auth"
+      )
+    } else {
+      NULL
+    }
+
     # LDAP Authentication
     auth_status <- if (!is.null(ldap_auth)) {
       ldap_login_server("auth", ldap_auth, logger)
@@ -290,35 +328,6 @@ survey <- function(json = NULL,
     if (!is_multisurvey) {
       hide_and_show("surveyContainer", "waitingMessage")
     }
-
-    rv <- shiny::reactiveValues(
-      survey_responses = NULL,
-      loading = FALSE,
-      survey_completed = FALSE,
-      error_message = NULL,
-      load_start_time = Sys.time(),
-      start_time = NULL,
-      complete_time = NULL,
-      save_time = NULL,
-      duration_load = NULL,
-      duration_complete = NULL,
-      duration_save = NULL,
-      validated_params = NULL,
-      survey_def = NULL,
-      selected_survey = NULL,
-      survey_json = NULL,
-      auth_changed = NULL
-    )
-
-    server_setup(
-      session = session,
-      db_config = db_config,
-      app_pool = app_pool,
-      survey_logger = survey_logger,
-      db_ops = db_ops,
-      echo = echo,
-      is_multisurvey = is_multisurvey
-    )
 
     config_list_reactive <- reactive({
       req(!is.null(db_logic))
@@ -404,7 +413,7 @@ survey <- function(json = NULL,
                 return()
               } else {
                 # Valid survey selected - check authentication if LDAP is configured
-                if (!is.null(ldap_auth)) {
+                if (!is.null(ldap_config)) {
                   auth <- auth_status()
                   if (!auth$authenticated) {
                     # Hide landing page and show login form
@@ -429,7 +438,7 @@ survey <- function(json = NULL,
               }
             } else {
               # Single survey mode - check authentication if LDAP is configured
-              if (!is.null(ldap_auth)) {
+              if (!is.null(ldap_config)) {
                 auth <- auth_status()
                 if (!auth$authenticated) {
                   # Hide main content and show login form

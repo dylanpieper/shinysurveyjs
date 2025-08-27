@@ -70,6 +70,11 @@ survey_logger <- R6::R6Class(
     #' @param survey_name Character string identifying the survey
     #' @param echo Logical flag to display console output. Default: TRUE
     initialize = function(log_table, session_id, survey_name, echo = TRUE) {
+      # Ensure log_table is not NULL or empty
+      if (is.null(log_table) || length(log_table) == 0 || log_table == "") {
+        log_table <- "survey_logs"
+      }
+      
       self$log_table <- log_table
       self$session_id <- session_id
       self$survey_name <- survey_name
@@ -243,7 +248,7 @@ survey_logger <- R6::R6Class(
               duration_complete DECIMAL(10,3),
               duration_save DECIMAL(10,3),
               ip_address TEXT,
-              created_at created_at NOT NULL
+              created_at TIMESTAMP NOT NULL
             )",
               self$log_table
             )

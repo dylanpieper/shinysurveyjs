@@ -6,9 +6,9 @@
 #' @param driver DBI-compatible driver function or name of database driver (default: RMariaDB::MariaDB())
 #' @param host Database host
 #' @param port Database port (default: 3306)
-#' @param db_name Database name
+#' @param name Database name
 #' @param user Database username
-#' @param password Database password
+#' @param pass Database password
 #' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
 #' @param logger Logger object for tracking operations (default: NULL)
 #' @param pool_size Maximum number of connections in the pool (default: 10)
@@ -25,23 +25,23 @@ db_conn_open <- function(
     driver = RMariaDB::MariaDB(),
     host = NULL,
     port = 3306,
-    db_name = NULL,
+    name = NULL,
     user = NULL,
-    password = NULL,
+    pass = NULL,
     global = TRUE,
     logger = NULL,
     pool_size = 10,
     ...) {
-  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(db_name) && !is.null(user) && !is.null(password)) {
+  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(name) && !is.null(user) && !is.null(pass)) {
     
     # Create connection pool
     pool <- pool::dbPool(
       drv = driver,
       host = host,
       port = port,
-      dbname = db_name,
+      dbname = name,
       user = user,
-      password = password,
+      password = pass,
       maxSize = pool_size,
       ...
     )
