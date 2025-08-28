@@ -239,7 +239,13 @@ db_ops <- R6::R6Class(
           if (!col %in% existing_cols) {
             # Check if this field has showOtherItem enabled and needs an _other column
             if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
-              other_col_name <- paste0(col, "_other")
+              # Remove "_id" suffix if present before adding "_other"
+              base_col_name <- if (endsWith(col, "_id")) {
+                substr(col, 1, nchar(col) - 3)
+              } else {
+                col
+              }
+              other_col_name <- paste0(base_col_name, "_other")
               if (!other_col_name %in% existing_cols) {
                 missing_cols <- c(missing_cols, col, other_col_name)
               } else if (!col %in% existing_cols) {
@@ -747,7 +753,13 @@ db_ops <- R6::R6Class(
           required_cols[[col]] <- main_type
 
           # Other column for free text responses
-          other_col_name <- paste0(col, "_other")
+          # Remove "_id" suffix if present before adding "_other"
+          base_col_name <- if (endsWith(col, "_id")) {
+            substr(col, 1, nchar(col) - 3)
+          } else {
+            col
+          }
+          other_col_name <- paste0(base_col_name, "_other")
           required_cols[[other_col_name]] <- "TEXT"
         } else {
           # Regular field
@@ -912,7 +924,13 @@ db_ops <- R6::R6Class(
           created_cols <- c(created_cols, col)
 
           # Create separate column for "other" responses - check for duplicates
-          other_col_name <- paste0(col, "_other")
+          # Remove "_id" suffix if present before adding "_other"
+          base_col_name <- if (endsWith(col, "_id")) {
+            substr(col, 1, nchar(col) - 3)
+          } else {
+            col
+          }
+          other_col_name <- paste0(base_col_name, "_other")
           if (!other_col_name %in% created_cols) {
             col_defs <- c(col_defs, sprintf(
               "%s TEXT",

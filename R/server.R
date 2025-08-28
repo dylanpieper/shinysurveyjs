@@ -681,7 +681,13 @@ survey <- function(json = NULL,
             other_fields <- get_fields_with_other_option(survey_def)
 
             for (field_name in other_fields) {
-              other_field_name <- paste0(field_name, "_other")
+              # Remove "_id" suffix if present before adding "_other"
+              base_field_name <- if (endsWith(field_name, "_id")) {
+                substr(field_name, 1, nchar(field_name) - 3)
+              } else {
+                field_name
+              }
+              other_field_name <- paste0(base_field_name, "_other")
 
               if (field_name %in% names(parsed_data)) {
                 field_value <- parsed_data[[field_name]]

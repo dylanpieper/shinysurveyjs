@@ -172,7 +172,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' database operations in the parent environment. Creates a logger instance and establishes
 #' database connections with error handling.
 #'
-#' @param session Shiny session object containing the session token.
+#' @param session Shiny session object containing the auth_token.
 #' @param db_config List. Database configuration parameters:
 #'   * `log_table`: Name of logging table
 #' @param app_pool Database connection pool object from global environment
@@ -211,7 +211,7 @@ server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, ec
   survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
-    session_id = session$token,
+    session_id = session$auth_token,
     survey_name = survey_name,
     echo = echo
   )
@@ -373,7 +373,7 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' and closing the global database pool connection. This function should be called
 #' within server initialization to ensure proper resource cleanup.
 #'
-#' @param session Shiny session object containing the session token.
+#' @param session Shiny session object containing the auth_token.
 #' @param logger Logger object with log_message method for event recording.
 #' @param zone Character. Logging zone identifier. Default: "SURVEY"
 #'
