@@ -63,7 +63,7 @@ LdapAuth <- R6::R6Class(
         # Create table if it doesn't exist (using CREATE TABLE IF NOT EXISTS)
         create_query <- paste0("
         CREATE TABLE IF NOT EXISTS ", self$config$auth_table, " (
-          auth_token VARCHAR(255) PRIMARY KEY,
+          token VARCHAR(255) PRIMARY KEY,
           username VARCHAR(255) NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP NOT NULL
@@ -83,8 +83,8 @@ LdapAuth <- R6::R6Class(
     },
 
 
-    #' Generate secure session auth_token
-    generate_auth_token = function() {
+    #' Generate secure session token
+    generate_token = function() {
       # Generate 32 random bytes and convert to hex
       paste0(sprintf("%02x", as.integer(runif(32, 0, 256))), collapse = "")
     },
@@ -95,12 +95,12 @@ LdapAuth <- R6::R6Class(
       if (is.null(self$config$db_ops)) return(NULL)
       
       # Table existence already ensured by validate_session or authentication flow
-      auth_token <- self$generate_auth_token()
+      token <- self$generate_token()
       expires_at <- Sys.time() + (self$config$session_duration_days * 24 * 60 * 60)
       
       tryCatch({
         session_data <- data.frame(
-          auth_token = auth_token,
+          token = token,
           username = username,
           expires_at = expires_at,
           stringsAsFactors = FALSE
@@ -109,22 +109,22 @@ LdapAuth <- R6::R6Class(
         # Insert session data directly using operate method
         self$config$db_ops$operate(function(conn) {
           insert_query <- sprintf(
-            "INSERT INTO %s (auth_token, username, expires_at) VALUES (?, ?, ?)",
+            "INSERT INTO %s (token, username, expires_at) VALUES (?, ?, ?)",
             self$config$auth_table
           )
-          DBI::dbExecute(conn, insert_query, list(auth_token, username, expires_at))
+          DBI::dbExecute(conn, insert_query, list(token, username, expires_at))
         }, "Failed to insert session")
-        auth_token
+        token
       }, error = function(e) {
         warning("Failed to create session: ", e$message)
         NULL
       })
     },
 
-    #' Validate session auth_token
-    #' @param auth_token Session auth_token to validate
-    validate_session = function(auth_token) {
-      if (is.null(self$config$db_ops) || is.null(auth_token) || auth_token == "") {
+    #' Validate session token
+    #' @param token Session token to validate
+    validate_session = function(token) {
+      if (is.null(self$config$db_ops) || is.null(token) || token == "") {
         return(list(valid = FALSE, user_info = NULL))
       }
       
@@ -136,10 +136,10 @@ LdapAuth <- R6::R6Class(
           private$last_cleanup <- Sys.time()
         }
         
-        # Check if auth_token exists and is not expired
+        # Check if token exists and is not expired
         session_data <- self$config$db_ops$read_table(
           self$config$auth_table,
-          filters = list(auth_token = auth_token),
+          filters = list(token = token),
           limit = 1,
           update_last_sql = FALSE
         )
@@ -154,7 +154,7 @@ LdapAuth <- R6::R6Class(
             self$user_info <- list(
               username = session_row$username,
               login_time = as.POSIXct(session_row$created_at),
-              auth_token = auth_token
+              token = token
             )
             
             return(list(valid = TRUE, user_info = self$user_info))
@@ -201,22 +201,22 @@ LdapAuth <- R6::R6Class(
     },
 
     #' Remove specific session
-    #' @param auth_token Session auth_token to remove
-    logout_session = function(auth_token = NULL) {
+    #' @param token Session token to remove
+    logout_session = function(token = NULL) {
       if (is.null(self$config$db_ops)) {
         self$authenticated <- FALSE
         self$user_info <- NULL
         return(TRUE)
       }
       
-      # Use current session auth_token if none provided
-      if (is.null(auth_token) && !is.null(self$user_info$auth_token)) {
-        auth_token <- self$user_info$auth_token
+      # Use current session token if none provided
+      if (is.null(token) && !is.null(self$user_info$token)) {
+        token <- self$user_info$token
       }
       
-      if (!is.null(auth_token)) {
+      if (!is.null(token)) {
         tryCatch({
-          delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE auth_token = '", auth_token, "'")
+          delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE token = '", token, "'")
           self$config$db_ops$operate(function(conn) {
             DBI::dbExecute(conn, delete_query)
           }, "Failed to remove session")
@@ -289,20 +289,20 @@ LdapAuth <- R6::R6Class(
           if (result) {
             self$authenticated <- TRUE
             
-            # Create session auth_token if database operations are available
-            auth_token <- self$create_session(clean_username)
+            # Create session token if database operations are available
+            token <- self$create_session(clean_username)
             
             self$user_info <- list(
               username = username,
               login_time = Sys.time(),
-              auth_token = auth_token
+              token = token
             )
 
             if (!is.null(logger)) {
               logger$log_message(paste("Login success:", username), type = "INFO", zone = "AUTH")
             }
 
-            return(list(success = TRUE, user_info = self$user_info, auth_token = auth_token))
+            return(list(success = TRUE, user_info = self$user_info, token = token))
           } else {
             if (!is.null(logger)) {
               logger$log_message(paste("Login failed:", username), type = "WARN", zone = "AUTH")
@@ -428,11 +428,11 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL, theme_color = "#007b
       $(document).ready(function() {
         var ns_prefix = "%s";
 
-        // Store session auth_token but do not validate automatically
+        // Store session token but do not validate automatically
         $(document).on("shiny:connected", function() {
           var existingToken = getCookie("auth_session");
           if (existingToken) {
-            // Store the auth_token but do not trigger validation yet
+            // Store the token but do not trigger validation yet
             window.authSessionToken = existingToken;
           }
         });
@@ -488,8 +488,8 @@ ldap_login_ui <- function(id, title = "Login", logo = NULL, theme_color = "#007b
       });
 
       Shiny.addCustomMessageHandler("login_success", function(data) {
-        if (data.auth_token) {
-          setCookie("auth_session", data.auth_token, 7);
+        if (data.token) {
+          setCookie("auth_session", data.token, 7);
         }
       });
 
@@ -516,12 +516,12 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
       user_info = NULL
     )
 
-    # Check for existing session auth_token - only validate when authentication is actually needed
-    shiny::observeEvent(input$auth_token, {
+    # Check for existing session token - only validate when authentication is actually needed
+    shiny::observeEvent(input$token, {
       # Only validate session if we're not just browsing the library
       # This prevents unnecessary auth checks on the landing page
-      if (!is.null(input$auth_token) && input$auth_token != "" && input$validate_session) {
-        validation_result <- ldap_auth$validate_session(input$auth_token)
+      if (!is.null(input$token) && input$token != "" && input$validate_session) {
+        validation_result <- ldap_auth$validate_session(input$token)
         
         if (validation_result$valid) {
           auth_status$authenticated <- TRUE
@@ -544,7 +544,7 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
         var existingToken = getCookie('auth_session');
         if (existingToken) {
           Shiny.setInputValue('%svalidate_session', true, {priority: 'event'});
-          Shiny.setInputValue('%sauth_token', existingToken, {priority: 'event'});
+          Shiny.setInputValue('%stoken', existingToken, {priority: 'event'});
         }
       ", ns_prefix, ns_prefix))
     }
@@ -559,10 +559,10 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
         auth_status$user_info <- result$user_info
         shinyjs::hide("login_form")
         
-        # Send session auth_token to client for cookie storage
-        if (!is.null(result$auth_token)) {
+        # Send session token to client for cookie storage
+        if (!is.null(result$token)) {
           session$sendCustomMessage("login_success", list(
-            auth_token = result$auth_token
+            token = result$token
           ))
         }
       } else {

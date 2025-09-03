@@ -11,6 +11,11 @@
   - `survey_id` → `table_id` (in logging table)  
   - `sql_statement` → `sql` (in logging table)
 
+- **LDAP authentication changes**: Renamed authentication token field and methods for consistency:
+  - Database table field: `auth_token` → `token` (in authentication table)
+  - Method name: `generate_auth_token()` → `generate_token()`
+  - Parameter name: `auth_token` → `token` in `validate_session()` and `logout_session()` methods
+
 ## Improvements
 
 - Authentication table (`sjs_auth`) and logging table (`sjs_logs`) can now be customized directly via `survey()` parameters
