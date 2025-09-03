@@ -36,8 +36,8 @@
 #'   * `user`: Database username (default: `Sys.getenv("DB_USER")`)
 #'   * `pass`: Database password (default: `Sys.getenv("DB_PASS")`)
 #'   * `write_table`: Survey data table (default: "survey_data")
-#'   * `log_table`: Application logs table (default: "survey_logs")
-#'   * `auth_table`: Authentication sessions table (default: "survey_auth")
+#'   * `log_table`: Application logs table (default: "sjs_logs")
+#'   * `auth_table`: Authentication sessions table (default: "sjs_auth")
 #'   * `pool_size`: Maximum connections in pool (default: 10)
 #' @param db_update List. Update configuration for multi-survey workflows.
 #'   Each element contains:
@@ -69,6 +69,8 @@
 #'     * `result`: Action on duplicate - "warn" or "stop"
 #'     * `result_field`: Survey field for warning display (use hidden HTML element)
 #'   }
+#' @param sjs_auth String. Name of authentication sessions table (default: "sjs_auth").
+#' @param sjs_logs String. Name of application logs table (default: "sjs_logs").
 #' @param cookie_expiration_days Numeric. Days to retain survey progress cookies.
 #'   Default: 0 (no cookies).
 #' @param custom_css String. Additional CSS rules to append to the theme.
@@ -105,8 +107,8 @@
 #'     user = Sys.getenv("DB_USER"),
 #'     pass = Sys.getenv("DB_PASS"),
 #'     write_table = "survey_data",
-#'     log_table = "survey_logs",
-#'     auth_table = "survey_auth",
+#'     log_table = "sjs_logs",
+#'     auth_table = "sjs_auth",
 #'     pool_size = 10
 #'   )
 #' )
@@ -135,12 +137,14 @@ survey <- function(json = NULL,
                      user = Sys.getenv("DB_USER"),
                      pass = Sys.getenv("DB_PASS"),
                      write_table = "survey_data",
-                     log_table = "survey_logs",
-                     auth_table = "survey_auth",
+                     log_table = "sjs_logs",
+                     auth_table = "sjs_auth",
                      pool_size = 10
                    ),
                    db_update = NULL,
                    db_logic = NULL,
+                   sjs_auth = "sjs_auth",
+                   sjs_logs = "sjs_logs",
                    cookie_expiration_days = 0,
                    custom_css = NULL,
                    echo = TRUE) {
@@ -161,6 +165,10 @@ survey <- function(json = NULL,
       auto_unbox = TRUE
     )
   }
+
+  # Override auth_table and log_table with sjs parameters
+  db_config$auth_table <- sjs_auth
+  db_config$log_table <- sjs_logs
 
   survey_setup(db_config, shiny_config, is_multisurvey)
 
@@ -278,7 +286,7 @@ survey <- function(json = NULL,
         ssh_tunnel = ldap_config$ssh_tunnel,
         db_ops = db_ops,
         session_duration_days = ldap_config$session_duration_days %||% 7,
-        auth_table = db_config$auth_table %||% "survey_auth"
+        auth_table = db_config$auth_table %||% "sjs_auth"
       )
     } else {
       NULL
@@ -446,8 +454,8 @@ survey <- function(json = NULL,
                 rv$selected_survey <- survey_param
                 rv$survey_json <- jsonlite::toJSON(list[[survey_param]], pretty = TRUE, auto_unbox = TRUE)
 
-                # Update logger to use actual survey name and start logging
-                logger$update_survey_name(survey_param)
+                # Update logger to use actual table name and start logging
+                logger$update_table_name(survey_param)
                 logger$log_message("Started session", zone = "SURVEY")
 
                 shinyjs::hide("landingPage")
@@ -801,8 +809,8 @@ survey <- function(json = NULL,
               result <- db_ops$update_survey_table(table_name, parsed_data)
             }
 
-            # Get the survey ID for logging
-            survey_id <- tryCatch(
+            # Get the table ID for logging
+            table_id <- tryCatch(
               {
                 if (is_update_operation) {
                   # For updates, get the ID from the target table using the join value
@@ -834,9 +842,14 @@ survey <- function(json = NULL,
             # Get client IP address
             client_ip <- session$clientData$url_hostname %||% "unknown"
 
+            # For update operations, temporarily update logger to use target table name
+            if (is_update_operation) {
+              logger$update_table_name(update_config$to)
+            }
+
             # Log the successful submission with timing data
             logger$log_entry(
-              survey_id = survey_id,
+              table_id = table_id,
               ip_address = client_ip,
               duration_load = rv$duration_load,
               duration_complete = rv$duration_complete,
@@ -873,9 +886,14 @@ survey <- function(json = NULL,
             # Get client IP address
             client_ip <- session$clientData$url_hostname %||% "unknown"
 
-            # Log error with available information (no survey_id since save failed)
+            # For update operations, ensure logger uses target table name for error logging too
+            if (is_update_operation) {
+              logger$update_table_name(update_config$to)
+            }
+
+            # Log error with available information (no table_id since save failed)
             logger$log_entry(
-              survey_id = NA,
+              table_id = NA,
               message = rv$error_message,
               ip_address = client_ip,
               duration_load = rv$duration_load,

@@ -15,9 +15,11 @@ survey(
   db_config = list(host = Sys.getenv("DB_HOST"), port =
     as.numeric(Sys.getenv("DB_PORT")), name = Sys.getenv("DB_NAME"), user =
     Sys.getenv("DB_USER"), pass = Sys.getenv("DB_PASS"), write_table = "survey_data",
-    log_table = "survey_logs", auth_table = "survey_auth", pool_size = 10),
+    log_table = "sjs_logs", auth_table = "sjs_auth", pool_size = 10),
   db_update = NULL,
   db_logic = NULL,
+  sjs_auth = "sjs_auth",
+  sjs_logs = "sjs_logs",
   cookie_expiration_days = 0,
   custom_css = NULL,
   echo = TRUE
@@ -66,8 +68,8 @@ Default: "#003594".}
 \item \code{user}: Database username (default: \code{Sys.getenv("DB_USER")})
 \item \code{pass}: Database password (default: \code{Sys.getenv("DB_PASS")})
 \item \code{write_table}: Survey data table (default: "survey_data")
-\item \code{log_table}: Application logs table (default: "survey_logs")
-\item \code{auth_table}: Authentication sessions table (default: "survey_auth")
+\item \code{log_table}: Application logs table (default: "sjs_logs")
+\item \code{auth_table}: Authentication sessions table (default: "sjs_auth")
 \item \code{pool_size}: Maximum connections in pool (default: 10)
 }}
 
@@ -104,6 +106,10 @@ Prevents duplicate entries in database fields:
 * \code{result}: Action on duplicate - "warn" or "stop"
 * \code{result_field}: Survey field for warning display (use hidden HTML element)
 }}
+
+\item{sjs_auth}{String. Name of authentication sessions table (default: "sjs_auth").}
+
+\item{sjs_logs}{String. Name of application logs table (default: "sjs_logs").}
 
 \item{cookie_expiration_days}{Numeric. Days to retain survey progress cookies.
 Default: 0 (no cookies).}
@@ -156,8 +162,8 @@ survey(
     user = Sys.getenv("DB_USER"),
     pass = Sys.getenv("DB_PASS"),
     write_table = "survey_data",
-    log_table = "survey_logs",
-    auth_table = "survey_auth",
+    log_table = "sjs_logs",
+    auth_table = "sjs_auth",
     pool_size = 10
   )
 )

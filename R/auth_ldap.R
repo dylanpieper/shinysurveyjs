@@ -28,8 +28,8 @@ LdapAuth <- R6::R6Class(
     #' @param ssh_tunnel Local port number for SSH tunnel (assumes tunnel already running, e.g., `ssh_tunnel = 3389`)
     #' @param db_ops Database operations object for session management
     #' @param session_duration_days Number of days sessions remain valid (default: 7)
-    #' @param auth_table Name of authentication sessions table (default: "survey_auth")
-    initialize = function(host, base_dn, port = 389, user_attr = "uid", domain = NULL, ssh_tunnel = NULL, db_ops = NULL, session_duration_days = 7, auth_table = "survey_auth") {
+    #' @param auth_table Name of authentication sessions table (default: "sjs_auth")
+    initialize = function(host, base_dn, port = 389, user_attr = "uid", domain = NULL, ssh_tunnel = NULL, db_ops = NULL, session_duration_days = 7, auth_table = "sjs_auth") {
       self$config <- list(
         host = host,
         base_dn = base_dn,

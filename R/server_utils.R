@@ -201,18 +201,18 @@ configure_shiny <- function(..., type_handlers = list()) {
 server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
   # Ensure required db_config fields have defaults
   if (is.null(db_config$log_table)) {
-    db_config$log_table <- "survey_logs"
+    db_config$log_table <- "sjs_logs"
   }
   if (is.null(db_config$auth_table)) {
-    db_config$auth_table <- "survey_auth"
+    db_config$auth_table <- "sjs_auth"
   }
   
   # Initialize survey app logger
-  survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
+  table_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$auth_token,
-    survey_name = survey_name,
+    table_name = table_name,
     echo = echo
   )
 

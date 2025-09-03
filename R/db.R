@@ -174,9 +174,9 @@ db_ops <- R6::R6Class(
           
           if (!skip_logging) {
             self$logger$log_entry(
-              survey_id = NA, # Will be set by calling function if available
+              table_id = NA, # Will be set by calling function if available
               message = sprintf("%s: %s", error_message, e$message),
-              sql_statement = self$logger$last_sql_statement,
+              sql = self$logger$last_sql,
               force_log = force_critical
             )
           }
@@ -230,7 +230,7 @@ db_ops <- R6::R6Class(
           "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
-        self$logger$update_last_sql_statement(cols_query)
+        self$logger$update_last_sql(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
         # Check for required columns
@@ -317,7 +317,7 @@ db_ops <- R6::R6Class(
            WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
-        self$logger$update_last_sql_statement(cols_query)
+        self$logger$update_last_sql(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
         # Check that all required columns exist
@@ -372,7 +372,7 @@ db_ops <- R6::R6Class(
           columns,
           paste(values_list, collapse = ", ")
         )
-        self$logger$update_last_sql_statement(insert_statement)
+        self$logger$update_last_sql(insert_statement)
 
         DBI::dbWriteTable(
           conn,
@@ -509,7 +509,7 @@ db_ops <- R6::R6Class(
         )
 
         if (update_last_sql) {
-          self$logger$update_last_sql_statement(query)
+          self$logger$update_last_sql(query)
         }
         result <- DBI::dbGetQuery(conn, query)
 
@@ -670,7 +670,7 @@ db_ops <- R6::R6Class(
           DBI::dbQuoteIdentifier(conn, target_col),
           if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
         )
-        self$logger$update_last_sql_statement(check_query)
+        self$logger$update_last_sql(check_query)
         record_count <- DBI::dbGetQuery(conn, check_query)$count
 
         if (record_count == 0) {
@@ -713,7 +713,7 @@ db_ops <- R6::R6Class(
           if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
         )
 
-        self$logger$update_last_sql_statement(update_query)
+        self$logger$update_last_sql(update_query)
         rows_affected <- DBI::dbExecute(conn, update_query)
 
         self$logger$log_message(

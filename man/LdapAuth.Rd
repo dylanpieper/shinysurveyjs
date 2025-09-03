@@ -49,7 +49,7 @@ Initialize LDAP Authentication}
   ssh_tunnel = NULL,
   db_ops = NULL,
   session_duration_days = 7,
-  auth_table = "survey_auth"
+  auth_table = "sjs_auth"
 )}\if{html}{\out{</div>}}
 }
 
@@ -72,7 +72,7 @@ Initialize LDAP Authentication}
 
 \item{\code{session_duration_days}}{Number of days sessions remain valid (default: 7)}
 
-\item{\code{auth_table}}{Name of authentication sessions table (default: "survey_auth")
+\item{\code{auth_table}}{Name of authentication sessions table (default: "sjs_auth")
 Ensure session table exists once during initialization (no read check)
 Generate secure session auth_token
 Create new session}

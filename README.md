@@ -35,8 +35,8 @@ db_config <- list(
   user = Sys.getenv("DB_USER"),
   pass = Sys.getenv("DB_PASS"),
   write_table = "survey_data",
-  log_table = "survey_logs",
-  auth_table = "survey_auth",
+  log_table = "sjs_logs",
+  auth_table = "sjs_auth",
   pool_size = 10
 )
 
@@ -266,8 +266,8 @@ db_config <- list(
   user = Sys.getenv("DB_USER"),
   pass = Sys.getenv("DB_PASS"),
   write_table = "survey_data",
-  log_table = "survey_logs",
-  auth_table = "survey_auth",
+  log_table = "sjs_logs",
+  auth_table = "sjs_auth",
   pool_size = 10
 )
 
@@ -329,8 +329,8 @@ db_config <- list(
   user = Sys.getenv("DB_USER"),
   pass = keyring::key_get("db_pass", "research_db"),
   write_table = "survey_data",
-  log_table = "survey_logs",
-  auth_table = "survey_auth",
+  log_table = "sjs_logs",
+  auth_table = "sjs_auth",
   pool_size = 10
 )
 
