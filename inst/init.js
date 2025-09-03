@@ -233,6 +233,12 @@ function initializeSurvey(data) {
             model: survey,
             onAfterRenderSurvey: () => {
                 console.log("Survey rendered, expectDbLogicConfig:", expectDbLogicConfig);
+                
+                // Set up other field validation after survey is rendered
+                if (typeof OtherFieldValidation !== 'undefined') {
+                    OtherFieldValidation.init();
+                }
+                
                 if (expectDbLogicConfig) {
                     console.log("Waiting for database logic config");
                     Shiny.setInputValue("surveyReady", true);
