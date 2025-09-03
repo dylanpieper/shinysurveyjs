@@ -237,19 +237,7 @@ survey_logger <- R6::R6Class(
         {
           if (!DBI::dbExistsTable(conn, self$log_table)) {
             query <- sprintf(
-              "
-            CREATE TABLE IF NOT EXISTS %s (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              table_name TEXT NOT NULL,
-              table_id INT,
-              sql TEXT,
-              message TEXT,
-              duration_load DECIMAL(10,3),
-              duration_complete DECIMAL(10,3),
-              duration_save DECIMAL(10,3),
-              ip_address TEXT,
-              created_at TIMESTAMP NOT NULL
-            )",
+              "CREATE TABLE IF NOT EXISTS %s (id INT AUTO_INCREMENT PRIMARY KEY, table_name TEXT NOT NULL, table_id INT, `sql` TEXT, `message` TEXT, duration_load DECIMAL(10,3), duration_complete DECIMAL(10,3), duration_save DECIMAL(10,3), ip_address TEXT, created_at TIMESTAMP NOT NULL)",
               self$log_table
             )
             DBI::dbExecute(conn, query)
@@ -275,12 +263,7 @@ survey_logger <- R6::R6Class(
       tryCatch(
         {
           query <- sprintf(
-            "
-          INSERT INTO %s
-            (table_name, table_id, sql, message,
-             duration_load, duration_complete, duration_save, ip_address, created_at)
-          VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO %s (table_name, table_id, `sql`, `message`, duration_load, duration_complete, duration_save, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             self$log_table
           )
 
