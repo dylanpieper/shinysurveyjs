@@ -285,7 +285,7 @@ survey <- function(json = NULL,
         domain = ldap_config$domain,
         ssh_tunnel = ldap_config$ssh_tunnel,
         db_ops = db_ops,
-        session_duration_days = ldap_config$session_duration_days %||% 7,
+        session_duration_days = ldap_config$session_duration_days %||% 0,
         auth_table = db_config$auth_table %||% "sjs_auth"
       )
     } else {
