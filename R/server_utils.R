@@ -8,9 +8,9 @@
 #' @param db_config List. Database configuration parameters:
 #'   * `host`: Database host address
 #'   * `port`: Database port number
-#'   * `db_name`: Name of the database
+#'   * `name`: Name of the database
 #'   * `user`: Database username
-#'   * `password`: Database password
+#'   * `pass`: Database password
 #' @param shiny_config List. Optional Shiny configuration parameters to pass to
 #'   `configure_shiny()`. Applied before database initialization.
 #'
@@ -44,7 +44,7 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
   }
 
   # Validate database configuration
-  required_db_fields <- c("host", "port", "db_name", "user", "password")
+  required_db_fields <- c("host", "port", "name", "user", "pass")
   missing_fields <- required_db_fields[!required_db_fields %in% names(db_config)]
   if (length(missing_fields) > 0) {
     cli::cli_alert_danger("Missing required database configuration fields: {.field {missing_fields}}")
@@ -54,11 +54,11 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
   # List of environment variables to check and set
   cli::cli_h2("Environment Setup")
   env_vars <- list(
-    HOST = db_config$host,
-    PORT = as.character(db_config$port),
-    DB_NAME = db_config$db_name,
-    USER = db_config$user,
-    PASSWORD = db_config$password
+    DB_HOST = db_config$host,
+    DB_PORT = as.character(db_config$port),
+    DB_NAME = db_config$name,
+    DB_USER = db_config$user,
+    DB_PASS = db_config$pass
   )
 
   # Iterate through each variable and set if not exists
@@ -90,7 +90,7 @@ survey_setup <- function(db_config, shiny_config = NULL, is_multisurvey = FALSE)
         }
         assign("app_pool", do.call(
           db_conn_open,
-          db_config[c("driver", "host", "port", "db_name", "user", "password", "pool_size")]
+          db_config[c("driver", "host", "port", "name", "user", "pass", "pool_size")]
         ),
         envir = .GlobalEnv
         )
@@ -172,7 +172,7 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' database operations in the parent environment. Creates a logger instance and establishes
 #' database connections with error handling.
 #'
-#' @param session Shiny session object containing the session token.
+#' @param session Shiny session object containing the token.
 #' @param db_config List. Database configuration parameters:
 #'   * `log_table`: Name of logging table
 #' @param app_pool Database connection pool object from global environment
@@ -199,12 +199,20 @@ configure_shiny <- function(..., type_handlers = list()) {
 #' @noRd
 #' @keywords internal
 server_setup <- function(session, db_config, app_pool, survey_logger, db_ops, echo, is_multisurvey = FALSE) {
+  # Ensure required db_config fields have defaults
+  if (is.null(db_config$log_table)) {
+    db_config$log_table <- "sjs_logs"
+  }
+  if (is.null(db_config$auth_table)) {
+    db_config$auth_table <- "sjs_auth"
+  }
+  
   # Initialize survey app logger
-  survey_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
+  table_name <- if (is_multisurvey) "multisurvey" else db_config$write_table
   logger <- survey_logger$new(
     log_table = db_config$log_table,
     session_id = session$token,
-    survey_name = survey_name,
+    table_name = table_name,
     echo = echo
   )
 
@@ -365,7 +373,7 @@ server_response <- function(output, rv, show_response = TRUE, theme_mode = "ligh
 #' and closing the global database pool connection. This function should be called
 #' within server initialization to ensure proper resource cleanup.
 #'
-#' @param session Shiny session object containing the session token.
+#' @param session Shiny session object containing the token.
 #' @param logger Logger object with log_message method for event recording.
 #' @param zone Character. Logging zone identifier. Default: "SURVEY"
 #'

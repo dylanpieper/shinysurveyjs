@@ -51,7 +51,7 @@ Key Features:
 
 \item{\code{session_id}}{Character string containing unique session identifier}
 
-\item{\code{survey_name}}{Character string identifying the current survey}
+\item{\code{table_name}}{Character string identifying the current table}
 
 \item{\code{survey_loaded}}{Logical flag indicating if a survey has been successfully loaded}
 
@@ -59,7 +59,7 @@ Key Features:
 
 \item{\code{queue}}{data.frame containing queued messages for batch processing}
 
-\item{\code{last_sql_statement}}{Character string containing the last executed SQL statement}
+\item{\code{last_sql}}{Character string containing the last executed SQL statement}
 }
 \if{html}{\out{</div>}}
 }
@@ -67,9 +67,9 @@ Key Features:
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-survey_logger-new}{\code{survey_logger$new()}}
-\item \href{#method-survey_logger-update_survey_name}{\code{survey_logger$update_survey_name()}}
+\item \href{#method-survey_logger-update_table_name}{\code{survey_logger$update_table_name()}}
 \item \href{#method-survey_logger-mark_survey_loaded}{\code{survey_logger$mark_survey_loaded()}}
-\item \href{#method-survey_logger-update_last_sql_statement}{\code{survey_logger$update_last_sql_statement()}}
+\item \href{#method-survey_logger-update_last_sql}{\code{survey_logger$update_last_sql()}}
 \item \href{#method-survey_logger-log_entry}{\code{survey_logger$log_entry()}}
 \item \href{#method-survey_logger-log_message}{\code{survey_logger$log_message()}}
 \item \href{#method-survey_logger-clone}{\code{survey_logger$clone()}}
@@ -81,7 +81,7 @@ Key Features:
 \subsection{Method \code{new()}}{
 Initialize a new survey logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, survey_name, echo = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$new(log_table, session_id, table_name, echo = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -91,7 +91,7 @@ Initialize a new survey logger instance
 
 \item{\code{session_id}}{Character string containing session identifier}
 
-\item{\code{survey_name}}{Character string identifying the survey}
+\item{\code{table_name}}{Character string identifying the table}
 
 \item{\code{echo}}{Logical flag to display console output. Default: TRUE}
 }
@@ -99,18 +99,18 @@ Initialize a new survey logger instance
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-survey_logger-update_survey_name"></a>}}
-\if{latex}{\out{\hypertarget{method-survey_logger-update_survey_name}{}}}
-\subsection{Method \code{update_survey_name()}}{
-Update the survey name for this logger instance
+\if{html}{\out{<a id="method-survey_logger-update_table_name"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-update_table_name}{}}}
+\subsection{Method \code{update_table_name()}}{
+Update the table name for this logger instance
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_survey_name(survey_name)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_table_name(table_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{survey_name}}{Character string identifying the new survey name}
+\item{\code{table_name}}{Character string identifying the new table name}
 }
 \if{html}{\out{</div>}}
 }
@@ -132,18 +132,18 @@ Invisible NULL
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-survey_logger-update_last_sql_statement"></a>}}
-\if{latex}{\out{\hypertarget{method-survey_logger-update_last_sql_statement}{}}}
-\subsection{Method \code{update_last_sql_statement()}}{
+\if{html}{\out{<a id="method-survey_logger-update_last_sql"></a>}}
+\if{latex}{\out{\hypertarget{method-survey_logger-update_last_sql}{}}}
+\subsection{Method \code{update_last_sql()}}{
 Update the last SQL statement executed
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_last_sql_statement(sql_statement)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{survey_logger$update_last_sql(sql)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{sql_statement}}{Character string containing the SQL statement}
+\item{\code{sql}}{Character string containing the SQL statement}
 }
 \if{html}{\out{</div>}}
 }
@@ -158,13 +158,13 @@ Invisible NULL
 Queue a log entry for database insert (only for loaded surveys)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{survey_logger$log_entry(
-  survey_id,
+  table_id,
   message = NULL,
   ip_address = NULL,
   duration_load = NULL,
   duration_complete = NULL,
   duration_save = NULL,
-  sql_statement = NULL,
+  sql = NULL,
   force_log = FALSE
 )}\if{html}{\out{</div>}}
 }
@@ -172,7 +172,7 @@ Queue a log entry for database insert (only for loaded surveys)
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{survey_id}}{Integer ID from the survey table}
+\item{\code{table_id}}{Integer ID from the table}
 
 \item{\code{message}}{Character string containing error message (only for DB errors after survey loaded)}
 
@@ -184,7 +184,7 @@ Queue a log entry for database insert (only for loaded surveys)
 
 \item{\code{duration_save}}{Numeric time spent saving (seconds)}
 
-\item{\code{sql_statement}}{Character string containing the SQL that failed (only for errors)}
+\item{\code{sql}}{Character string containing the SQL that failed (only for errors)}
 
 \item{\code{force_log}}{Logical flag to force logging even if survey not loaded (internal use)}
 }

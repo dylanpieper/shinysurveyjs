@@ -6,9 +6,9 @@
 #' @param driver DBI-compatible driver function or name of database driver (default: RMariaDB::MariaDB())
 #' @param host Database host
 #' @param port Database port (default: 3306)
-#' @param db_name Database name
+#' @param name Database name
 #' @param user Database username
-#' @param password Database password
+#' @param pass Database password
 #' @param global Logical; if TRUE (default), assigns pool to .GlobalEnv as app_pool
 #' @param logger Logger object for tracking operations (default: NULL)
 #' @param pool_size Maximum number of connections in the pool (default: 10)
@@ -25,23 +25,23 @@ db_conn_open <- function(
     driver = RMariaDB::MariaDB(),
     host = NULL,
     port = 3306,
-    db_name = NULL,
+    name = NULL,
     user = NULL,
-    password = NULL,
+    pass = NULL,
     global = TRUE,
     logger = NULL,
     pool_size = 10,
     ...) {
-  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(db_name) && !is.null(user) && !is.null(password)) {
+  if (!is.null(driver) && !is.null(host) && !is.null(port) && !is.null(name) && !is.null(user) && !is.null(pass)) {
     
     # Create connection pool
     pool <- pool::dbPool(
       drv = driver,
       host = host,
       port = port,
-      dbname = db_name,
+      dbname = name,
       user = user,
-      password = password,
+      password = pass,
       maxSize = pool_size,
       ...
     )
@@ -174,9 +174,9 @@ db_ops <- R6::R6Class(
           
           if (!skip_logging) {
             self$logger$log_entry(
-              survey_id = NA, # Will be set by calling function if available
+              table_id = NA, # Will be set by calling function if available
               message = sprintf("%s: %s", error_message, e$message),
-              sql_statement = self$logger$last_sql_statement,
+              sql = self$logger$last_sql,
               force_log = force_critical
             )
           }
@@ -230,7 +230,7 @@ db_ops <- R6::R6Class(
           "SELECT COLUMN_NAME as column_name FROM information_schema.columns WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
-        self$logger$update_last_sql_statement(cols_query)
+        self$logger$update_last_sql(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)$column_name
 
         # Check for required columns
@@ -239,7 +239,13 @@ db_ops <- R6::R6Class(
           if (!col %in% existing_cols) {
             # Check if this field has showOtherItem enabled and needs an _other column
             if (!is.null(survey_obj) && private$has_other_option(survey_obj, col)) {
-              other_col_name <- paste0(col, "_other")
+              # Remove "_id" suffix if present before adding "_other"
+              base_col_name <- if (endsWith(col, "_id")) {
+                substr(col, 1, nchar(col) - 3)
+              } else {
+                col
+              }
+              other_col_name <- paste0(base_col_name, "_other")
               if (!other_col_name %in% existing_cols) {
                 missing_cols <- c(missing_cols, col, other_col_name)
               } else if (!col %in% existing_cols) {
@@ -311,7 +317,7 @@ db_ops <- R6::R6Class(
            WHERE table_name = '%s' AND table_schema = DATABASE();",
           table_name
         )
-        self$logger$update_last_sql_statement(cols_query)
+        self$logger$update_last_sql(cols_query)
         existing_cols <- DBI::dbGetQuery(conn, cols_query)
 
         # Check that all required columns exist
@@ -366,7 +372,7 @@ db_ops <- R6::R6Class(
           columns,
           paste(values_list, collapse = ", ")
         )
-        self$logger$update_last_sql_statement(insert_statement)
+        self$logger$update_last_sql(insert_statement)
 
         DBI::dbWriteTable(
           conn,
@@ -503,7 +509,7 @@ db_ops <- R6::R6Class(
         )
 
         if (update_last_sql) {
-          self$logger$update_last_sql_statement(query)
+          self$logger$update_last_sql(query)
         }
         result <- DBI::dbGetQuery(conn, query)
 
@@ -664,7 +670,7 @@ db_ops <- R6::R6Class(
           DBI::dbQuoteIdentifier(conn, target_col),
           if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
         )
-        self$logger$update_last_sql_statement(check_query)
+        self$logger$update_last_sql(check_query)
         record_count <- DBI::dbGetQuery(conn, check_query)$count
 
         if (record_count == 0) {
@@ -707,7 +713,7 @@ db_ops <- R6::R6Class(
           if (is.character(join_value)) DBI::dbQuoteString(conn, join_value) else join_value
         )
 
-        self$logger$update_last_sql_statement(update_query)
+        self$logger$update_last_sql(update_query)
         rows_affected <- DBI::dbExecute(conn, update_query)
 
         self$logger$log_message(
@@ -747,7 +753,13 @@ db_ops <- R6::R6Class(
           required_cols[[col]] <- main_type
 
           # Other column for free text responses
-          other_col_name <- paste0(col, "_other")
+          # Remove "_id" suffix if present before adding "_other"
+          base_col_name <- if (endsWith(col, "_id")) {
+            substr(col, 1, nchar(col) - 3)
+          } else {
+            col
+          }
+          other_col_name <- paste0(base_col_name, "_other")
           required_cols[[other_col_name]] <- "TEXT"
         } else {
           # Regular field
@@ -912,7 +924,13 @@ db_ops <- R6::R6Class(
           created_cols <- c(created_cols, col)
 
           # Create separate column for "other" responses - check for duplicates
-          other_col_name <- paste0(col, "_other")
+          # Remove "_id" suffix if present before adding "_other"
+          base_col_name <- if (endsWith(col, "_id")) {
+            substr(col, 1, nchar(col) - 3)
+          } else {
+            col
+          }
+          other_col_name <- paste0(base_col_name, "_other")
           if (!other_col_name %in% created_cols) {
             col_defs <- c(col_defs, sprintf(
               "%s TEXT",

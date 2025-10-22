@@ -47,8 +47,8 @@ survey_logger <- R6::R6Class(
     #' @field session_id Character string containing unique session identifier
     session_id = NULL,
 
-    #' @field survey_name Character string identifying the current survey
-    survey_name = NULL,
+    #' @field table_name Character string identifying the current table
+    table_name = NULL,
 
     #' @field survey_loaded Logical flag indicating if a survey has been successfully loaded
     survey_loaded = NULL,
@@ -59,29 +59,34 @@ survey_logger <- R6::R6Class(
     #' @field queue data.frame containing queued messages for batch processing
     queue = NULL,
 
-    #' @field last_sql_statement Character string containing the last executed SQL statement
-    last_sql_statement = NULL,
+    #' @field last_sql Character string containing the last executed SQL statement
+    last_sql = NULL,
 
     #' @description
     #' Initialize a new survey logger instance
     #'
     #' @param log_table Character string specifying logging table name
     #' @param session_id Character string containing session identifier
-    #' @param survey_name Character string identifying the survey
+    #' @param table_name Character string identifying the table
     #' @param echo Logical flag to display console output. Default: TRUE
-    initialize = function(log_table, session_id, survey_name, echo = TRUE) {
+    initialize = function(log_table, session_id, table_name, echo = TRUE) {
+      # Ensure log_table is not NULL or empty
+      if (is.null(log_table) || length(log_table) == 0 || log_table == "") {
+        log_table <- "sjs_logs"
+      }
+      
       self$log_table <- log_table
       self$session_id <- session_id
-      self$survey_name <- survey_name
+      self$table_name <- table_name
       self$survey_loaded <- FALSE
       self$suppress_logs <- !echo
-      self$last_sql_statement <- NULL
+      self$last_sql <- NULL
 
       # Initialize empty queue
       self$queue <- data.frame(
-        survey_name = character(),
-        survey_id = integer(),
-        sql_statement = character(),
+        table_name = character(),
+        table_id = integer(),
+        sql = character(),
         message = character(),
         duration_load = numeric(),
         duration_complete = numeric(),
@@ -103,13 +108,13 @@ survey_logger <- R6::R6Class(
     },
 
     #' @description
-    #' Update the survey name for this logger instance
+    #' Update the table name for this logger instance
     #'
-    #' @param survey_name Character string identifying the new survey name
+    #' @param table_name Character string identifying the new table name
     #'
     #' @return Invisible NULL
-    update_survey_name = function(survey_name) {
-      self$survey_name <- survey_name
+    update_table_name = function(table_name) {
+      self$table_name <- table_name
       invisible(NULL)
     },
 
@@ -125,55 +130,55 @@ survey_logger <- R6::R6Class(
     #' @description
     #' Update the last SQL statement executed
     #'
-    #' @param sql_statement Character string containing the SQL statement
+    #' @param sql Character string containing the SQL statement
     #'
     #' @return Invisible NULL
-    update_last_sql_statement = function(sql_statement) {
-      self$last_sql_statement <- sql_statement
+    update_last_sql = function(sql) {
+      self$last_sql <- sql
       invisible(NULL)
     },
 
     #' @description
     #' Queue a log entry for database insert (only for loaded surveys)
     #'
-    #' @param survey_id Integer ID from the survey table
+    #' @param table_id Integer ID from the table
     #' @param message Character string containing error message (only for DB errors after survey loaded)
     #' @param ip_address Character string containing client IP address
     #' @param duration_load Numeric time spent loading (seconds)
     #' @param duration_complete Numeric time spent completing survey (seconds)
     #' @param duration_save Numeric time spent saving (seconds)
-    #' @param sql_statement Character string containing the SQL that failed (only for errors)
+    #' @param sql Character string containing the SQL that failed (only for errors)
     #' @param force_log Logical flag to force logging even if survey not loaded (internal use)
     #'
     #' @return Invisible NULL
-    log_entry = function(survey_id, message = NULL, ip_address = NULL,
+    log_entry = function(table_id, message = NULL, ip_address = NULL,
                          duration_load = NULL, duration_complete = NULL,
-                         duration_save = NULL, sql_statement = NULL, force_log = FALSE) {
+                         duration_save = NULL, sql = NULL, force_log = FALSE) {
       # Only log errors if survey is loaded, unless forced
       if (!is.null(message) && !self$survey_loaded && !force_log) {
         return(invisible(NULL))
       }
       # Ensure all values are single length
-      survey_id <- if (is.null(survey_id) || length(survey_id) == 0) NA else survey_id[1]
+      table_id <- if (is.null(table_id) || length(table_id) == 0) NA else table_id[1]
       message <- if (is.null(message) || length(message) == 0) NA else message[1]
       ip_address <- if (is.null(ip_address) || length(ip_address) == 0) NA else ip_address[1]
       duration_load <- if (is.null(duration_load) || length(duration_load) == 0) NA else duration_load[1]
       duration_complete <- if (is.null(duration_complete) || length(duration_complete) == 0) NA else duration_complete[1]
       duration_save <- if (is.null(duration_save) || length(duration_save) == 0) NA else duration_save[1]
 
-      # Use provided sql_statement or fall back to last_sql_statement
-      if (is.null(sql_statement) || length(sql_statement) == 0) {
-        sql_statement <- self$last_sql_statement
+      # Use provided sql or fall back to last_sql
+      if (is.null(sql) || length(sql) == 0) {
+        sql <- self$last_sql
       } else {
-        sql_statement <- sql_statement[1]
+        sql <- sql[1]
       }
-      sql_statement <- if (is.null(sql_statement) || length(sql_statement) == 0) NA else sql_statement
+      sql <- if (is.null(sql) || length(sql) == 0) NA else sql
 
       # Add entry to queue
       new_entry <- data.frame(
-        survey_name = self$survey_name,
-        survey_id = survey_id,
-        sql_statement = sql_statement,
+        table_name = self$table_name,
+        table_id = table_id,
+        sql = sql,
         message = message,
         duration_load = duration_load,
         duration_complete = duration_complete,
@@ -190,8 +195,8 @@ survey_logger <- R6::R6Class(
         cli::cli_alert_danger(
           "[DATABASE ERROR] {message}"
         )
-        if (!is.null(sql_statement) && !is.na(sql_statement)) {
-          cli::cli_alert_danger("SQL: {sql_statement}")
+        if (!is.null(sql) && !is.na(sql)) {
+          cli::cli_alert_danger("SQL: {sql}")
         }
       }
 
@@ -232,19 +237,7 @@ survey_logger <- R6::R6Class(
         {
           if (!DBI::dbExistsTable(conn, self$log_table)) {
             query <- sprintf(
-              "
-            CREATE TABLE IF NOT EXISTS %s (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              survey_name TEXT NOT NULL,
-              survey_id INT,
-              sql_statement TEXT,
-              message TEXT,
-              duration_load DECIMAL(10,3),
-              duration_complete DECIMAL(10,3),
-              duration_save DECIMAL(10,3),
-              ip_address TEXT,
-              created_at created_at NOT NULL
-            )",
+              "CREATE TABLE IF NOT EXISTS %s (id INT AUTO_INCREMENT PRIMARY KEY, table_name TEXT NOT NULL, table_id INT, `sql` TEXT, `message` TEXT, duration_load DECIMAL(10,3), duration_complete DECIMAL(10,3), duration_save DECIMAL(10,3), ip_address TEXT, created_at TIMESTAMP NOT NULL)",
               self$log_table
             )
             DBI::dbExecute(conn, query)
@@ -270,12 +263,7 @@ survey_logger <- R6::R6Class(
       tryCatch(
         {
           query <- sprintf(
-            "
-          INSERT INTO %s
-            (survey_name, survey_id, sql_statement, message,
-             duration_load, duration_complete, duration_save, ip_address, created_at)
-          VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO %s (table_name, table_id, `sql`, `message`, duration_load, duration_complete, duration_save, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             self$log_table
           )
 
@@ -286,9 +274,9 @@ survey_logger <- R6::R6Class(
               conn,
               query,
               params = list(
-                row$survey_name,
-                if (is.na(row$survey_id) || is.null(row$survey_id)) NA else row$survey_id,
-                if (is.na(row$sql_statement) || is.null(row$sql_statement)) NA else row$sql_statement,
+                row$table_name,
+                if (is.na(row$table_id) || is.null(row$table_id)) NA else row$table_id,
+                if (is.na(row$sql) || is.null(row$sql)) NA else row$sql,
                 if (is.na(row$message) || is.null(row$message)) NA else row$message,
                 if (is.na(row$duration_load) || is.null(row$duration_load)) NA else row$duration_load,
                 if (is.na(row$duration_complete) || is.null(row$duration_complete)) NA else row$duration_complete,

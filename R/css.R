@@ -150,7 +150,7 @@ body {{
     align-items: center !important;
     min-height: 32vh !important;
     flex-direction: column-reverse;
-    background-color: var(--container-background) !important;
+    background-color: var(--background) !important;
     border-top: 2px solid var(--primary) !important;
 }}
 

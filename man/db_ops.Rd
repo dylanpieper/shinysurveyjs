@@ -51,7 +51,7 @@ Create a new Database Operations instance
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{conn}}{Connection object. Database connection}
+\item{\code{conn}}{Connection pool object. Database connection pool}
 
 \item{\code{logger}}{survey_logger object. Logger instance for tracking operations}
 }
@@ -62,7 +62,7 @@ Create a new Database Operations instance
 \if{html}{\out{<a id="method-Database Operations-operate"></a>}}
 \if{latex}{\out{\hypertarget{method-Database Operations-operate}{}}}
 \subsection{Method \code{operate()}}{
-Execute a database operation with transaction handling
+Execute a database operation with transaction handling using connection pool
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{db_ops$operate(operation, error_message)}\if{html}{\out{</div>}}
 }

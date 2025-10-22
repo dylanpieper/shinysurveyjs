@@ -399,6 +399,11 @@ function updateDbLogicChoices(data) {
                 setupUniqueValidation(data);
             }
 
+            // Re-initialize other field validation after database logic changes
+            if (typeof OtherFieldValidation !== 'undefined') {
+                OtherFieldValidation.init();
+            }
+
             // Signal that database logic configuration is complete
             console.log("Database logic configuration complete");
             Shiny.setInputValue("dbLogicConfigComplete", true);

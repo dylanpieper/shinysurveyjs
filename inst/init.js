@@ -159,22 +159,26 @@ function initializeSurvey(data) {
                                         });
                                         
                                         // Handle "other" responses separately
+                                        // Remove "_id" suffix from key when creating "_other" field
+                                        const baseKey = key.endsWith('_id') ? key.slice(0, -3) : key;
+                                        const otherKey = `${baseKey}_other`;
+                                        
                                         if (typeof value === 'object' && value !== null && 'value' in value && 'other' in value) {
                                             // SurveyJS structure for other responses: {value: selectedChoice, other: otherText}
                                             responses[key] = value.value;
-                                            responses[`${key}_other`] = value.other || null;
+                                            responses[otherKey] = value.other || null;
                                         } else if (value === 'other' && question.comment) {
                                             // Alternative structure where "other" is selected and comment contains the text
                                             responses[key] = value;
-                                            responses[`${key}_other`] = question.comment;
+                                            responses[otherKey] = question.comment;
                                         } else if (typeof value === 'string' && value.startsWith('other:')) {
                                             // Another possible structure: "other:custom text"
                                             responses[key] = 'other';
-                                            responses[`${key}_other`] = value.substring(6); // Remove "other:" prefix
+                                            responses[otherKey] = value.substring(6); // Remove "other:" prefix
                                         } else if (value === survey.otherValue || (typeof value === 'string' && value === 'other')) {
                                             // User selected "other" option
                                             responses[key] = value;
-                                            responses[`${key}_other`] = survey.getOtherValue(key) || null;
+                                            responses[otherKey] = survey.getOtherValue(key) || null;
                                         } else {
                                             // Regular choice selection (not "other") - don't create _other field at all for non-other responses
                                             responses[key] = question._param ?? value;
@@ -229,6 +233,12 @@ function initializeSurvey(data) {
             model: survey,
             onAfterRenderSurvey: () => {
                 console.log("Survey rendered, expectDbLogicConfig:", expectDbLogicConfig);
+                
+                // Set up other field validation after survey is rendered
+                if (typeof OtherFieldValidation !== 'undefined') {
+                    OtherFieldValidation.init();
+                }
+                
                 if (expectDbLogicConfig) {
                     console.log("Waiting for database logic config");
                     Shiny.setInputValue("surveyReady", true);

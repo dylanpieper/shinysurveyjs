@@ -11,126 +11,161 @@ survey(
   theme = "defaultV2",
   theme_color = "#003594",
   shiny_config = list(host = "0.0.0.0", port = 3838),
-  db_config = list(host = Sys.getenv("HOST"), port = as.numeric(Sys.getenv("PORT")),
-    db_name = Sys.getenv("DB_NAME"), user = Sys.getenv("USER"), password =
-    Sys.getenv("PASSWORD"), write_table = Sys.getenv("WRITE_TABLE"), log_table =
-    Sys.getenv("LOG_TABLE")),
+  ldap_config = NULL,
+  db_config = list(host = Sys.getenv("DB_HOST"), port =
+    as.numeric(Sys.getenv("DB_PORT")), name = Sys.getenv("DB_NAME"), user =
+    Sys.getenv("DB_USER"), pass = Sys.getenv("DB_PASS"), write_table = "survey_data",
+    log_table = "sjs_logs", auth_table = "sjs_auth", pool_size = 10),
   db_update = NULL,
   db_logic = NULL,
+  sjs_auth = "sjs_auth",
+  sjs_logs = "sjs_logs",
   cookie_expiration_days = 0,
   custom_css = NULL,
   echo = TRUE
 )
 }
 \arguments{
-\item{json}{String. JSON survey definition or object.}
+\item{json}{String. JSON survey definition. Use for single survey applications.}
 
-\item{list}{List. Survey structure to convert to JSON.}
+\item{list}{List. Survey structure(s). Can be:
+\itemize{
+\item Single survey: List with survey elements (converted to JSON)
+\item Multi-survey: Named list where each element is a complete survey
+(e.g., \code{list("survey_1" = survey1, "survey_2" = survey2)})
+}}
 
 \item{show_response}{Logical. Display responses in a data.table after submission.
 Default: \code{FALSE}.}
 
-\item{theme}{String. SurveyJS theme, either "defaultV2" or "modern".
-Default: "defaultV2".}
+\item{theme}{String. SurveyJS theme: "defaultV2" or "modern". Default: "defaultV2".}
 
-\item{theme_color}{String. Hex color code for primary theme customization.}
+\item{theme_color}{String. Hex color code for primary theme customization.
+Default: "#003594".}
 
-\item{shiny_config}{List. Optional Shiny configuration parameters.}
-
-\item{db_config}{List. Database connection parameters. If not specified,
-values are read from environment variables:
+\item{shiny_config}{List. Shiny server configuration:
 \itemize{
-\item \code{host}: Database host (env: HOST)
-\item \code{port}: Database port (env: PORT)
-\item \code{db_name}: Database name (env: DB_NAME)
-\item \code{user}: Database username (env: USER)
-\item \code{password}: Database password (env: PASSWORD)
-\item \code{write_table}: Survey data table name (env: WRITE_TABLE)
-\item \code{log_table}: Log messages table name (env: LOG_TABLE)
+\item \code{host}: Server host address. Default: "0.0.0.0"
+\item \code{port}: Server port number. Default: 3838
 }}
 
-\item{db_update}{List. Configuration for updating existing records instead of inserting new ones.
-Each element should be a list containing:
+\item{ldap_config}{List. Optional LDAP authentication configuration:
+\itemize{
+\item \code{host}: LDAP server hostname
+\item \code{base_dn}: Base Distinguished Name for LDAP searches
+\item \code{port}: LDAP port (default: 389)
+\item \code{user_attr}: User attribute for authentication (default: "uid")
+\item \code{domain}: Domain for UPN binding (e.g., "pitt.edu") - for Active Directory
+\item \code{ssh_tunnel}: Local port number for SSH tunnel (assumes tunnel already running, e.g., \code{ssh_tunnel = 3389})
+\item \code{logo}: URL to logo image to display instead of title text (optional)
+}}
+
+\item{db_config}{List. Database connection parameters:
+\itemize{
+\item \code{host}: Database host (default: \code{Sys.getenv("DB_HOST")})
+\item \code{port}: Database port (default: \code{as.numeric(Sys.getenv("DB_PORT"))})
+\item \code{name}: Database name (default: \code{Sys.getenv("DB_NAME")})
+\item \code{user}: Database username (default: \code{Sys.getenv("DB_USER")})
+\item \code{pass}: Database password (default: \code{Sys.getenv("DB_PASS")})
+\item \code{write_table}: Survey data table (default: "survey_data")
+\item \code{log_table}: Application logs table (default: "sjs_logs")
+\item \code{auth_table}: Authentication sessions table (default: "sjs_auth")
+\item \code{pool_size}: Maximum connections in pool (default: 10)
+}}
+
+\item{db_update}{List. Update configuration for multi-survey workflows.
+Each element contains:
 \itemize{
 \item \code{from}: Source survey name to update from
-\item \code{to}: Target survey name to update to
-\item \code{by}: Named character vector specifying the join columns (e.g., c("field_in_from" = "field_in_to"))
+\item \code{to}: Target survey/table name to update
+\item \code{by}: Named vector for join columns (e.g., \code{c("source_id" = "target_id")})
 }}
 
-\item{db_logic}{List. Configuration for database logic. Supports three types:
-\subsection{Choice Configuration}{
-Populates dropdown or radio button choices from database tables:
-* \code{config_type}: Set to "choice"
-* \code{table_name}: Database table to populate choices from
-* \code{config_col}: Column containing choice text
-* \code{display_col}: Optional column for display text
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{For dependent fields:
-* `parent_table_name`: Parent table for dependency chain
-* `parent_id_col`: Column linking to parent table
-}\if{html}{\out{</div>}}
-
+\item{db_logic}{List. Dynamic database configurations supporting multiple types:
+\subsection{Choice Configuration (\code{type = "choice"})}{
+Populates dropdown/radio choices from database tables:
+* \code{source_tbl}: Database table containing choices
+* \code{source_col}: Column with choice values
+* \code{source_display_col}: Optional column for display text (defaults to \code{source_col})
+* \code{target_tbl}: Target survey/table name (for multi-survey filtering)
+* \code{target_col}: Survey field to populate
+* \code{filter_source}: R expression to filter source data (e.g., \code{"is.na(status)"})
+* \code{filter_unique}: Logical. Remove choices already used in target table
 }
-\subsection{Parameter Configuration}{
-Handles URL query parameters and hidden fields:
-* \code{config_type}: Set to "param"
-* \code{table_name}: Database table with valid parameters
-* \code{config_col}: Column matching URL parameter name
-* \code{display_col}: Optional column for display text
+\subsection{Parameter Configuration (\code{type = "param"})}{
+Validates URL query parameters against database values:
+* \code{source_tbl}: Database table with valid parameter values
+* \code{target_col}: URL parameter name to validate
 }
-\subsection{Unique Value Configuration}{
-Validates unique entries against existing database records:
-* \code{config_type}: Set to "unique"
-* \code{config_col}: Column to check for uniqueness
-* \code{result}: Action on duplicate ("warn" or "stop")
-* \code{result_field}: Survey field for warning message (should be hidden)
+\subsection{Uniqueness Validation (\code{type = "unique"})}{
+Prevents duplicate entries in database fields:
+* \code{source_tbl}: Database table to check against
+* \code{source_col}: Database column to check for duplicates
+* \code{target_tbl}: Target survey/table name
+* \code{target_col}: Survey field to validate
+* \code{result}: Action on duplicate - "warn" or "stop"
+* \code{result_field}: Survey field for warning display (use hidden HTML element)
 }}
 
-\item{cookie_expiration_days}{Numeric. Number of days to retain survey cookies (experimental).
-Default: 0.}
+\item{sjs_auth}{String. Name of authentication sessions table (default: "sjs_auth").}
 
-\item{custom_css}{String. Custom CSS rules to append to the theme.}
+\item{sjs_logs}{String. Name of application logs table (default: "sjs_logs").}
 
-\item{echo}{Logical. Display console log messages. Default: \code{TRUE}.}
+\item{cookie_expiration_days}{Numeric. Days to retain survey progress cookies.
+Default: 0 (no cookies).}
+
+\item{custom_css}{String. Additional CSS rules to append to the theme.}
+
+\item{echo}{Logical. Display console logging messages. Default: \code{TRUE}.}
 }
 \value{
 A Shiny application object
 }
 \description{
-Creates and deploys a Shiny application for a survey using SurveyJS
-(\url{https://surveyjs.io}) with MySQL and DBI database integration. The application handles
-survey data collection, database logic, and asynchronous logging through a future plan.
+Creates and deploys a Shiny application for SurveyJS surveys with database integration,
+dual logging system, and advanced dynamic configuration. Supports both single surveys
+and multi-survey applications with URL-based routing.
+}
+\details{
+The dual logging system provides:
+\itemize{
+\item Console logging: Immediate zoned messages for development and monitoring
+\item Database logging: Survey metadata including timing, IP addresses, and error tracking
+}
 }
 \examples{
 \dontrun{
-# Choice configuration example
-db_logic <- list(
-  list(
-    config_type = "choice",
-    table_name = "packages",
-    config_col = "name"
+# Single survey with basic configuration
+survey <- list(
+  title = "Feedback Survey",
+  pages = list(
+    list(
+      name = "feedback",
+      elements = list(
+        list(
+          type = "radiogroup",
+          name = "rating",
+          title = "How satisfied are you?",
+          choices = c("Very satisfied", "Satisfied", "Neutral", "Dissatisfied")
+        )
+      )
+    )
   )
 )
 
-# Parameter configuration example
-db_logic <- list(
-  list(
-    config_type = "param",
-    table_name = "sources",
-    config_col = "source",
-    display_col = "display_text"
-  )
-)
-
-# Unique value configuration example
-db_logic <- list(
-  list(
-    config_type = "unique",
-    config_col = "title",
-    result = "warn",
-    result_field = "warning_message"
+survey(
+  list = survey,
+  db_config = list(
+    host = Sys.getenv("DB_HOST"),
+    port = as.numeric(Sys.getenv("DB_PORT")),
+    name = Sys.getenv("DB_NAME"),
+    user = Sys.getenv("DB_USER"),
+    pass = Sys.getenv("DB_PASS"),
+    write_table = "survey_data",
+    log_table = "sjs_logs",
+    auth_table = "sjs_auth",
+    pool_size = 10
   )
 )
 }
-
 }

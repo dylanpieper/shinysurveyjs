@@ -5,7 +5,7 @@
 #' and multi-survey applications with URL-based routing.
 #'
 #' The dual logging system provides:
-#' * Console logging: Immediate color-coded messages for development and monitoring
+#' * Console logging: Immediate zoned messages for development and monitoring
 #' * Database logging: Survey metadata including timing, IP addresses, and error tracking
 #'
 #' @param json String. JSON survey definition. Use for single survey applications.
@@ -21,14 +21,23 @@
 #' @param shiny_config List. Shiny server configuration:
 #'   * `host`: Server host address. Default: "0.0.0.0"
 #'   * `port`: Server port number. Default: 3838
+#' @param ldap_config List. Optional LDAP authentication configuration:
+#'   * `host`: LDAP server hostname
+#'   * `base_dn`: Base Distinguished Name for LDAP searches
+#'   * `port`: LDAP port (default: 389)
+#'   * `user_attr`: User attribute for authentication (default: "uid")
+#'   * `domain`: Domain for UPN binding (e.g., "pitt.edu") - for Active Directory
+#'   * `ssh_tunnel`: Local port number for SSH tunnel (assumes tunnel already running, e.g., `ssh_tunnel = 3389`)
+#'   * `logo`: URL to logo image to display instead of title text (optional)
 #' @param db_config List. Database connection parameters:
-#'   * `host`: Database host (default: `Sys.getenv("HOST")`)
-#'   * `port`: Database port (default: `Sys.getenv("PORT")`)
-#'   * `db_name`: Database name (default: `Sys.getenv("DB_NAME")`)
-#'   * `user`: Database username (default: `Sys.getenv("USER")`)
-#'   * `password`: Database password (default: `Sys.getenv("PASSWORD")`)
-#'   * `write_table`: Survey data table (default: `Sys.getenv("WRITE_TABLE")`)
-#'   * `log_table`: Application logs table (default: `Sys.getenv("LOG_TABLE")`)
+#'   * `host`: Database host (default: `Sys.getenv("DB_HOST")`)
+#'   * `port`: Database port (default: `as.numeric(Sys.getenv("DB_PORT"))`)
+#'   * `name`: Database name (default: `Sys.getenv("DB_NAME")`)
+#'   * `user`: Database username (default: `Sys.getenv("DB_USER")`)
+#'   * `pass`: Database password (default: `Sys.getenv("DB_PASS")`)
+#'   * `write_table`: Survey data table (default: "survey_data")
+#'   * `log_table`: Application logs table (default: "sjs_logs")
+#'   * `auth_table`: Authentication sessions table (default: "sjs_auth")
 #'   * `pool_size`: Maximum connections in pool (default: 10)
 #' @param db_update List. Update configuration for multi-survey workflows.
 #'   Each element contains:
@@ -60,6 +69,8 @@
 #'     * `result`: Action on duplicate - "warn" or "stop"
 #'     * `result_field`: Survey field for warning display (use hidden HTML element)
 #'   }
+#' @param sjs_auth String. Name of authentication sessions table (default: "sjs_auth").
+#' @param sjs_logs String. Name of application logs table (default: "sjs_logs").
 #' @param cookie_expiration_days Numeric. Days to retain survey progress cookies.
 #'   Default: 0 (no cookies).
 #' @param custom_css String. Additional CSS rules to append to the theme.
@@ -90,13 +101,14 @@
 #' survey(
 #'   list = survey,
 #'   db_config = list(
-#'     driver = RMariaDB::MariaDB(),
-#'     host = "localhost",
-#'     user = "user",
-#'     password = "password",
-#'     db_name = "surveys",
-#'     write_table = "feedback_data",
-#'     log_table = "app_logs",
+#'     host = Sys.getenv("DB_HOST"),
+#'     port = as.numeric(Sys.getenv("DB_PORT")),
+#'     name = Sys.getenv("DB_NAME"),
+#'     user = Sys.getenv("DB_USER"),
+#'     pass = Sys.getenv("DB_PASS"),
+#'     write_table = "survey_data",
+#'     log_table = "sjs_logs",
+#'     auth_table = "sjs_auth",
 #'     pool_size = 10
 #'   )
 #' )
@@ -117,18 +129,22 @@ survey <- function(json = NULL,
                      host = "0.0.0.0",
                      port = 3838
                    ),
+                   ldap_config = NULL,
                    db_config = list(
-                     host = Sys.getenv("HOST"),
-                     port = as.numeric(Sys.getenv("PORT")),
-                     db_name = Sys.getenv("DB_NAME"),
-                     user = Sys.getenv("USER"),
-                     password = Sys.getenv("PASSWORD"),
-                     write_table = Sys.getenv("WRITE_TABLE"),
-                     log_table = Sys.getenv("LOG_TABLE"),
+                     host = Sys.getenv("DB_HOST"),
+                     port = as.numeric(Sys.getenv("DB_PORT")),
+                     name = Sys.getenv("DB_NAME"),
+                     user = Sys.getenv("DB_USER"),
+                     pass = Sys.getenv("DB_PASS"),
+                     write_table = "survey_data",
+                     log_table = "sjs_logs",
+                     auth_table = "sjs_auth",
                      pool_size = 10
                    ),
                    db_update = NULL,
                    db_logic = NULL,
+                   sjs_auth = "sjs_auth",
+                   sjs_logs = "sjs_logs",
                    cookie_expiration_days = 0,
                    custom_css = NULL,
                    echo = TRUE) {
@@ -150,64 +166,86 @@ survey <- function(json = NULL,
     )
   }
 
+  # Override auth_table and log_table with sjs parameters
+  db_config$auth_table <- sjs_auth
+  db_config$log_table <- sjs_logs
+
   survey_setup(db_config, shiny_config, is_multisurvey)
 
-  ui <- if (is_multisurvey) {
-    # Multisurvey UI with landing page
-    fluidPage(
-      shinyjs::useShinyjs(),
-      # Landing page
+  # LDAP configuration will be initialized later after db_ops is available
+
+  ui <- fluidPage(
+    shinyjs::useShinyjs(),
+
+    # LDAP Login Form (hidden initially, shown when auth required)
+    if (!is.null(ldap_config)) {
       shiny::div(
-        id = "landingPage",
-        style = "text-align: center; padding: 50px;",
-        shiny::h1("Survey Portal"),
-        shiny::div(
-          id = "surveyLinks",
-          lapply(names(list), function(survey_name) {
-            shiny::div(
-              style = "margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; display: inline-block; min-width: 200px;",
-              shiny::h4(list[[survey_name]]$title %||% survey_name),
-              shiny::tags$a(
-                href = paste0("?survey=", survey_name),
-                "Start",
-                class = "btn btn-primary",
-                style = paste0("background-color: ", theme_color, "; border-color: ", theme_color, ";")
-              )
-            )
-          })
-        )
-      ),
-      # Survey container (hidden initially)
-      shiny::div(
-        id = "surveySection",
+        id = "login_section",
         style = "display: none;",
-        survey_ui_wrapper(
-          id = "surveyContainer",
-          theme = theme,
-          theme_color = theme_color,
-          cookie_expiration_days = cookie_expiration_days,
-          custom_css = custom_css
+        ldap_login_ui("auth", "Surveys", logo = ldap_config$logo, theme_color = theme_color)
+      )
+    },
+
+    # Main content (conditionally hidden based on LDAP and survey access)
+    shiny::div(
+      id = "main_content",
+      style = "",
+      if (is_multisurvey) {
+        # Multisurvey content
+        list(
+          # Landing page
+          shiny::div(
+            id = "landingPage",
+            style = "text-align: center; padding: 50px;",
+            shiny::h1("Survey Library"),
+            shiny::div(
+              id = "surveyLinks",
+              lapply(names(list), function(survey_name) {
+                shiny::div(
+                  style = "margin: 10px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; display: inline-block; min-width: 200px;",
+                  shiny::h4(list[[survey_name]]$title %||% survey_name),
+                  shiny::tags$a(
+                    href = paste0("?survey=", survey_name),
+                    "Start",
+                    class = "btn btn-primary",
+                    style = paste0("background-color: ", theme_color, "; border-color: ", theme_color, ";")
+                  )
+                )
+              })
+            )
+          ),
+          # Survey container (hidden initially, requires auth if LDAP enabled)
+          shiny::div(
+            id = "surveySection",
+            style = if (!is.null(ldap_config)) "display: none;" else "display: none;",
+            survey_ui_wrapper(
+              id = "surveyContainer",
+              theme = theme,
+              theme_color = theme_color,
+              cookie_expiration_days = cookie_expiration_days,
+              custom_css = custom_css
+            )
+          )
         )
-      )
+      } else {
+        # Single survey content (requires auth if LDAP enabled)
+        shiny::div(
+          id = "singleSurveySection",
+          style = if (!is.null(ldap_config)) "display: none;" else "",
+          survey_ui_wrapper(
+            id = "surveyContainer",
+            theme = theme,
+            theme_color = theme_color,
+            cookie_expiration_days = cookie_expiration_days,
+            custom_css = custom_css
+          )
+        )
+      }
     )
-  } else {
-    # Single survey UI
-    fluidPage(
-      survey_ui_wrapper(
-        id = "surveyContainer",
-        theme = theme,
-        theme_color = theme_color,
-        cookie_expiration_days = cookie_expiration_days,
-        custom_css = custom_css
-      )
-    )
-  }
+  )
 
   server <- function(input, output, session) {
-    if (!is_multisurvey) {
-      hide_and_show("surveyContainer", "waitingMessage")
-    }
-
+    # Initialize reactive values first
     rv <- shiny::reactiveValues(
       survey_responses = NULL,
       loading = FALSE,
@@ -223,7 +261,8 @@ survey <- function(json = NULL,
       validated_params = NULL,
       survey_def = NULL,
       selected_survey = NULL,
-      survey_json = NULL
+      survey_json = NULL,
+      auth_changed = NULL
     )
 
     server_setup(
@@ -235,6 +274,70 @@ survey <- function(json = NULL,
       echo = echo,
       is_multisurvey = is_multisurvey
     )
+
+    # Initialize LDAP authentication after db_ops is available
+    ldap_auth <- if (!is.null(ldap_config)) {
+      LdapAuth$new(
+        host = ldap_config$host,
+        base_dn = ldap_config$base_dn,
+        port = ldap_config$port %||% 389,
+        user_attr = ldap_config$user_attr %||% "uid",
+        domain = ldap_config$domain,
+        ssh_tunnel = ldap_config$ssh_tunnel,
+        db_ops = db_ops,
+        session_duration_days = ldap_config$session_duration_days %||% 7,
+        auth_table = db_config$auth_table %||% "sjs_auth"
+      )
+    } else {
+      NULL
+    }
+
+    # LDAP Authentication
+    if (!is.null(ldap_auth)) {
+      ldap_server <- ldap_login_server("auth", ldap_auth, logger)
+      auth_status <- ldap_server$auth_status
+    } else {
+      # No auth required - always authenticated
+      ldap_server <- NULL
+      auth_status <- shiny::reactive(list(authenticated = TRUE, user_info = NULL))
+    }
+
+    # Show authenticated content when user is authenticated
+    if (!is.null(ldap_auth)) {
+      shiny::observe({
+        auth <- auth_status()
+        if (auth$authenticated) {
+          # Hide login form and show main content
+          shinyjs::hide("login_section")
+          shinyjs::show("main_content")
+
+          # Show survey sections that require authentication
+          if (is_multisurvey) {
+            # Check if a survey is currently selected
+            query_list <- parse_query(session)
+            survey_param <- query_list$survey
+            if (!is.null(survey_param) && survey_param != "") {
+              shinyjs::show("surveySection")
+            }
+          } else {
+            shinyjs::show("singleSurveySection")
+          }
+
+          # Log successful authentication
+          if (!is.null(logger)) {
+            username <- auth$user_info$username %||% "unknown"
+            logger$log_message(paste("Authenticated:", username), type = "INFO", zone = "AUTH")
+          }
+
+          # Trigger re-evaluation of URL parsing after authentication
+          rv$auth_changed <- Sys.time()
+        }
+      })
+    }
+
+    if (!is_multisurvey) {
+      hide_and_show("surveyContainer", "waitingMessage")
+    }
 
     config_list_reactive <- reactive({
       req(!is.null(db_logic))
@@ -319,12 +422,40 @@ survey <- function(json = NULL,
                 hide_and_show("landingPage", "surveyNotFoundMessage")
                 return()
               } else {
-                # Valid survey selected
+                # Valid survey selected - check authentication if LDAP is configured
+                if (!is.null(ldap_config)) {
+                  auth <- auth_status()
+                  if (!auth$authenticated) {
+                    # Try to validate any existing session before showing login
+                    if (!is.null(ldap_server) && !is.null(ldap_server$validate_existing_session)) {
+                      ldap_server$validate_existing_session()
+                      # Give a moment for validation to complete before showing login
+                      shinyjs::delay(100, {
+                        auth_recheck <- auth_status()
+                        if (!auth_recheck$authenticated) {
+                          # Hide landing page and show login form
+                          shinyjs::hide("landingPage")
+                          shinyjs::hide("main_content")
+                          shinyjs::show("login_section")
+                        }
+                      })
+                      return()
+                    } else {
+                      # No session validation available - show login immediately
+                      shinyjs::hide("landingPage")
+                      shinyjs::hide("main_content")
+                      shinyjs::show("login_section")
+                      return()
+                    }
+                  }
+                }
+
+                # Valid survey selected and authenticated (or no auth required)
                 rv$selected_survey <- survey_param
                 rv$survey_json <- jsonlite::toJSON(list[[survey_param]], pretty = TRUE, auto_unbox = TRUE)
 
-                # Update logger to use actual survey name and start logging
-                logger$update_survey_name(survey_param)
+                # Update logger to use actual table name and start logging
+                logger$update_table_name(survey_param)
                 logger$log_message("Started session", zone = "SURVEY")
 
                 shinyjs::hide("landingPage")
@@ -332,6 +463,31 @@ survey <- function(json = NULL,
                 hide_and_show("surveyContainer", "waitingMessage")
               }
             } else {
+              # Single survey mode - check authentication if LDAP is configured
+              if (!is.null(ldap_config)) {
+                auth <- auth_status()
+                if (!auth$authenticated) {
+                  # Try to validate any existing session before showing login
+                  if (!is.null(ldap_server) && !is.null(ldap_server$validate_existing_session)) {
+                    ldap_server$validate_existing_session()
+                    # Give a moment for validation to complete before showing login
+                    shinyjs::delay(100, {
+                      auth_recheck <- auth_status()
+                      if (!auth_recheck$authenticated) {
+                        # Hide main content and show login form
+                        shinyjs::hide("main_content")
+                        shinyjs::show("login_section")
+                      }
+                    })
+                    return()
+                  } else {
+                    # No session validation available - show login immediately
+                    shinyjs::hide("main_content")
+                    shinyjs::show("login_section")
+                    return()
+                  }
+                }
+              }
               # Single survey mode - set survey_json
               rv$survey_json <- json
             }
@@ -430,7 +586,7 @@ survey <- function(json = NULL,
           shinyjs::hide("waitingMessage")
         }
       )
-    }) |> bindEvent(session$clientData$url_search, ignoreInit = FALSE)
+    }) |> bindEvent(session$clientData$url_search, rv$auth_changed, ignoreInit = FALSE, ignoreNULL = FALSE)
 
     observeEvent(input$surveyComplete, {
       shinyjs::hide(
@@ -533,7 +689,13 @@ survey <- function(json = NULL,
             other_fields <- get_fields_with_other_option(survey_def)
 
             for (field_name in other_fields) {
-              other_field_name <- paste0(field_name, "_other")
+              # Remove "_id" suffix if present before adding "_other"
+              base_field_name <- if (endsWith(field_name, "_id")) {
+                substr(field_name, 1, nchar(field_name) - 3)
+              } else {
+                field_name
+              }
+              other_field_name <- paste0(base_field_name, "_other")
 
               if (field_name %in% names(parsed_data)) {
                 field_value <- parsed_data[[field_name]]
@@ -647,8 +809,8 @@ survey <- function(json = NULL,
               result <- db_ops$update_survey_table(table_name, parsed_data)
             }
 
-            # Get the survey ID for logging
-            survey_id <- tryCatch(
+            # Get the table ID for logging
+            table_id <- tryCatch(
               {
                 if (is_update_operation) {
                   # For updates, get the ID from the target table using the join value
@@ -680,9 +842,14 @@ survey <- function(json = NULL,
             # Get client IP address
             client_ip <- session$clientData$url_hostname %||% "unknown"
 
+            # For update operations, temporarily update logger to use target table name
+            if (is_update_operation) {
+              logger$update_table_name(update_config$to)
+            }
+
             # Log the successful submission with timing data
             logger$log_entry(
-              survey_id = survey_id,
+              table_id = table_id,
               ip_address = client_ip,
               duration_load = rv$duration_load,
               duration_complete = rv$duration_complete,
@@ -715,19 +882,24 @@ survey <- function(json = NULL,
           },
           error = function(e) {
             rv$error_message <- sprintf("Database error: %s", e$message)
-            
+
             # Get client IP address
             client_ip <- session$clientData$url_hostname %||% "unknown"
-            
-            # Log error with available information (no survey_id since save failed)
+
+            # For update operations, ensure logger uses target table name for error logging too
+            if (is_update_operation) {
+              logger$update_table_name(update_config$to)
+            }
+
+            # Log error with available information (no table_id since save failed)
             logger$log_entry(
-              survey_id = NA,
+              table_id = NA,
               message = rv$error_message,
               ip_address = client_ip,
               duration_load = rv$duration_load,
               duration_complete = rv$duration_complete,
-              duration_save = NA,  # Save failed, so no valid save duration
-              force_log = TRUE  # Force logging even if survey not marked as loaded
+              duration_save = NA, # Save failed, so no valid save duration
+              force_log = TRUE # Force logging even if survey not marked as loaded
             )
             hide_and_show("savingDataMessage", "invalidDataMessage")
           }
