@@ -2,9 +2,11 @@
 % Please edit documentation in R/auth_ldap.R
 \name{LdapAuth}
 \alias{LdapAuth}
-\title{LDAP Authentication for shinysurveyjs}
+\title{LDAP Authentication Class}
 \description{
-Simple LDAP authentication module that integrates with the survey() function
+LDAP Authentication Class
+
+LDAP Authentication Class
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -23,7 +25,7 @@ Initialize LDAP Authentication}
 \itemize{
 \item \href{#method-LdapAuth-new}{\code{LdapAuth$new()}}
 \item \href{#method-LdapAuth-ensure_session_table_once}{\code{LdapAuth$ensure_session_table_once()}}
-\item \href{#method-LdapAuth-generate_auth_token}{\code{LdapAuth$generate_auth_token()}}
+\item \href{#method-LdapAuth-generate_token}{\code{LdapAuth$generate_token()}}
 \item \href{#method-LdapAuth-create_session}{\code{LdapAuth$create_session()}}
 \item \href{#method-LdapAuth-validate_session}{\code{LdapAuth$validate_session()}}
 \item \href{#method-LdapAuth-cleanup_expired_sessions_silent}{\code{LdapAuth$cleanup_expired_sessions_silent()}}
@@ -73,9 +75,7 @@ Initialize LDAP Authentication}
 \item{\code{session_duration_days}}{Number of days sessions remain valid (default: 7)}
 
 \item{\code{auth_table}}{Name of authentication sessions table (default: "sjs_auth")
-Ensure session table exists once during initialization (no read check)
-Generate secure session auth_token
-Create new session}
+Ensure session table exists once during initialization (no read check)}
 }
 \if{html}{\out{</div>}}
 }
@@ -84,17 +84,21 @@ Create new session}
 \if{html}{\out{<a id="method-LdapAuth-ensure_session_table_once"></a>}}
 \if{latex}{\out{\hypertarget{method-LdapAuth-ensure_session_table_once}{}}}
 \subsection{Method \code{ensure_session_table_once()}}{
+Creates the authentication session table if it doesn't exist and performs initial cleanup
+Generate secure session token
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LdapAuth$ensure_session_table_once()}\if{html}{\out{</div>}}
 }
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-LdapAuth-generate_auth_token"></a>}}
-\if{latex}{\out{\hypertarget{method-LdapAuth-generate_auth_token}{}}}
-\subsection{Method \code{generate_auth_token()}}{
+\if{html}{\out{<a id="method-LdapAuth-generate_token"></a>}}
+\if{latex}{\out{\hypertarget{method-LdapAuth-generate_token}{}}}
+\subsection{Method \code{generate_token()}}{
+Generates a 32-byte random hex token for session authentication
+Create new session
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$generate_auth_token()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$generate_token()}\if{html}{\out{</div>}}
 }
 
 }
@@ -110,7 +114,7 @@ Create new session}
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{username}}{Username to create session for
-Validate session auth_token}
+Validate session token}
 }
 \if{html}{\out{</div>}}
 }
@@ -120,16 +124,14 @@ Validate session auth_token}
 \if{latex}{\out{\hypertarget{method-LdapAuth-validate_session}{}}}
 \subsection{Method \code{validate_session()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$validate_session(auth_token)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$validate_session(token)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{auth_token}}{Session auth_token to validate
-Clean up expired sessions silently (no logging)
-Clean up expired sessions
-Remove specific session}
+\item{\code{token}}{Session token to validate
+Clean up expired sessions silently (no logging)}
 }
 \if{html}{\out{</div>}}
 }
@@ -138,6 +140,8 @@ Remove specific session}
 \if{html}{\out{<a id="method-LdapAuth-cleanup_expired_sessions_silent"></a>}}
 \if{latex}{\out{\hypertarget{method-LdapAuth-cleanup_expired_sessions_silent}{}}}
 \subsection{Method \code{cleanup_expired_sessions_silent()}}{
+Removes expired sessions from the database without warning messages
+Clean up expired sessions
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LdapAuth$cleanup_expired_sessions_silent()}\if{html}{\out{</div>}}
 }
@@ -147,6 +151,8 @@ Remove specific session}
 \if{html}{\out{<a id="method-LdapAuth-cleanup_expired_sessions"></a>}}
 \if{latex}{\out{\hypertarget{method-LdapAuth-cleanup_expired_sessions}{}}}
 \subsection{Method \code{cleanup_expired_sessions()}}{
+Removes expired sessions from the database with error logging
+Remove specific session
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LdapAuth$cleanup_expired_sessions()}\if{html}{\out{</div>}}
 }
@@ -157,15 +163,14 @@ Remove specific session}
 \if{latex}{\out{\hypertarget{method-LdapAuth-logout_session}{}}}
 \subsection{Method \code{logout_session()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$logout_session(auth_token = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{LdapAuth$logout_session(token = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{auth_token}}{Session auth_token to remove
-Get effective host and port (considering SSH tunnel)
-Authenticate user credentials}
+\item{\code{token}}{Session token to remove
+Get effective host and port (considering SSH tunnel)}
 }
 \if{html}{\out{</div>}}
 }
@@ -174,6 +179,8 @@ Authenticate user credentials}
 \if{html}{\out{<a id="method-LdapAuth-get_connection_params"></a>}}
 \if{latex}{\out{\hypertarget{method-LdapAuth-get_connection_params}{}}}
 \subsection{Method \code{get_connection_params()}}{
+Returns connection parameters, using SSH tunnel settings if configured
+Authenticate user credentials
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LdapAuth$get_connection_params()}\if{html}{\out{</div>}}
 }
@@ -204,6 +211,7 @@ Logout user}
 \if{html}{\out{<a id="method-LdapAuth-logout"></a>}}
 \if{latex}{\out{\hypertarget{method-LdapAuth-logout}{}}}
 \subsection{Method \code{logout()}}{
+Logs out the current user by removing their session
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LdapAuth$logout()}\if{html}{\out{</div>}}
 }

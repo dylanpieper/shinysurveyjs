@@ -1,12 +1,3 @@
-#' LDAP Authentication for shinysurveyjs
-#'
-#' Simple LDAP authentication module that integrates with the survey() function
-#'
-#' @importFrom R6 R6Class
-#' @importFrom shiny div tags observeEvent reactive
-#' @importFrom shinyjs show hide
-#' @importFrom ldapr ldap
-
 #' LDAP Authentication Class
 #' @export
 LdapAuth <- R6::R6Class(
@@ -56,34 +47,41 @@ LdapAuth <- R6::R6Class(
     },
 
     #' Ensure session table exists once during initialization (no read check)
+    #' @description Creates the authentication session table if it doesn't exist and performs initial cleanup
     ensure_session_table_once = function() {
-      if (is.null(self$config$db_ops)) return(FALSE)
-      
-      tryCatch({
-        # Create table if it doesn't exist (using CREATE TABLE IF NOT EXISTS)
-        create_query <- paste0("
+      if (is.null(self$config$db_ops)) {
+        return(FALSE)
+      }
+
+      tryCatch(
+        {
+          # Create table if it doesn't exist (using CREATE TABLE IF NOT EXISTS)
+          create_query <- paste0("
         CREATE TABLE IF NOT EXISTS ", self$config$auth_table, " (
           token VARCHAR(255) PRIMARY KEY,
           username VARCHAR(255) NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           expires_at TIMESTAMP NOT NULL
         )")
-        
-        self$config$db_ops$operate(function(conn) {
-          DBI::dbExecute(conn, create_query)
-        }, "Failed to create auth_sessions table")
-        
-        # Also do initial cleanup of any expired sessions
-        self$cleanup_expired_sessions_silent()
-        TRUE
-      }, error = function(e) {
-        warning("Failed to initialize auth_sessions table: ", e$message)
-        FALSE
-      })
+
+          self$config$db_ops$operate(function(conn) {
+            DBI::dbExecute(conn, create_query)
+          }, "Failed to create auth_sessions table")
+
+          # Also do initial cleanup of any expired sessions
+          self$cleanup_expired_sessions_silent()
+          TRUE
+        },
+        error = function(e) {
+          warning("Failed to initialize auth_sessions table: ", e$message)
+          FALSE
+        }
+      )
     },
 
 
     #' Generate secure session token
+    #' @description Generates a 32-byte random hex token for session authentication
     generate_token = function() {
       # Generate 32 random bytes and convert to hex
       paste0(sprintf("%02x", as.integer(runif(32, 0, 256))), collapse = "")
@@ -92,33 +90,38 @@ LdapAuth <- R6::R6Class(
     #' Create new session
     #' @param username Username to create session for
     create_session = function(username) {
-      if (is.null(self$config$db_ops)) return(NULL)
-      
+      if (is.null(self$config$db_ops)) {
+        return(NULL)
+      }
+
       # Table existence already ensured by validate_session or authentication flow
       token <- self$generate_token()
       expires_at <- Sys.time() + (self$config$session_duration_days * 24 * 60 * 60)
-      
-      tryCatch({
-        session_data <- data.frame(
-          token = token,
-          username = username,
-          expires_at = expires_at,
-          stringsAsFactors = FALSE
-        )
-        
-        # Insert session data directly using operate method
-        self$config$db_ops$operate(function(conn) {
-          insert_query <- sprintf(
-            "INSERT INTO %s (token, username, expires_at) VALUES (?, ?, ?)",
-            self$config$auth_table
+
+      tryCatch(
+        {
+          session_data <- data.frame(
+            token = token,
+            username = username,
+            expires_at = expires_at,
+            stringsAsFactors = FALSE
           )
-          DBI::dbExecute(conn, insert_query, list(token, username, expires_at))
-        }, "Failed to insert session")
-        token
-      }, error = function(e) {
-        warning("Failed to create session: ", e$message)
-        NULL
-      })
+
+          # Insert session data directly using operate method
+          self$config$db_ops$operate(function(conn) {
+            insert_query <- sprintf(
+              "INSERT INTO %s (token, username, expires_at) VALUES (?, ?, ?)",
+              self$config$auth_table
+            )
+            DBI::dbExecute(conn, insert_query, list(token, username, expires_at))
+          }, "Failed to insert session")
+          token
+        },
+        error = function(e) {
+          warning("Failed to create session: ", e$message)
+          NULL
+        }
+      )
     },
 
     #' Validate session token
@@ -127,77 +130,92 @@ LdapAuth <- R6::R6Class(
       if (is.null(self$config$db_ops) || is.null(token) || token == "") {
         return(list(valid = FALSE, user_info = NULL))
       }
-      
-      tryCatch({
-        # Only clean up expired sessions occasionally (every 12 hours)
-        if (is.null(private$last_cleanup) || 
+
+      tryCatch(
+        {
+          # Only clean up expired sessions occasionally (every 12 hours)
+          if (is.null(private$last_cleanup) ||
             as.numeric(Sys.time() - private$last_cleanup) > 43200) {
-          self$cleanup_expired_sessions()
-          private$last_cleanup <- Sys.time()
-        }
-        
-        # Check if token exists and is not expired
-        session_data <- self$config$db_ops$read_table(
-          self$config$auth_table,
-          filters = list(token = token),
-          limit = 1,
-          update_last_sql = FALSE
-        )
-        
-        if (nrow(session_data) > 0) {
-          session_row <- session_data[1, ]
-          expires_at <- as.POSIXct(session_row$expires_at)
-          
-          if (expires_at > Sys.time()) {
-            # Session is valid
-            self$authenticated <- TRUE
-            self$user_info <- list(
-              username = session_row$username,
-              login_time = as.POSIXct(session_row$created_at),
-              token = token
-            )
-            
-            return(list(valid = TRUE, user_info = self$user_info))
+            self$cleanup_expired_sessions()
+            private$last_cleanup <- Sys.time()
           }
+
+          # Check if token exists and is not expired
+          session_data <- self$config$db_ops$read_table(
+            self$config$auth_table,
+            filters = list(token = token),
+            limit = 1,
+            update_last_sql = FALSE
+          )
+
+          if (nrow(session_data) > 0) {
+            session_row <- session_data[1, ]
+            expires_at <- as.POSIXct(session_row$expires_at)
+
+            if (expires_at > Sys.time()) {
+              # Session is valid
+              self$authenticated <- TRUE
+              self$user_info <- list(
+                username = session_row$username,
+                login_time = as.POSIXct(session_row$created_at),
+                token = token
+              )
+
+              return(list(valid = TRUE, user_info = self$user_info))
+            }
+          }
+
+          return(list(valid = FALSE, user_info = NULL))
+        },
+        error = function(e) {
+          warning("Session validation error: ", e$message)
+          return(list(valid = FALSE, user_info = NULL))
         }
-        
-        return(list(valid = FALSE, user_info = NULL))
-      }, error = function(e) {
-        warning("Session validation error: ", e$message)
-        return(list(valid = FALSE, user_info = NULL))
-      })
+      )
     },
 
     #' Clean up expired sessions silently (no logging)
+    #' @description Removes expired sessions from the database without warning messages
     cleanup_expired_sessions_silent = function() {
-      if (is.null(self$config$db_ops)) return(FALSE)
-      
-      tryCatch({
-        delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE expires_at < NOW()")
-        self$config$db_ops$operate(function(conn) {
-          DBI::dbExecute(conn, delete_query)
-        }, "Failed to cleanup expired sessions")
-        TRUE
-      }, error = function(e) {
-        # Silent failure during initialization
-        FALSE
-      })
+      if (is.null(self$config$db_ops)) {
+        return(FALSE)
+      }
+
+      tryCatch(
+        {
+          delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE expires_at < NOW()")
+          self$config$db_ops$operate(function(conn) {
+            DBI::dbExecute(conn, delete_query)
+          }, "Failed to cleanup expired sessions")
+          TRUE
+        },
+        error = function(e) {
+          # Silent failure during initialization
+          FALSE
+        }
+      )
     },
 
     #' Clean up expired sessions
+    #' @description Removes expired sessions from the database with error logging
     cleanup_expired_sessions = function() {
-      if (is.null(self$config$db_ops)) return(FALSE)
-      
-      tryCatch({
-        delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE expires_at < NOW()")
-        self$config$db_ops$operate(function(conn) {
-          DBI::dbExecute(conn, delete_query)
-        }, "Failed to cleanup expired sessions")
-        TRUE
-      }, error = function(e) {
-        warning("Failed to cleanup expired sessions: ", e$message)
-        FALSE
-      })
+      if (is.null(self$config$db_ops)) {
+        return(FALSE)
+      }
+
+      tryCatch(
+        {
+          delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE expires_at < NOW()")
+          self$config$db_ops$operate(function(conn) {
+            DBI::dbExecute(conn, delete_query)
+          }, "Failed to cleanup expired sessions")
+          TRUE
+        },
+        error = function(e) {
+          warning("Failed to cleanup expired sessions: ", e$message)
+          FALSE
+        }
+      )
     },
 
     #' Remove specific session
@@ -208,29 +226,33 @@ LdapAuth <- R6::R6Class(
         self$user_info <- NULL
         return(TRUE)
       }
-      
+
       # Use current session token if none provided
       if (is.null(token) && !is.null(self$user_info$token)) {
         token <- self$user_info$token
       }
-      
+
       if (!is.null(token)) {
-        tryCatch({
-          delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE token = '", token, "'")
-          self$config$db_ops$operate(function(conn) {
-            DBI::dbExecute(conn, delete_query)
-          }, "Failed to remove session")
-        }, error = function(e) {
-          warning("Failed to remove session: ", e$message)
-        })
+        tryCatch(
+          {
+            delete_query <- paste0("DELETE FROM ", self$config$auth_table, " WHERE token = '", token, "'")
+            self$config$db_ops$operate(function(conn) {
+              DBI::dbExecute(conn, delete_query)
+            }, "Failed to remove session")
+          },
+          error = function(e) {
+            warning("Failed to remove session: ", e$message)
+          }
+        )
       }
-      
+
       self$authenticated <- FALSE
       self$user_info <- NULL
       TRUE
     },
 
     #' Get effective host and port (considering SSH tunnel)
+    #' @description Returns connection parameters, using SSH tunnel settings if configured
     get_connection_params = function() {
       if (!is.null(self$config$ssh_tunnel) && isTRUE(self$config$ssh_tunnel$enabled)) {
         list(
@@ -288,10 +310,10 @@ LdapAuth <- R6::R6Class(
 
           if (result) {
             self$authenticated <- TRUE
-            
+
             # Create session token if database operations are available
             token <- self$create_session(clean_username)
-            
+
             self$user_info <- list(
               username = username,
               login_time = Sys.time(),
@@ -321,11 +343,11 @@ LdapAuth <- R6::R6Class(
 
 
     #' Logout user
+    #' @description Logs out the current user by removing their session
     logout = function() {
       self$logout_session()
     }
   ),
-  
   private = list(
     last_cleanup = NULL
   )
@@ -510,7 +532,7 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     # Capture namespace prefix for use in validation function
     ns_prefix <- session$ns("")
-    
+
     auth_status <- shiny::reactiveValues(
       authenticated = FALSE,
       user_info = NULL
@@ -522,22 +544,22 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
       # This prevents unnecessary auth checks on the landing page
       if (!is.null(input$token) && input$token != "" && input$validate_session) {
         validation_result <- ldap_auth$validate_session(input$token)
-        
+
         if (validation_result$valid) {
           auth_status$authenticated <- TRUE
           auth_status$user_info <- validation_result$user_info
           shinyjs::hide("login_form")
-          
+
           if (!is.null(logger)) {
             username <- validation_result$user_info$username %||% "unknown"
             logger$log_message(paste("Session validated:", username), type = "INFO", zone = "AUTH")
           }
-          
+
           # Signal successful validation - the auth reactive will handle the rest
         }
       }
     })
-    
+
     # Method to trigger session validation when needed
     validate_existing_session <- function() {
       shinyjs::runjs(sprintf("
@@ -558,7 +580,7 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
         auth_status$authenticated <- TRUE
         auth_status$user_info <- result$user_info
         shinyjs::hide("login_form")
-        
+
         # Send session token to client for cookie storage
         if (!is.null(result$token)) {
           session$sendCustomMessage("login_success", list(
@@ -580,7 +602,7 @@ ldap_login_server <- function(id, ldap_auth, logger = NULL) {
         user_info = auth_status$user_info
       )
     })
-    
+
     # Return a list with both the reactive and the validation function
     return(list(
       auth_status = auth_reactive,
