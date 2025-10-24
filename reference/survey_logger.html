@@ -82,8 +82,8 @@ console messaging and database logging of survey metadata.</p>
 <dd><p>Character string containing unique session identifier</p></dd>
 
 
-<dt><code>survey_name</code></dt>
-<dd><p>Character string identifying the current survey</p></dd>
+<dt><code>table_name</code></dt>
+<dd><p>Character string identifying the current table</p></dd>
 
 
 <dt><code>survey_loaded</code></dt>
@@ -98,7 +98,7 @@ console messaging and database logging of survey metadata.</p>
 <dd><p>data.frame containing queued messages for batch processing</p></dd>
 
 
-<dt><code>last_sql_statement</code></dt>
+<dt><code>last_sql</code></dt>
 <dd><p>Character string containing the last executed SQL statement</p></dd>
 
 
@@ -111,9 +111,9 @@ console messaging and database logging of survey metadata.</p>
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 
 <ul><li><p><a href="#method-survey_logger-new"><code>survey_logger$new()</code></a></p></li>
-<li><p><a href="#method-survey_logger-update_survey_name"><code>survey_logger$update_survey_name()</code></a></p></li>
+<li><p><a href="#method-survey_logger-update_table_name"><code>survey_logger$update_table_name()</code></a></p></li>
 <li><p><a href="#method-survey_logger-mark_survey_loaded"><code>survey_logger$mark_survey_loaded()</code></a></p></li>
-<li><p><a href="#method-survey_logger-update_last_sql_statement"><code>survey_logger$update_last_sql_statement()</code></a></p></li>
+<li><p><a href="#method-survey_logger-update_last_sql"><code>survey_logger$update_last_sql()</code></a></p></li>
 <li><p><a href="#method-survey_logger-log_entry"><code>survey_logger$log_entry()</code></a></p></li>
 <li><p><a href="#method-survey_logger-log_message"><code>survey_logger$log_message()</code></a></p></li>
 <li><p><a href="#method-survey_logger-clone"><code>survey_logger$clone()</code></a></p></li>
@@ -121,7 +121,7 @@ console messaging and database logging of survey metadata.</p>
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Initialize a new survey logger instance</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/survey_logger.html">survey_logger</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">log_table</span>, <span class="va">session_id</span>, <span class="va">survey_name</span>, echo <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/survey_logger.html">survey_logger</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">log_table</span>, <span class="va">session_id</span>, <span class="va">table_name</span>, echo <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -134,8 +134,8 @@ console messaging and database logging of survey metadata.</p>
 <dd><p>Character string containing session identifier</p></dd>
 
 
-<dt><code>survey_name</code></dt>
-<dd><p>Character string identifying the survey</p></dd>
+<dt><code>table_name</code></dt>
+<dd><p>Character string identifying the table</p></dd>
 
 
 <dt><code>echo</code></dt>
@@ -145,17 +145,17 @@ console messaging and database logging of survey metadata.</p>
 </dl><p></p></div>
 </div>
 
-</div><p></p><hr><a id="method-survey_logger-update_survey_name"></a><div class="section">
-<h3 id="method-update-survey-name-">Method <code>update_survey_name()</code><a class="anchor" aria-label="anchor" href="#method-update-survey-name-"></a></h3>
-<p>Update the survey name for this logger instance</p><div class="section">
+</div><p></p><hr><a id="method-survey_logger-update_table_name"></a><div class="section">
+<h3 id="method-update-table-name-">Method <code>update_table_name()</code><a class="anchor" aria-label="anchor" href="#method-update-table-name-"></a></h3>
+<p>Update the table name for this logger instance</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">update_survey_name</span><span class="op">(</span><span class="va">survey_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">update_table_name</span><span class="op">(</span><span class="va">table_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>survey_name</code></dt>
-<dd><p>Character string identifying the new survey name</p></dd>
+<p></p><div class="arguments"><dl><dt><code>table_name</code></dt>
+<dd><p>Character string identifying the new table name</p></dd>
 
 
 </dl><p></p></div>
@@ -177,16 +177,16 @@ console messaging and database logging of survey metadata.</p>
 <p>Invisible NULL</p>
 </div>
 
-</div><p></p><hr><a id="method-survey_logger-update_last_sql_statement"></a><div class="section">
-<h3 id="method-update-last-sql-statement-">Method <code>update_last_sql_statement()</code><a class="anchor" aria-label="anchor" href="#method-update-last-sql-statement-"></a></h3>
+</div><p></p><hr><a id="method-survey_logger-update_last_sql"></a><div class="section">
+<h3 id="method-update-last-sql-">Method <code>update_last_sql()</code><a class="anchor" aria-label="anchor" href="#method-update-last-sql-"></a></h3>
 <p>Update the last SQL statement executed</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">update_last_sql_statement</span><span class="op">(</span><span class="va">sql_statement</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">update_last_sql</span><span class="op">(</span><span class="va">sql</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>sql_statement</code></dt>
+<p></p><div class="arguments"><dl><dt><code>sql</code></dt>
 <dd><p>Character string containing the SQL statement</p></dd>
 
 
@@ -202,21 +202,21 @@ console messaging and database logging of survey metadata.</p>
 <p>Queue a log entry for database insert (only for loaded surveys)</p><div class="section">
 <h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">survey_logger</span><span class="op">$</span><span class="fu">log_entry</span><span class="op">(</span></span>
-<span>  <span class="va">survey_id</span>,</span>
+<span>  <span class="va">table_id</span>,</span>
 <span>  message <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ip_address <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  duration_load <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  duration_complete <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  duration_save <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  sql_statement <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sql <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  force_log <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>survey_id</code></dt>
-<dd><p>Integer ID from the survey table</p></dd>
+<p></p><div class="arguments"><dl><dt><code>table_id</code></dt>
+<dd><p>Integer ID from the table</p></dd>
 
 
 <dt><code>message</code></dt>
@@ -239,7 +239,7 @@ console messaging and database logging of survey metadata.</p>
 <dd><p>Numeric time spent saving (seconds)</p></dd>
 
 
-<dt><code>sql_statement</code></dt>
+<dt><code>sql</code></dt>
 <dd><p>Character string containing the SQL that failed (only for errors)</p></dd>
 
 

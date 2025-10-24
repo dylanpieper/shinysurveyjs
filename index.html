@@ -96,13 +96,14 @@
 <span></span>
 <span><span class="co"># Database configuration (reused across examples)</span></span>
 <span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
-<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
-<span>  db_name <span class="op">=</span> <span class="st">"research_db"</span>,</span>
-<span>  user <span class="op">=</span> <span class="st">"db_user"</span>,</span>
-<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"research_db"</span><span class="op">)</span>,</span>
-<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_HOST"</span><span class="op">)</span>,</span>
+<span>  port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
+<span>  user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_USER"</span><span class="op">)</span>,</span>
+<span>  pass <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PASS"</span><span class="op">)</span>,</span>
+<span>  write_table <span class="op">=</span> <span class="st">"survey_data"</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"sjs_logs"</span>,</span>
+<span>  auth_table <span class="op">=</span> <span class="st">"sjs_auth"</span>,</span>
 <span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -229,17 +230,6 @@
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dylanpieper.github.io/shinysurveyjs">shinysurveyjs</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Database configuration (reused across examples)</span></span>
-<span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  host <span class="op">=</span> <span class="st">"localhost"</span>,</span>
-<span>  db_name <span class="op">=</span> <span class="st">"survey_db"</span>, </span>
-<span>  user <span class="op">=</span> <span class="st">"user"</span>,</span>
-<span>  password <span class="op">=</span> <span class="st">"pass"</span>,</span>
-<span>  write_table <span class="op">=</span> <span class="st">"responses"</span>, <span class="co"># Required for single surveys</span></span>
-<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
 <span><span class="co"># Example survey definition</span></span>
 <span><span class="va">feedback_survey</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  title <span class="op">=</span> <span class="st">"Feedback Survey"</span>,</span>
@@ -348,13 +338,14 @@
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Database configuration</span></span>
 <span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
-<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
-<span>  db_name <span class="op">=</span> <span class="st">"survey_db"</span>,</span>
-<span>  user <span class="op">=</span> <span class="st">"db_user"</span>,</span>
-<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"survey_db"</span><span class="op">)</span>,</span>
-<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_HOST"</span><span class="op">)</span>,</span>
+<span>  port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
+<span>  user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_USER"</span><span class="op">)</span>,</span>
+<span>  pass <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PASS"</span><span class="op">)</span>,</span>
+<span>  write_table <span class="op">=</span> <span class="st">"survey_data"</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"sjs_logs"</span>,</span>
+<span>  auth_table <span class="op">=</span> <span class="st">"sjs_auth"</span>,</span>
 <span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -383,14 +374,9 @@
 <span>  show_response <span class="op">=</span> <span class="cn">TRUE</span>,    <span class="co"># Display data table after submission</span></span>
 <span>  echo <span class="op">=</span> <span class="cn">FALSE</span>             <span class="co"># Hide console output</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="configuration">Configuration<a class="anchor" aria-label="anchor" href="#configuration"></a>
-</h2>
-<div class="section level3">
-<h3 id="environment-variables">Environment variables<a class="anchor" aria-label="anchor" href="#environment-variables"></a>
-</h3>
+<div class="section level4">
+<h4 id="environment-variables">Environment variables<a class="anchor" aria-label="anchor" href="#environment-variables"></a>
+</h4>
 <p>Set database connection parameters using environment variables:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># .Renviron file</span></span>
@@ -398,13 +384,11 @@
 <span><span class="va">DB_PORT</span><span class="op">=</span><span class="fl">3306</span> </span>
 <span><span class="va">DB_NAME</span><span class="op">=</span><span class="va">research_db</span></span>
 <span><span class="va">DB_USER</span><span class="op">=</span><span class="va">db_user</span></span>
-<span><span class="va">DB_PASSWORD</span><span class="op">=</span><span class="va">db_pass</span></span>
-<span><span class="va">WRITE_TABLE</span><span class="op">=</span><span class="va">survey_responses</span> <span class="co"># For single survey use case</span></span>
-<span><span class="va">LOG_TABLE</span><span class="op">=</span><span class="va">survey_logs</span></span></code></pre></div>
+<span><span class="va">DB_PASS</span><span class="op">=</span><span class="va">db_pass</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="secure-credential-management">Secure credential management<a class="anchor" aria-label="anchor" href="#secure-credential-management"></a>
-</h3>
+<div class="section level4">
+<h4 id="secure-credential-management">Secure credential management<a class="anchor" aria-label="anchor" href="#secure-credential-management"></a>
+</h4>
 <p>Use <a href="https://keyring.r-lib.org/" class="external-link">keyring</a> for production deployments:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://keyring.r-lib.org/" class="external-link">keyring</a></span><span class="op">)</span></span>
@@ -414,18 +398,20 @@
 <span></span>
 <span><span class="co"># Database configuration with secure credentials</span></span>
 <span><span class="va">db_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  driver <span class="op">=</span> <span class="fu">RMariaDB</span><span class="fu">::</span><span class="fu"><a href="https://rmariadb.r-dbi.org/reference/dbConnect-MariaDBDriver-method.html" class="external-link">MariaDB</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  host <span class="op">=</span> <span class="st">"database.example.com"</span>,</span>
-<span>  port <span class="op">=</span> <span class="fl">3306</span>,</span>
-<span>  user <span class="op">=</span> <span class="st">"db_user"</span>, </span>
-<span>  password <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"research_db"</span><span class="op">)</span>,</span>
-<span>  db_name <span class="op">=</span> <span class="st">"research_db"</span>,</span>
-<span>  log_table <span class="op">=</span> <span class="st">"survey_logs"</span>,</span>
+<span>  host <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_HOST"</span><span class="op">)</span>,</span>
+<span>  port <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_PORT"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_NAME"</span><span class="op">)</span>,</span>
+<span>  user <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"DB_USER"</span><span class="op">)</span>,</span>
+<span>  pass <span class="op">=</span> <span class="fu">keyring</span><span class="fu">::</span><span class="fu">key_get</span><span class="op">(</span><span class="st">"db_pass"</span>, <span class="st">"research_db"</span><span class="op">)</span>,</span>
+<span>  write_table <span class="op">=</span> <span class="st">"survey_data"</span>,</span>
+<span>  log_table <span class="op">=</span> <span class="st">"sjs_logs"</span>,</span>
+<span>  auth_table <span class="op">=</span> <span class="st">"sjs_auth"</span>,</span>
 <span>  pool_size <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use in survey</span></span>
 <span><span class="fu"><a href="reference/survey.html">survey</a></span><span class="op">(</span>list <span class="op">=</span> <span class="va">my_surveys</span>, db_config <span class="op">=</span> <span class="va">db_config</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 </div>
 </div>

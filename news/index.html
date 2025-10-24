@@ -40,9 +40,41 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="shinysurveyjs-development-version">shinysurveyjs (development version)<a class="anchor" aria-label="anchor" href="#shinysurveyjs-development-version"></a></h2>
-<p>No news yet.</p>
+<div class="section level3">
+<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<ul><li>
+<strong>Parameter name changes</strong>: For consistency, renamed function parameters:
+<ul><li>
+<code>survey_auth</code> → <code>sjs_auth</code> (now exposed as direct parameter in <code><a href="../reference/survey.html">survey()</a></code>)</li>
+<li>
+<code>survey_log</code> → <code>sjs_logs</code> (now exposed as direct parameter in <code><a href="../reference/survey.html">survey()</a></code>)</li>
+</ul></li>
+<li>
+<strong>Database table field renaming</strong>: To improve clarity and consistency:
+<ul><li>
+<code>survey_name</code> → <code>table_name</code> (in logging table)</li>
+<li>
+<code>survey_id</code> → <code>table_id</code> (in logging table)<br></li>
+<li>
+<code>sql_statement</code> → <code>sql</code> (in logging table)</li>
+</ul></li>
+<li>
+<strong>LDAP authentication changes</strong>: Renamed authentication token field and methods for consistency:
+<ul><li>Database table field: <code>auth_token</code> → <code>token</code> (in authentication table)</li>
+<li>Method name: <code>generate_auth_token()</code> → <code>generate_token()</code>
+</li>
+<li>Parameter name: <code>auth_token</code> → <code>token</code> in <code>validate_session()</code> and <code>logout_session()</code> methods</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<ul><li>Authentication table (<code>sjs_auth</code>) and logging table (<code>sjs_logs</code>) can now be customized directly via <code><a href="../reference/survey.html">survey()</a></code> parameters</li>
+<li>For surveys using <code>db_update</code>, the logging table now correctly records the target table name being updated to (rather than the source survey name)</li>
+<li>Updated roxygen documentation to reflect parameter name changes</li>
+</ul></div>
 </div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

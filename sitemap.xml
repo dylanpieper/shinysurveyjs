@@ -5,8 +5,11 @@
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/authors.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/index.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/news/index.html</loc></url>
+<url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/LdapAuth.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/db_ops.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/index.html</loc></url>
+<url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/ldap_login_server.html</loc></url>
+<url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/ldap_login_ui.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/survey.html</loc></url>
 <url><loc>https://dylanpieper.github.io/shinysurveyjs/reference/survey_logger.html</loc></url>
 </urlset>
