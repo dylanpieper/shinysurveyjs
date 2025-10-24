@@ -22,3 +22,10 @@ reference:
     contents:
       - db_ops
       - survey_logger
+  - title: "Authentication"
+    desc: >
+      LDAP authentication classes and UI components
+    contents:
+      - LdapAuth
+      - ldap_login_ui
+      - ldap_login_server
