@@ -2,6 +2,8 @@
 
 Deploy survey applications using [SurveyJS](https://surveyjs.io) and [Shiny](https://shiny.posit.co) for R with advanced database integration.
 
+⚠️ This is a development project I created at the University of Pittsburgh. I am no longer actively working on it. Use at your own risk, especially with respect to security or compliance. See [surveydown](https://surveydown.org/) for a more mature survey project using Shiny.
+
 ## Overview
 
 shinysurveyjs bridges the gap between SurveyJS's frontend for survey creation and Shiny's backend for data plumbing, enabling individuals and organizations to deploy survey applications with:
